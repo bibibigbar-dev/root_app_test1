@@ -156,6 +156,24 @@ const WithdrawalScreen = ({ navigation }) => {
       return;
     }
 
+    // 출금 확인 알림
+    Alert.alert(
+      '출금 신청',
+      `출금신청을 하시겠습니까?\n금액: ${formatCurrency(numericAmount.toString())}원`,
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '확인',
+          onPress: () => proceedWithdrawal(numericAmount),
+        },
+      ]
+    );
+  };
+
+  const proceedWithdrawal = async (numericAmount) => {
     setLoading(true);
 
     try {
@@ -172,18 +190,28 @@ const WithdrawalScreen = ({ navigation }) => {
       const response = await ApiService.requestWithdrawal(withdrawalData);
 
       if (response.success) {
+        // 출금 성공 시 잔액 차감
+        const currentBalance = parseFloat(user.session?.balance || '0');
+        const newBalance = Math.max(0, currentBalance - numericAmount);
+        
+        // 세션 데이터 업데이트
+        await ApiService.updateSessionData('balance', newBalance.toString());
+        
+        // 사용자 정보 새로고침
+        const updatedUser = await ApiService.getCurrentUser();
+        if (updatedUser) {
+          setUser(updatedUser);
+        }
+        
         Alert.alert(
           '출금 신청 완료',
-          `출금 신청이 완료되었습니다.\n거래번호: ${response.transactionId || 'N/A'}`,
+          response.message || '출금 신청이 완료되었습니다.',
           [
             {
               text: '확인',
               onPress: () => {
-                // 폼 초기화
+                // 출금 금액만 초기화 (은행 정보는 유지)
                 setAmount('');
-                setBankName('');
-                setBankAccount('');
-                setAccountHolder(user?.name || '');
               },
             },
           ]
@@ -250,14 +278,7 @@ const WithdrawalScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.userInfo}>
-          <Text style={styles.welcomeText}>
-            안녕하세요, {user?.session?.r_name || user?.name || '사용자'}님
-          </Text>
-        </View>
-
         <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>출금 정보</Text>
 
           {/* 투자금 출금 계좌 정보 박스 */}
           <View style={styles.accountInfoBox}>
@@ -320,7 +341,8 @@ const WithdrawalScreen = ({ navigation }) => {
           <Text style={styles.noticeTitle}>출금 안내</Text>
           <Text style={styles.noticeText}>
             • 계좌변경은 본인명의 계좌로만 가능합니다.{'\n'}
-            • 신한은행, 우리은행, 신협의 경우 (구)계좌는 이용이 불가능하며, 신 계좌번호(신한 110, 우리 1002, 신협 13 으로 시작)만 이용 가능 합니다.
+            • 신한은행, 우리은행, 신협의 경우 (구)계좌는 이용이 불가능하며, 신 계좌번호(신한 110, 우리 1002, 신협 13 으로 시작)만 이용 가능 합니다.{'\n'}
+            • 출금은 00:30 ~ 11:30 까지 가능합니다.
           </Text>
         </View>
       </ScrollView>

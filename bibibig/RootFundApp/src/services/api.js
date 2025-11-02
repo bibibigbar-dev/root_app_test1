@@ -50,8 +50,7 @@ class ApiService {
 
   // API 베이스 URL 결정
   getApiBaseUrl() {
-    // 원래 설정으로 복원
-    return 'http://127.0.0.1:8080';
+    return 'https://rootenergy.co.kr';
   }
 
   // URL-encoded 형태로 데이터 변환 (Spring @ModelAttribute용)
@@ -856,7 +855,7 @@ DwIDAQAB
         } else {
           return { 
             success: false, 
-            message: `출금 신청에 실패했습니다. (에러코드: ${rtnvalue})`,
+            message: '출금 신청에 실패했습니다.',
             errorCode: rtnvalue
           };
         }

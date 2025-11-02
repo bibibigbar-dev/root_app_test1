@@ -11,17 +11,29 @@ import {
   Platform,
   ScrollView,
   Image,
+  Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
 const LoginScreen = ({ navigation }) => {
+  const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberEmail, setRememberEmail] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [mainLoginLoading, setMainLoginLoading] = useState(false);
+  const [withdrawalLoginLoading, setWithdrawalLoginLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const passwordRef = useRef(null);
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      setScreenHeight(Dimensions.get('window').height);
+    };
+
+    const subscription = Dimensions.addEventListener('change', updateDimensions);
+    return () => subscription?.remove();
+  }, []);
 
   useEffect(() => {
     checkExistingLogin();
@@ -49,10 +61,14 @@ const LoginScreen = ({ navigation }) => {
   const loadRememberedEmail = async () => {
     try {
       const savedEmail = await AsyncStorage.getItem('rememberedEmail');
+      const savedPassword = await AsyncStorage.getItem('rememberedPassword');
       const shouldRemember = await AsyncStorage.getItem('rememberEmailFlag');
       
       if (shouldRemember === 'true' && savedEmail) {
         setEmail(savedEmail);
+        if (savedPassword) {
+          setPassword(savedPassword);
+        }
         setRememberEmail(true);
       }
     } catch (error) {
@@ -64,9 +80,13 @@ const LoginScreen = ({ navigation }) => {
     try {
       if (rememberEmail) {
         await AsyncStorage.setItem('rememberedEmail', email);
+        if (password) {
+          await AsyncStorage.setItem('rememberedPassword', password);
+        }
         await AsyncStorage.setItem('rememberEmailFlag', 'true');
       } else {
         await AsyncStorage.removeItem('rememberedEmail');
+        await AsyncStorage.removeItem('rememberedPassword');
         await AsyncStorage.removeItem('rememberEmailFlag');
       }
     } catch (error) {
@@ -74,7 +94,7 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (targetScreen = 'Main', setLoadingState) => {
     console.log('🚀 로그인 시작');
     
     if (!email || !password) {
@@ -83,7 +103,7 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
 
-    setLoading(true);
+    setLoadingState(true);
     
     try {
       await saveRememberedEmail();
@@ -105,16 +125,25 @@ const LoginScreen = ({ navigation }) => {
         
         console.log('💾 AsyncStorage에 저장 완료');
         
-        // 출금 화면으로 바로 이동
-        navigation.replace('Withdrawal');
+        // 타겟 화면으로 이동
+        navigation.replace(targetScreen);
       } else {
         Alert.alert('로그인 실패', response.message || '계정 정보를 확인하여 주십시오.');
       }
     } catch (error) {
       Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
     } finally {
-      setLoading(false);
+      setLoadingState(false);
     }
+  };
+
+  const handleMainLogin = () => {
+    Alert.alert('알림', '준비중입니다.');
+    // handleLogin('Main', setMainLoginLoading);
+  };
+
+  const handleWithdrawalLogin = () => {
+    handleLogin('Withdrawal', setWithdrawalLoginLoading);
   };
 
   const handleKakaoLogin = async () => {
@@ -152,14 +181,21 @@ const LoginScreen = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={[styles.scrollContainer, { minHeight: screenHeight, flexGrow: 1 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* 로고 섹션 */}
         <View style={styles.logoSection}>
+          <View style={styles.logoSpacer} />
           <Text style={styles.subtitle}>환경을 생각하는 투자 플랫폼</Text>
-          <Text style={styles.logoText}>ROOTFUND</Text>
+          <View style={styles.logoImageContainer}>
+            <Image 
+              source={require('../assets/images/thumbnail_logo_en.jpg')} 
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
+          </View>
         </View>
 
         {/* 로그인 폼 */}
@@ -188,7 +224,7 @@ const LoginScreen = ({ navigation }) => {
               secureTextEntry
               autoCapitalize="none"
               returnKeyType="done"
-              onSubmitEditing={handleLogin}
+              onSubmitEditing={handleMainLogin}
             />
           </View>
 
@@ -200,31 +236,41 @@ const LoginScreen = ({ navigation }) => {
             <View style={[styles.checkbox, rememberEmail && styles.checkboxChecked]}>
               {rememberEmail && <Text style={styles.checkmark}>✓</Text>}
             </View>
-            <Text style={styles.checkboxLabel}>이메일 저장하기</Text>
+            <Text style={styles.checkboxLabel}>로그인 저장하기</Text>
           </TouchableOpacity>
 
-          {/* 로그인 버튼 */}
+          {/* 신규 로그인 버튼 */}
           <TouchableOpacity 
-            style={[styles.loginButton, loading && styles.disabledButton]} 
-            onPress={handleLogin}
-            disabled={loading}
+            style={[styles.loginButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
+            onPress={handleMainLogin}
+            disabled={mainLoginLoading || withdrawalLoginLoading}
           >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.loginButtonText}>로그인</Text>
-            )}
+            <Text style={styles.loginButtonText}>로그인</Text>
           </TouchableOpacity>
 
           {/* 카카오 로그인 버튼 */}
           <TouchableOpacity 
-            style={styles.kakaoButton}
+            style={[styles.kakaoButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]}
             onPress={handleKakaoLogin}
+            disabled={mainLoginLoading || withdrawalLoginLoading}
           >
             <View style={styles.kakaoIcon}>
               <Text style={styles.kakaoIconText}>K</Text>
             </View>
             <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
+          </TouchableOpacity>
+
+          {/* 출금 바로가기 버튼 */}
+          <TouchableOpacity 
+            style={[styles.withdrawalButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
+            onPress={handleWithdrawalLogin}
+            disabled={mainLoginLoading || withdrawalLoginLoading}
+          >
+            {withdrawalLoginLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.withdrawalButtonText}>출금 바로가기</Text>
+            )}
           </TouchableOpacity>
 
           {/* 링크 섹션 */}
@@ -259,10 +305,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
-    flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingVertical: 130,
+    justifyContent: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -279,10 +324,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 50,
   },
+  logoSpacer: {
+    height: 40,
+  },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#666666',
     marginBottom: 10,
+  },
+  logoImageContainer: {
+    height: 40,
+    width: '100%',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+  },
+  logoImage: {
+    width: '80%',
+    height: 160,
   },
   logoText: {
     fontSize: 36,
@@ -357,7 +417,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 10,
+  },
+  withdrawalButton: {
+    height: 48,
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 30,
+  },
+  withdrawalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   kakaoIcon: {
     width: 24,
