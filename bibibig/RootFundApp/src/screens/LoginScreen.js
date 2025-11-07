@@ -152,18 +152,15 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleFindEmail = () => {
-    Alert.alert('이메일 찾기', '이메일 찾기 기능은 준비 중입니다.');
-    // TODO: 이메일 찾기 화면으로 이동
+    navigation.navigate('FindEmail');
   };
 
   const handleFindPassword = () => {
-    Alert.alert('비밀번호 찾기', '비밀번호 찾기 기능은 준비 중입니다.');
-    // TODO: 비밀번호 찾기 화면으로 이동
+    navigation.navigate('FindPassword');
   };
 
   const handleSignUp = () => {
-    Alert.alert('회원가입', '회원가입 기능은 준비 중입니다.');
-    // TODO: 회원가입 화면으로 이동
+    navigation.navigate('SignUp');
   };
 
   if (initialLoading) {
@@ -239,26 +236,30 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.checkboxLabel}>로그인 저장하기</Text>
           </TouchableOpacity>
 
-          {/* 신규 로그인 버튼 */}
-          <TouchableOpacity 
-            style={[styles.loginButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
-            onPress={handleMainLogin}
-            disabled={mainLoginLoading || withdrawalLoginLoading}
-          >
-            <Text style={styles.loginButtonText}>로그인</Text>
-          </TouchableOpacity>
+          {/* 신규 로그인 버튼 - 임시 비활성화 */}
+          {false && (
+            <TouchableOpacity 
+              style={[styles.loginButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
+              onPress={handleMainLogin}
+              disabled={mainLoginLoading || withdrawalLoginLoading}
+            >
+              <Text style={styles.loginButtonText}>로그인</Text>
+            </TouchableOpacity>
+          )}
 
-          {/* 카카오 로그인 버튼 */}
-          <TouchableOpacity 
-            style={[styles.kakaoButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]}
-            onPress={handleKakaoLogin}
-            disabled={mainLoginLoading || withdrawalLoginLoading}
-          >
-            <View style={styles.kakaoIcon}>
-              <Text style={styles.kakaoIconText}>K</Text>
-            </View>
-            <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
-          </TouchableOpacity>
+          {/* 카카오 로그인 버튼 - 임시 비활성화 */}
+          {false && (
+            <TouchableOpacity 
+              style={[styles.kakaoButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]}
+              onPress={handleKakaoLogin}
+              disabled={mainLoginLoading || withdrawalLoginLoading}
+            >
+              <View style={styles.kakaoIcon}>
+                <Text style={styles.kakaoIconText}>K</Text>
+              </View>
+              <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
+            </TouchableOpacity>
+          )}
 
           {/* 출금 바로가기 버튼 */}
           <TouchableOpacity 
@@ -276,21 +277,37 @@ const LoginScreen = ({ navigation }) => {
           {/* 링크 섹션 */}
           <View style={styles.linksContainer}>
             <View style={styles.leftLinks}>
-              <TouchableOpacity onPress={handleFindEmail}>
-                <Text style={styles.linkText}>이메일 찾기</Text>
-              </TouchableOpacity>
-              <Text style={styles.separator}>|</Text>
-              <TouchableOpacity onPress={handleFindPassword}>
-                <Text style={styles.linkText}>비밀번호 찾기</Text>
-              </TouchableOpacity>
+              {false && (
+                <>
+                  <TouchableOpacity onPress={handleFindEmail}>
+                    <Text style={styles.linkText}>이메일 찾기</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.separator}>|</Text>
+                  <TouchableOpacity onPress={handleFindPassword}>
+                    <Text style={styles.linkText}>비밀번호 찾기</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
-            
+
+          {false && (
             <TouchableOpacity onPress={handleSignUp} style={styles.signupButton}>
               <Text style={styles.signupButtonText}>
                 <Text style={styles.signupEmphasis}>회원가입</Text> 바로가기
               </Text>
             </TouchableOpacity>
+          )}
           </View>
+
+          {/* 로그인 skip 버튼 */}
+        {false && (
+          <TouchableOpacity 
+            style={styles.skipButton}
+            onPress={() => navigation.replace('Main')}
+          >
+            <Text style={styles.skipButtonText}>SKIP</Text>
+          </TouchableOpacity>
+        )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -479,6 +496,17 @@ const styles = StyleSheet.create({
   signupEmphasis: {
     fontWeight: 'bold',
     color: '#007AFF',
+  },
+  skipButton: {
+    marginTop: 30,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skipButtonText: {
+    fontSize: 18,
+    color: '#999999',
+    textDecorationLine: 'underline',
   },
 });
 

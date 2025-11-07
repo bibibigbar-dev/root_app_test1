@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import Header from '../components/Header';
 
 const MainScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -22,11 +23,23 @@ const MainScreen = ({ navigation }) => {
 
   const loadUserData = async () => {
     try {
-      // 세션 만료 확인
+      // 먼저 로그인 정보가 있는지 확인
+      const userData = await AsyncStorage.getItem('userData');
+      
+      // 로그인 정보가 없으면 Skip 모드로 진행
+      if (!userData) {
+        console.log('로그인 정보 없음 - Skip 모드로 진행');
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      // 로그인 정보가 있을 때만 세션 만료 확인
       const loginCheck = await ApiService.checkLoginExpiration();
       if (loginCheck.expired) {
         console.log('세션 만료:', loginCheck.reason);
         await ApiService.clearLoginData();
+        // 세션 만료 시에만 로그인 화면으로 이동
         navigation.replace('Login');
         return;
       }
@@ -36,12 +49,14 @@ const MainScreen = ({ navigation }) => {
       if (currentUser) {
         setUser(currentUser);
       } else {
-        // 로그인 정보가 없으면 로그인 화면으로 이동
-        navigation.replace('Login');
+        // 로그인 정보가 없어도 Skip 모드를 허용 (화면 유지)
+        console.log('사용자 정보 조회 실패 - Skip 모드로 진행');
+        setUser(null);
       }
     } catch (error) {
       console.error('사용자 데이터 로드 오류:', error);
-      navigation.replace('Login');
+      // 에러 발생 시에도 Skip 모드 허용
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -49,7 +64,12 @@ const MainScreen = ({ navigation }) => {
 
   const handleLogout = async () => {
     try {
-      await ApiService.logout();
+      if (user) {
+        await ApiService.logout();
+      } else {
+        // Skip 모드에서 로그아웃 시 로그인 화면으로 이동
+        await ApiService.clearLoginData();
+      }
       navigation.replace('Login');
     } catch (error) {
       console.error('로그아웃 오류:', error);
@@ -72,17 +92,8 @@ const MainScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Image 
-          source={require('../assets/images/thumbnail_logo_en.jpg')} 
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>로그아웃</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <Header navigation={navigation} user={user} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.userInfo}>
@@ -95,12 +106,21 @@ const MainScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.menuContainer}>
-          <TouchableOpacity style={styles.menuButton} onPress={handleWithdrawal}>
+          <TouchableOpacity 
+            style={[styles.menuButton, !user && styles.menuButtonDisabled]} 
+            onPress={handleWithdrawal}
+            disabled={!user}
+          >
             <Text style={styles.menuButtonText}>출금 신청</Text>
           </TouchableOpacity>
+          {!user && (
+            <Text style={styles.skipNoticeText}>
+              로그인 후 출금 신청이 가능합니다.
+            </Text>
+          )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -125,34 +145,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#666666',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  logo: {
-    width: 120,
-    height: 40,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-  },
-  logoutButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 5,
-    backgroundColor: '#F5F5F5',
-  },
-  logoutText: {
-    color: '#666666',
-    fontSize: 14,
   },
   content: {
     flex: 1,
@@ -188,6 +180,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  menuButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
+  skipNoticeText: {
+    fontSize: 14,
+    color: '#999999',
+    textAlign: 'center',
+    marginTop: 10,
   },
 });
 

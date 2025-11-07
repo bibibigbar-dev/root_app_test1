@@ -9,13 +9,14 @@ import {
   ActivityIndicator,
   ScrollView,
   SafeAreaView,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
 const WithdrawalScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
-  const [amount, setAmount] = useState('');
   const [bankName, setBankName] = useState('');
   const [bankAccount, setBankAccount] = useState('');
   const [accountHolder, setAccountHolder] = useState('');
@@ -138,37 +139,30 @@ const WithdrawalScreen = ({ navigation }) => {
   };
 
   const handleWithdrawal = async () => {
-    if (!amount || !bankName || !bankAccount || !accountHolder) {
-      Alert.alert('오류', '모든 필드를 입력해주세요.');
+    // 필수 정보 확인
+    if (!bankName || !bankAccount || !accountHolder) {
+      Alert.alert('오류', '출금 계좌 정보를 확인할 수 없습니다.');
       return;
     }
 
-    // 콤마 제거하고 숫자로 변환
-    const numericAmount = parseFloat(amount.replace(/,/g, ''));
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      Alert.alert('오류', '올바른 금액을 입력해주세요.');
-      return;
-    }
-
-    // member_id 확인
     if (!user?.session?.member_id) {
       Alert.alert('오류', '사용자 정보를 확인할 수 없습니다.');
       return;
     }
 
-    // 출금 확인 알림
+    const balanceString = user?.session?.balance || '0';
+    const numericAmount = parseFloat(String(balanceString).replace(/,/g, ''));
+    if (!numericAmount || isNaN(numericAmount) || numericAmount <= 0) {
+      Alert.alert('오류', '출금 가능한 금액이 없습니다.');
+      return;
+    }
+
     Alert.alert(
-      '출금 신청',
-      `출금신청을 하시겠습니까?\n금액: ${formatCurrency(numericAmount.toString())}원`,
+      '전액 출금 신청',
+      `보유 금액 전액(${formatCurrency(numericAmount.toString())}원)을 출금 신청하시겠습니까?`,
       [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '확인',
-          onPress: () => proceedWithdrawal(numericAmount),
-        },
+        { text: '취소', style: 'cancel' },
+        { text: '확인', onPress: () => proceedWithdrawal(numericAmount) },
       ]
     );
   };
@@ -210,8 +204,7 @@ const WithdrawalScreen = ({ navigation }) => {
             {
               text: '확인',
               onPress: () => {
-                // 출금 금액만 초기화 (은행 정보는 유지)
-                setAmount('');
+                // 전액 출금이므로 초기화할 필요 없음
               },
             },
           ]
@@ -233,18 +226,7 @@ const WithdrawalScreen = ({ navigation }) => {
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
-  const handleAmountChange = (value) => {
-    const formatted = formatCurrency(value);
-    setAmount(formatted);
-  };
-
-  const handleFullAmountPress = () => {
-    if (user?.session?.balance) {
-      const fullAmount = formatCurrency(user.session.balance);
-      setAmount(fullAmount);
-      console.log('💰 전액 설정:', fullAmount);
-    }
-  };
+  // 금액 입력은 제거하여 전액 출금만 지원
 
   const maskAccountNumber = (accountNumber) => {
     if (!accountNumber || accountNumber.length < 6) {
@@ -269,9 +251,16 @@ const WithdrawalScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>출금 신청</Text>
+    <View style={styles.container}>
+      {/* 상단 뒤로가기/로그아웃 바 */}
+      <View
+        style={[
+          styles.topBar,
+          Platform.OS === 'android' && { paddingTop: (StatusBar.currentHeight || 16) },
+          Platform.OS === 'ios' && { paddingTop: 16 },
+        ]}
+      >
+        <Text style={styles.topTitle}>출금 요청</Text>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Text style={styles.logoutText}>로그아웃</Text>
         </TouchableOpacity>
@@ -296,33 +285,15 @@ const WithdrawalScreen = ({ navigation }) => {
               <Text style={styles.accountLabel}>예금주명</Text>
               <Text style={styles.accountValue}>{accountHolder || '예금주명 없음'}</Text>
             </View>
-          </View>
-
-          {/* 출금 금액 정보 */}
-          <View style={styles.amountInfoBox}>
-            <Text style={styles.balanceText}>
-              출금 가능한 금액: {user?.session?.balance ? formatCurrency(user.session.balance) : '0'}원
-            </Text>
             
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>출금 금액 (원)</Text>
-              <View style={styles.amountInputContainer}>
-                <TextInput
-                  style={styles.amountInput}
-                  placeholder="0"
-                  value={amount}
-                  onChangeText={handleAmountChange}
-                  keyboardType="numeric"
-                />
-                <TouchableOpacity 
-                  style={styles.fullAmountButton}
-                  onPress={handleFullAmountPress}
-                >
-                  <Text style={styles.fullAmountButtonText}>전액</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.accountDisplayGroup}>
+              <Text style={styles.accountLabel}>출금가능금액</Text>
+              <Text style={styles.accountNumberValue}>
+                {formatCurrency(user?.session?.balance || '0')} 원
+              </Text>
             </View>
           </View>
+
 
           <TouchableOpacity
             style={[styles.submitButton, loading && styles.disabledButton]}
@@ -332,7 +303,7 @@ const WithdrawalScreen = ({ navigation }) => {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitButtonText}>출금 신청</Text>
+              <Text style={styles.submitButtonText}>전액 출금 신청</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -346,7 +317,7 @@ const WithdrawalScreen = ({ navigation }) => {
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -354,6 +325,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    paddingTop: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -366,17 +338,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
   },
-  header: {
+  content: {
+    flex: 1,
+  },
+  topBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
   },
-  headerTitle: {
-    fontSize: 20,
+  backButton: {
+    paddingVertical: 6,
+    paddingRight: 12,
+  },
+  backIcon: {
+    fontSize: 22,
+    color: '#333333',
+  },
+  topTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333333',
   },
@@ -389,9 +373,6 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#666666',
     fontSize: 14,
-  },
-  content: {
-    flex: 1,
   },
   userInfo: {
     padding: 20,
@@ -441,7 +422,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   amountInfoBox: {
-    backgroundColor: '#F0F8FF',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 10, // 20에서 15로 줄임
@@ -456,7 +437,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   accountLabel: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333333',
     flex: 1,
@@ -469,7 +450,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   accountNumberValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#007AFF', // 파랑색
     flex: 2,
@@ -514,6 +495,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     backgroundColor: '#FAFAFA',
   },
+  balanceReadOnlyInput: {
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+    color: '#000000',
+    fontSize: 18,
+  },
   fullAmountButton: {
     height: 50,
     paddingHorizontal: 25,
@@ -540,13 +529,13 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   notice: {
     margin: 20,
     padding: 15,
-    backgroundColor: '#F0F8FF', // 연한 파랑색 배경
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderLeftWidth: 4,
     borderLeftColor: '#007AFF', // 파랑색 테두리

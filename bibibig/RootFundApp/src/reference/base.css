@@ -1,0 +1,79 @@
+/* Reset */
+*,
+*:before,
+*:after { box-sizing: border-box; letter-spacing: -0.02em; } 
+html { font-size: 10px; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; } 
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+div,
+p,
+address,
+ul,
+ol,
+li,
+dl,
+dt,
+dd,
+table,
+th,
+td,
+form,
+fieldset,
+legend,
+hr,
+input,
+textarea,
+button { margin: 0; padding: 0; } 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+b { font-weight: 700; } 
+ul,
+ol { list-style: none; } 
+table { width: 100%; border-spacing: 0; border: 0; } 
+img,
+fieldset { border: 0; vertical-align: top; } 
+i,
+address,
+em { font-style: normal; } 
+legend,
+caption,
+.blind_read { position: absolute; width: 0.1rem; height: 0.1rem; margin: -0.1rem; overflow: hidden; clip-path: polygon(0 0, 0 0, 0 0); } 
+
+/* Base */
+body { background: #fff; color: #222; font-size: 1.3rem; line-height: 1.5; font-weight: 400; font-family: "Pretendard", sans-serif; text-align: left; overflow-x: hidden; } 
+input, textarea, select, button { color: #222; font-size: 1.3rem; line-height: 1.5; font-weight: 400; font-family: "Pretendard", sans-serif; vertical-align: middle; } 
+a { color: #222; text-decoration: none; } 
+input:not([type="radio"]):not([type="checkbox"]), textarea, select, button { appearance: none; } 
+label, button, select { cursor: pointer; } 
+select::-ms-expand { display: none; } 
+button { border: none; } 
+img { max-width: 100%; } 
+
+#skip_nav { position: absolute; top: 0; left: 0; width: 100%; height: 0.1rem; z-index: 99999; } 
+#skip_nav a { display: block; position: absolute; top: -0.1rem; left: 0; width: 100%; height: 0.1rem; background: #000; color: #fff; font-size: 2rem; line-height: 5rem; font-weight: bold; text-align: center; overflow: hidden; -webkit-transition: 0.3s; transition: 0.3s; } 
+#skip_nav a:hover, #skip_nav a:focus, #skip_nav a:active { height: 5rem; -webkit-transition: 0.3s; transition: 0.3s; } 
+
+::-webkit-input-placeholder { color: #a3a7ab; font-size: 1.3rem; font-weight: 400; } 
+:-ms-input-placeholder { color: #a3a7ab; font-size: 1.3rem; font-weight: 400; } 
+::placeholder { color: #a3a7ab; font-size: 1.3rem; font-weight: 400; } 
+
+/*html5*/
+article,
+aside,
+dialog,
+footer,
+header,
+section,
+nav,
+figure,
+menu { display: block; } 
