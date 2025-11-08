@@ -40,7 +40,10 @@ const MainScreen = ({ navigation }) => {
         console.log('세션 만료:', loginCheck.reason);
         await ApiService.clearLoginData();
         // 세션 만료 시에만 로그인 화면으로 이동
-        navigation.replace('Login');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
         return;
       }
 
@@ -70,11 +73,17 @@ const MainScreen = ({ navigation }) => {
         // Skip 모드에서 로그아웃 시 로그인 화면으로 이동
         await ApiService.clearLoginData();
       }
-      navigation.replace('Login');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     } catch (error) {
       console.error('로그아웃 오류:', error);
       await ApiService.clearLoginData();
-      navigation.replace('Login');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     }
   };
 

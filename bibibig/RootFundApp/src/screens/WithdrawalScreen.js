@@ -15,6 +15,38 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
+const sanitizeText = (value) => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  const text = String(value).trim();
+  if (!text || text.toLowerCase() === 'null' || text.toLowerCase() === 'undefined') {
+    return '';
+  }
+
+  return text;
+};
+
+const displayOrDash = (value) => {
+  const sanitized = sanitizeText(value);
+  return sanitized || '-';
+};
+
+const getSafeBalanceText = (value, formatCurrencyFn) => {
+  const sanitized = sanitizeText(value);
+  if (!sanitized) {
+    return '-';
+  }
+
+  const numeric = Number(String(sanitized).replace(/[^0-9.-]/g, ''));
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return '-';
+  }
+
+  return `${formatCurrencyFn(numeric)} 원`;
+};
+
 const WithdrawalScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [bankName, setBankName] = useState('');
@@ -47,7 +79,14 @@ const WithdrawalScreen = ({ navigation }) => {
       if (loginCheck.expired) {
         console.log('세션 만료:', loginCheck.reason);
         await ApiService.clearLoginData();
-        navigation.replace('Login');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
         return;
       }
 
@@ -56,7 +95,7 @@ const WithdrawalScreen = ({ navigation }) => {
       if (currentUser) {
         setUser(currentUser);
         // 세션 데이터에서 r_name 사용
-        setAccountHolder(currentUser.session?.r_name || currentUser.name);
+        setAccountHolder(sanitizeText(currentUser.session?.r_name) || sanitizeText(currentUser.name));
         
         // 백엔드에서 받은 은행 정보 자동 설정 (member 데이터 직접 접근)
         console.log('🏦 은행 정보 설정 시도:');
@@ -65,8 +104,8 @@ const WithdrawalScreen = ({ navigation }) => {
         console.log('member.account:', currentUser.member?.account);
         
         // member 데이터에서 직접 가져오기
-        setBankName(currentUser.member?.bank_nm || '');
-        setBankAccount(currentUser.member?.account || '');
+        setBankName(sanitizeText(currentUser.member?.bank_nm));
+        setBankAccount(sanitizeText(currentUser.member?.account));
         
         console.log('🏦 은행 정보 설정 완료!');
         
@@ -102,12 +141,11 @@ const WithdrawalScreen = ({ navigation }) => {
         console.log('formatCurrency 테스트:', formatCurrency(currentUser.session?.balance || '0'));
       } else {
         console.log('❌ getCurrentUser 결과가 null');
-        // 로그인 정보가 없으면 로그인 화면으로 이동
-        navigation.replace('Login');
+        Alert.alert('알림', '사용자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
       }
     } catch (error) {
       console.error('사용자 데이터 로드 오류:', error);
-      navigation.replace('Login');
+      Alert.alert('네트워크 오류', '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setInitialLoading(false);
     }
@@ -125,12 +163,18 @@ const WithdrawalScreen = ({ navigation }) => {
             try {
               // 새로운 로그아웃 API 사용 (백엔드 로그아웃 + 로컬 데이터 삭제)
               await ApiService.logout();
-              navigation.replace('Login');
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
             } catch (error) {
               console.error('로그아웃 오류:', error);
               // 오류가 발생해도 로컬 데이터는 삭제하고 로그인 화면으로 이동
               await ApiService.clearLoginData();
-              navigation.replace('Login');
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
             }
           },
         },
@@ -229,8 +273,11 @@ const WithdrawalScreen = ({ navigation }) => {
   // 금액 입력은 제거하여 전액 출금만 지원
 
   const maskAccountNumber = (accountNumber) => {
-    if (!accountNumber || accountNumber.length < 6) {
-      return accountNumber || '계좌번호 없음';
+    if (!accountNumber) {
+      return '-';
+    }
+    if (accountNumber.length < 6) {
+      return accountNumber;
     }
     
     // 앞 4자리 + 중간 * + 뒤 2자리
@@ -273,7 +320,7 @@ const WithdrawalScreen = ({ navigation }) => {
           <View style={styles.accountInfoBox}>
             <View style={styles.accountDisplayGroup}>
               <Text style={styles.accountLabel}>은행명</Text>
-              <Text style={styles.accountValue}>{bankName || '은행명 없음'}</Text>
+              <Text style={styles.accountValue}>{displayOrDash(bankName)}</Text>
             </View>
 
             <View style={styles.accountDisplayGroup}>
@@ -283,13 +330,13 @@ const WithdrawalScreen = ({ navigation }) => {
 
             <View style={styles.accountDisplayGroup}>
               <Text style={styles.accountLabel}>예금주명</Text>
-              <Text style={styles.accountValue}>{accountHolder || '예금주명 없음'}</Text>
+              <Text style={styles.accountValue}>{displayOrDash(accountHolder)}</Text>
             </View>
             
             <View style={styles.accountDisplayGroup}>
               <Text style={styles.accountLabel}>출금가능금액</Text>
               <Text style={styles.accountNumberValue}>
-                {formatCurrency(user?.session?.balance || '0')} 원
+                {getSafeBalanceText(user?.session?.balance, formatCurrency)}
               </Text>
             </View>
           </View>

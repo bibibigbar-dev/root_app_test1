@@ -47,12 +47,18 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
         await ApiService.clearLoginData();
       }
       setMenuVisible(false);
-      navigation.replace('Login');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     } catch (error) {
       console.error('로그아웃 오류:', error);
       await ApiService.clearLoginData();
       setMenuVisible(false);
-      navigation.replace('Login');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     }
   };
 
@@ -68,7 +74,14 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
         {showBack ? (
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={onBackPress || (() => navigation.replace('Login'))}
+            onPress={
+              onBackPress ||
+              (() =>
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Login' }],
+                }))
+            }
           >
             <Text style={styles.backText}>뒤로</Text>
           </TouchableOpacity>
