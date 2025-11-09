@@ -48,8 +48,8 @@ const LoginScreen = ({ navigation }) => {
       const userToken = await AsyncStorage.getItem('userToken');
       
       if (userData && userToken) {
-        // 이미 로그인된 사용자가 있으면 출금 화면으로 이동
-        navigation.replace('Withdrawal');
+        // 이미 로그인된 사용자가 있으면 MyHome 화면으로 이동
+        navigation.replace('MyHome');
       }
     } catch (error) {
       console.error('기존 로그인 확인 오류:', error);
@@ -94,7 +94,7 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-  const handleLogin = async (targetScreen = 'Main', setLoadingState) => {
+  const handleLogin = async (targetScreen = 'MyHome', setLoadingState) => {
     console.log('🚀 로그인 시작');
     
     if (!email || !password) {
@@ -138,8 +138,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleMainLogin = () => {
-    Alert.alert('알림', '준비중입니다.');
-    // handleLogin('Main', setMainLoginLoading);
+    handleLogin('MyHome', setMainLoginLoading);
   };
 
   const handleWithdrawalLogin = () => {
@@ -236,30 +235,26 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.checkboxLabel}>로그인 저장하기</Text>
           </TouchableOpacity>
 
-          {/* 신규 로그인 버튼 - 임시 비활성화 */}
-          {false && (
-            <TouchableOpacity 
-              style={[styles.loginButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
-              onPress={handleMainLogin}
-              disabled={mainLoginLoading || withdrawalLoginLoading}
-            >
-              <Text style={styles.loginButtonText}>로그인</Text>
-            </TouchableOpacity>
-          )}
+          {/* 로그인 버튼 */}
+          <TouchableOpacity 
+            style={[styles.loginButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
+            onPress={handleMainLogin}
+            disabled={mainLoginLoading || withdrawalLoginLoading}
+          >
+            <Text style={styles.loginButtonText}>로그인</Text>
+          </TouchableOpacity>
 
-          {/* 카카오 로그인 버튼 - 임시 비활성화 */}
-          {false && (
-            <TouchableOpacity 
-              style={[styles.kakaoButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]}
-              onPress={handleKakaoLogin}
-              disabled={mainLoginLoading || withdrawalLoginLoading}
-            >
-              <View style={styles.kakaoIcon}>
-                <Text style={styles.kakaoIconText}>K</Text>
-              </View>
-              <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
-            </TouchableOpacity>
-          )}
+          {/* 카카오 로그인 버튼 */}
+          <TouchableOpacity 
+            style={[styles.kakaoButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]}
+            onPress={handleKakaoLogin}
+            disabled={mainLoginLoading || withdrawalLoginLoading}
+          >
+            <View style={styles.kakaoIcon}>
+              <Text style={styles.kakaoIconText}>K</Text>
+            </View>
+            <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
+          </TouchableOpacity>
 
           {/* 출금 바로가기 버튼 */}
           <TouchableOpacity 
@@ -277,37 +272,29 @@ const LoginScreen = ({ navigation }) => {
           {/* 링크 섹션 */}
           <View style={styles.linksContainer}>
             <View style={styles.leftLinks}>
-              {false && (
-                <>
-                  <TouchableOpacity onPress={handleFindEmail}>
-                    <Text style={styles.linkText}>이메일 찾기</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.separator}>|</Text>
-                  <TouchableOpacity onPress={handleFindPassword}>
-                    <Text style={styles.linkText}>비밀번호 찾기</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+              <TouchableOpacity onPress={handleFindEmail}>
+                <Text style={styles.linkText}>이메일 찾기</Text>
+              </TouchableOpacity>
+              <Text style={styles.separator}>|</Text>
+              <TouchableOpacity onPress={handleFindPassword}>
+                <Text style={styles.linkText}>비밀번호 찾기</Text>
+              </TouchableOpacity>
             </View>
 
-          {false && (
             <TouchableOpacity onPress={handleSignUp} style={styles.signupButton}>
               <Text style={styles.signupButtonText}>
                 <Text style={styles.signupEmphasis}>회원가입</Text> 바로가기
               </Text>
             </TouchableOpacity>
-          )}
           </View>
 
           {/* 로그인 skip 버튼 */}
-        {false && (
           <TouchableOpacity 
             style={styles.skipButton}
             onPress={() => navigation.replace('Main')}
           >
             <Text style={styles.skipButtonText}>SKIP</Text>
           </TouchableOpacity>
-        )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

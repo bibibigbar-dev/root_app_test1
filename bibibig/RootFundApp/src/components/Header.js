@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,32 +8,32 @@ import {
   ScrollView,
   Image,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
-// PNG assets (SVGs removed as requested)
-const LogoPng = require('../assets/images/logo.png');
-const MyPng = require('../assets/images/ico_my.png');
-const MenuPng = require('../assets/images/ico_menu.png');
-const List01Png = require('../assets/images/ico_menu_list01.png');
-const List02Png = require('../assets/images/ico_menu_list02.png');
-const List03Png = require('../assets/images/ico_menu_list03.png');
-const List04Png = require('../assets/images/ico_menu_list04.png');
-const List05Png = require('../assets/images/ico_menu_list05.png');
-const List06Png = require('../assets/images/ico_menu_list06.png');
-const List08Png = require('../assets/images/ico_menu_list08.png');
-const ArrowRightPng = require('../assets/images/ico_arrow_right_30.png');
-const LogoutPng = require('../assets/images/ico_logout.png');
-// Simple PNG renderer
-function Png({ source, width, height, style }) {
-  return <Image source={source} style={[{ width, height }, style]} resizeMode="contain" />;
-}
 
-
-const Header = ({ navigation, user, showBack = false, onBackPress }) => {
+const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = false }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(!!user);
+  const slideAnim = useRef(new Animated.Value(-1000)).current;
+
+  useEffect(() => {
+    if (menuVisible) {
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: -1000,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [menuVisible]);
 
   const toggleMenu = () => {
     setMenuVisible(!menuVisible);
@@ -69,21 +69,18 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
   };
 
   return (
-    <SafeAreaView style={styles.headerContainer}>
+    <SafeAreaView style={styles.headerContainer} edges={hideBorder ? ['top', 'left', 'right'] : ['top', 'left', 'right', 'bottom']}>
       <View style={styles.header}>
         {showBack ? (
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={
-              onBackPress ||
-              (() =>
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Login' }],
-                }))
-            }
+            onPress={onBackPress || (() => navigation.navigate('MyHome'))}
           >
-            <Text style={styles.backText}>뒤로</Text>
+            <Image 
+              source={require('../assets/images/ico_my.png')} 
+              style={{ width: 24, height: 24 }} 
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity 
@@ -93,7 +90,11 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
               console.log('마이페이지');
             }}
           >
-            <Png source={MyPng} width={24} height={24} />
+            <Image 
+              source={require('../assets/images/ico_my.png')} 
+              style={{ width: 24, height: 24 }} 
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         )}
 
@@ -101,19 +102,27 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
           style={styles.logoContainer}
           onPress={() => navigation.navigate('Main')}
         >
-          <Png source={LogoPng} width={142} height={24} />
+          <Image 
+            source={require('../assets/images/rootfund_logo.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.menuButton}
           onPress={toggleMenu}
         >
-          <Png source={MenuPng} width={24} height={24} />
+          <Image 
+            source={require('../assets/images/ico_menu.png')} 
+            style={{ width: 24, height: 24 }} 
+            resizeMode="contain"
+          />
         </TouchableOpacity>
       </View>
 
       {/* GNB (하단 네비게이션) */}
-      <View style={styles.gnbBox}>
+      <View style={[styles.gnbBox, hideBorder && styles.noBorder]}>
         <View style={styles.gnb}>
           <TouchableOpacity 
             style={styles.gnbItem}
@@ -149,7 +158,7 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
       <Modal
         visible={menuVisible}
         transparent={true}
-        animationType="slide"
+        animationType="none"
         onRequestClose={toggleMenu}
       >
         <View style={styles.menuWrap}>
@@ -158,7 +167,7 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
             activeOpacity={1}
             onPress={toggleMenu}
           />
-          <View style={styles.menuCont}>
+          <Animated.View style={[styles.menuCont, { right: slideAnim }]}>
             {/* 메뉴 헤더 */}
             <View style={styles.menuHead}>
               <Text style={styles.welcomeText}>
@@ -174,57 +183,57 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
               )}
             </View>
 
-            <ScrollView style={styles.menuInfo}>
-              {user ? (
-                // 로그인 후
-                <View style={styles.bankBox}>
-                  <View style={styles.nameNum}>
-                    <Image 
-                      source={require('../assets/images/img_bank_nh.png')} 
-                      style={styles.bankIcon}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.accountNum}>
-                      {user.member?.v_account || '-'}
-                    </Text>
-                  </View>
-                  <View style={styles.amountBox}>
-                    <Text style={styles.amountLabel}>예치금</Text>
-                    <Text style={styles.amountValue}>
-                      {formatCurrency(user?.session?.balance || '0')}원
-                    </Text>
-                  </View>
+            {/* 로그인/계좌 정보 박스 (절대 위치) */}
+            {user ? (
+              <View style={styles.bankBox}>
+                <View style={styles.nameNum}>
+                  <Image 
+                    source={require('../assets/images/img_bank_nh.png')} 
+                    style={styles.bankIcon}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.accountNum}>
+                    {user.member?.v_account || '-'}
+                  </Text>
                 </View>
-              ) : (
-                // 로그인 전
-                <View style={styles.loginJoin}>
-                  <TouchableOpacity 
-                    style={styles.loginJoinItem}
-                    onPress={() => {
-                      setMenuVisible(false);
-                      navigation.navigate('Login');
-                    }}
-                  >
-                    <Text style={styles.loginJoinText}>로그인</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.loginJoinItem}
-                    onPress={() => {
-                      setMenuVisible(false);
-                      navigation.navigate('SignUp');
-                    }}
-                  >
-                    <Text style={styles.loginJoinText}>회원가입</Text>
-                  </TouchableOpacity>
+                <View style={styles.amountBox}>
+                  <Text style={styles.amountLabel}>예치금</Text>
+                  <Text style={styles.amountValue}>
+                    {formatCurrency(user?.session?.balance || '0')}원
+                  </Text>
                 </View>
-              )}
+              </View>
+            ) : (
+              <View style={styles.loginJoin}>
+                <TouchableOpacity 
+                  style={styles.loginJoinItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('Login');
+                  }}
+                >
+                  <Text style={styles.loginJoinText}>로그인</Text>
+                </TouchableOpacity>
+                <View style={styles.loginJoinDivider} />
+                <TouchableOpacity 
+                  style={styles.loginJoinItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('SignUp');
+                  }}
+                >
+                  <Text style={styles.loginJoinText}>회원가입</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
+            <ScrollView style={styles.menuInfo}>
               {/* 메인 메뉴 */}
               <View style={styles.menuMain}>
                 <TouchableOpacity style={styles.menuMainItem}>
                   <Image 
                     source={require('../assets/images/ico_menu_main01.png')} 
-                    style={styles.menuMainIcon}
+                    style={[styles.menuMainIcon, { tintColor: null }]}
                     resizeMode="contain"
                   />
                   <Text style={styles.menuMainText}>투자현황</Text>
@@ -232,7 +241,7 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
                 <TouchableOpacity style={styles.menuMainItem}>
                   <Image 
                     source={require('../assets/images/ico_menu_main02.png')} 
-                    style={styles.menuMainIcon}
+                    style={[styles.menuMainIcon, { tintColor: null }]}
                     resizeMode="contain"
                   />
                   <Text style={styles.menuMainText}>마이페이지</Text>
@@ -240,7 +249,7 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
                 <TouchableOpacity style={styles.menuMainItem}>
                   <Image 
                     source={require('../assets/images/ico_menu_main03.png')} 
-                    style={styles.menuMainIcon}
+                    style={[styles.menuMainIcon, { tintColor: null }]}
                     resizeMode="contain"
                   />
                   <Text style={styles.menuMainText}>프로모션</Text>
@@ -250,58 +259,130 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
               {/* 메뉴 리스트 */}
               <View style={styles.menuList}>
                 <TouchableOpacity style={styles.menuListItem}>
-                  <Png source={List01Png} width={24} height={24} style={styles.menuListIcon} />
+                  <Image 
+                    source={require('../assets/images/ico_menu_list01.png')} 
+                    style={styles.menuListIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.menuListText}>투자</Text>
-                  <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                  <Image 
+                    source={require('../assets/images/ico_arrow_right_30.png')} 
+                    style={styles.menuListArrow} 
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuListItem}>
-                  <Png source={List02Png} width={24} height={24} style={styles.menuListIcon} />
+                  <Image 
+                    source={require('../assets/images/ico_menu_list02.png')} 
+                    style={styles.menuListIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.menuListText}>대출</Text>
-                  <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                  <Image 
+                    source={require('../assets/images/ico_arrow_right_30.png')} 
+                    style={styles.menuListArrow} 
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuListItem}>
-                  <Png source={List03Png} width={24} height={24} style={styles.menuListIcon} />
+                  <Image 
+                    source={require('../assets/images/ico_menu_list03.png')} 
+                    style={styles.menuListIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.menuListText}>법인투자안내</Text>
-                  <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                  <Image 
+                    source={require('../assets/images/ico_arrow_right_30.png')} 
+                    style={styles.menuListArrow} 
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuListItem}>
-                  <Png source={List04Png} width={24} height={24} style={styles.menuListIcon} />
+                  <Image 
+                    source={require('../assets/images/ico_menu_list04.png')} 
+                    style={styles.menuListIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.menuListText}>회사소개</Text>
-                  <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                  <Image 
+                    source={require('../assets/images/ico_arrow_right_30.png')} 
+                    style={styles.menuListArrow} 
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuListItem}>
-                  <Png source={List04Png} width={24} height={24} style={styles.menuListIcon} />
+                  <Image 
+                    source={require('../assets/images/ico_menu_list04.png')} 
+                    style={styles.menuListIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.menuListText}>고객센터</Text>
-                  <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                  <Image 
+                    source={require('../assets/images/ico_arrow_right_30.png')} 
+                    style={styles.menuListArrow} 
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuListItem}>
-                  <Png source={List05Png} width={24} height={24} style={styles.menuListIcon} />
+                  <Image 
+                    source={require('../assets/images/ico_menu_list05.png')} 
+                    style={styles.menuListIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.menuListText}>채권거래소</Text>
-                  <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                  <Image 
+                    source={require('../assets/images/ico_arrow_right_30.png')} 
+                    style={styles.menuListArrow} 
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuListItem}>
-                  <Png source={List06Png} width={24} height={24} style={styles.menuListIcon} />
+                  <Image 
+                    source={require('../assets/images/ico_menu_list06.png')} 
+                    style={styles.menuListIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.menuListText}>이웃신청 현황</Text>
-                  <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                  <Image 
+                    source={require('../assets/images/ico_arrow_right_30.png')} 
+                    style={styles.menuListArrow} 
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuListItem}>
-                  <Png source={List08Png} width={24} height={24} style={styles.menuListIcon} />
+                  <Image 
+                    source={require('../assets/images/ico_menu_list08.png')} 
+                    style={styles.menuListIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.menuListText}>이용방법</Text>
-                  <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                  <Image 
+                    source={require('../assets/images/ico_arrow_right_30.png')} 
+                    style={styles.menuListArrow} 
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
                 {user && (
                   <TouchableOpacity 
                     style={styles.menuListItem}
                     onPress={handleLogout}
                   >
-                    <Png source={LogoutPng} width={24} height={24} style={styles.menuListIcon} />
+                    <Image 
+                      source={require('../assets/images/ico_logout.png')} 
+                      style={styles.menuListIcon} 
+                      resizeMode="contain"
+                    />
                     <Text style={styles.menuListText}>로그아웃</Text>
-                    <Png source={ArrowRightPng} width={14} height={14} style={styles.menuListArrow} />
+                    <Image 
+                      source={require('../assets/images/ico_arrow_right_30.png')} 
+                      style={styles.menuListArrow} 
+                      resizeMode="contain"
+                    />
                   </TouchableOpacity>
                 )}
               </View>
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -311,13 +392,14 @@ const Header = ({ navigation, user, showBack = false, onBackPress }) => {
 const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(224, 225, 226, 0.5)',
+  },
+  noBorder: {
+    borderBottomWidth: 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
+    height: 38,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
   },
@@ -327,13 +409,9 @@ const styles = StyleSheet.create({
     marginRight: 'auto',
   },
   backButton: {
-    paddingVertical: 8,
-    paddingRight: 12,
+    width: 24,
+    height: 24,
     marginRight: 'auto',
-  },
-  backText: {
-    fontSize: 16,
-    color: '#333333',
   },
   myIcon: {
     width: 24,
@@ -344,7 +422,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    zIndex: -1,
+    justifyContent: 'center',
   },
   logoImage: {
     width: 142,
@@ -360,18 +438,19 @@ const styles = StyleSheet.create({
     height: 24,
   },
   gnbBox: {
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(224, 225, 226, 0.5)',
     backgroundColor: '#FFFFFF',
   },
   gnb: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(224, 225, 226, 0.5)',
   },
   gnbItem: {
     flex: 1,
-    paddingVertical: 12,
+    paddingTop: 10,
+    paddingBottom: 8,
     alignItems: 'center',
   },
   gnbText: {
@@ -390,17 +469,20 @@ const styles = StyleSheet.create({
   menuCont: {
     position: 'absolute',
     top: 0,
-    right: 0,
     width: '90%',
     height: '100%',
     backgroundColor: '#FFFFFF',
   },
   menuHead: {
-    minHeight: 161,
-    padding: 20,
+    flex: 0,
+    minHeight: 181,
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
     backgroundColor: '#2c3db8',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    flexDirection: 'row',
   },
   welcomeText: {
     color: '#FFFFFF',
@@ -423,15 +505,22 @@ const styles = StyleSheet.create({
   },
   menuInfo: {
     flex: 1,
+    position: 'relative',
+    zIndex: 1,
+    paddingTop: 25,
   },
   bankBox: {
-    marginTop: -33,
-    marginHorizontal: 20,
+    position: 'absolute',
+    top: 148,
+    left: 20,
+    right: 20,
     padding: 16,
     borderWidth: 1,
     borderColor: '#E0E1E2',
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
+    zIndex: 100,
+    elevation: 10,
   },
   nameNum: {
     flexDirection: 'row',
@@ -465,21 +554,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   loginJoin: {
+    position: 'absolute',
+    top: 148,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
-    marginTop: -33,
-    marginHorizontal: 20,
     borderWidth: 1,
     borderColor: '#E0E1E2',
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
+    zIndex: 100,
+    elevation: 10,
   },
   loginJoinItem: {
     flex: 1,
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#E0E1E2',
+    position: 'relative',
+  },
+  loginJoinDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: '#E0E1E2',
+    alignSelf: 'center',
   },
   loginJoinText: {
     fontSize: 15,
@@ -488,21 +586,22 @@ const styles = StyleSheet.create({
   menuMain: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: 50,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 15,
   },
   menuMainItem: {
     alignItems: 'center',
   },
   menuMainIcon: {
-    width: 40,
-    height: 40,
+    width: 35,
+    height: 35,
   },
   menuMainText: {
     marginTop: 4,
     fontSize: 12,
     textAlign: 'center',
+    color: '#333333',
   },
   menuList: {
     paddingHorizontal: 20,
@@ -522,6 +621,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     marginRight: 12,
+    tintColor: '#666666',
   },
   menuListText: {
     flex: 1,

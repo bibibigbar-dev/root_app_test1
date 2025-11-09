@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import LoginScreen from '../screens/LoginScreen';
 import MainScreen from '../screens/MainScreen';
+import MyHomeScreen from '../screens/MyHomeScreen';
 import WithdrawalScreen from '../screens/WithdrawalScreen';
 import FindEmailScreen from '../screens/FindEmailScreen';
 import FindPasswordScreen from '../screens/FindPasswordScreen';
@@ -21,6 +22,7 @@ const AppNavigator = () => {
       >
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Main" component={MainScreen} />
+        <Stack.Screen name="MyHome" component={MyHomeScreen} />
         <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
         <Stack.Screen name="FindEmail" component={FindEmailScreen} />
         <Stack.Screen name="FindPassword" component={FindPasswordScreen} />

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import JSEncrypt from 'jsencrypt';
 import { rsaEncryptWithPublicKey } from '../utils/rsaEncrypt';
+import { Platform } from 'react-native';
 
 class ApiService {
   constructor() {
@@ -50,7 +51,14 @@ class ApiService {
 
   // API 베이스 URL 결정
   getApiBaseUrl() {
-    return 'https://rootenergy.co.kr';
+    // 로컬 개발 환경
+    // Android 에뮬레이터: 10.0.2.2
+    // iOS 시뮬레이터: localhost
+    const localUrl = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+    return localUrl;
+    
+    // 운영 환경 (주석 처리)
+    // return 'https://rootenergy.co.kr';
   }
 
   // URL-encoded 형태로 데이터 변환 (Spring @ModelAttribute용)
@@ -904,6 +912,35 @@ DwIDAQAB
     } catch (error) {
       console.error('Get investment status error:', error);
       return { success: false, message: '투자 현황을 가져올 수 없습니다.' };
+    }
+  }
+
+  // 아이디 찾기
+  async findEmail(data) {
+    try {
+      const formData = new URLSearchParams();
+      formData.append('name', data.name);
+      formData.append('phone', data.phone);
+
+      const response = await this.api.post('/app/find/id/process', formData.toString());
+      return response.data;
+    } catch (error) {
+      console.error('Find email error:', error);
+      return { rtnvalue: '0', web_id: '' };
+    }
+  }
+
+  // 비밀번호 찾기
+  async findPassword(data) {
+    try {
+      const formData = new URLSearchParams();
+      formData.append('web_id', data.web_id);
+
+      const response = await this.api.post('/app/find/password/process', formData.toString());
+      return response.data;
+    } catch (error) {
+      console.error('Find password error:', error);
+      return { rtnvalue: '0' };
     }
   }
 }
