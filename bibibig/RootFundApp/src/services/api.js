@@ -915,6 +915,21 @@ DwIDAQAB
     }
   }
 
+  // 메인 페이지 데이터 조회
+  async getMainData() {
+    try {
+      const response = await this.api.get('/app/main', {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get main data error:', error);
+      throw error;
+    }
+  }
+
   // 아이디 찾기
   async findEmail(data) {
     try {

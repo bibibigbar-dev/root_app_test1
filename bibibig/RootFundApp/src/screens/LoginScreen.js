@@ -293,7 +293,7 @@ const LoginScreen = ({ navigation }) => {
             style={styles.skipButton}
             onPress={() => navigation.replace('Main')}
           >
-            <Text style={styles.skipButtonText}>SKIP</Text>
+            <Text style={styles.skipButtonText}>메인페이지로 이동</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
