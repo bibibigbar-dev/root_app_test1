@@ -34,6 +34,7 @@ const MainScreen = ({ navigation }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentReviewSlide, setCurrentReviewSlide] = useState(0);
   const [currentNewsSlide, setCurrentNewsSlide] = useState(0);
+  const [expandedFaqIndex, setExpandedFaqIndex] = useState(null);
   const flatListRef = useRef(null);
   const reviewScrollRef = useRef(null);
   const newsScrollRef = useRef(null);
@@ -694,7 +695,7 @@ const MainScreen = ({ navigation }) => {
         )}
 
         {/* 루트소식 */}
-        <View style={styles.whiteBox}>
+        <View style={styles.rootNewsSection}>
           <View style={styles.titleBox}>
             <Text style={styles.sectionTitle}>루트소식</Text>
           </View>
@@ -740,28 +741,68 @@ const MainScreen = ({ navigation }) => {
         {/* 자주하는 질문 */}
         {mainData.faq.length > 0 && (
           <View style={styles.whiteBox}>
-            <View style={[styles.titleBox, styles.titleBoxRow]}>
-              <Text style={styles.sectionTitle}>자주하는질문</Text>
+            <View style={styles.inHead}>
+              <View style={styles.titleWithIcon}>
+                <Image 
+                  source={require('../assets/images/ico_whitebox_faq.png')} 
+                  style={styles.titleIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.whiteBoxTitle}>자주하는질문</Text>
+              </View>
               <TouchableOpacity style={styles.moreButtonContainer}>
                 <Text style={styles.moreButton}>전체보기 ›</Text>
               </TouchableOpacity>
             </View>
-            {mainData.faq.slice(0, 3).map((item, index) => (
-              <View key={index} style={styles.faqItem}>
-                <View style={styles.faqHeader}>
-                  <Text style={styles.faqQ}>Q</Text>
-                  <Text style={styles.faqTitle}>{item.subject}</Text>
+            <View style={styles.inCont}>
+              {mainData.faq.slice(0, 3).map((item, index) => (
+                <View key={index} style={styles.faqItem}>
+                  <TouchableOpacity 
+                    style={styles.faqTitbox}
+                    onPress={() => setExpandedFaqIndex(expandedFaqIndex === index ? null : index)}
+                  >
+                    <Text style={styles.faqQ}>Q</Text>
+                    <Text style={styles.faqTitle}>{item.subject}</Text>
+                    <Image 
+                      source={require('../assets/images/arrow_select.png')} 
+                      style={[
+                        styles.faqArrowImage,
+                        expandedFaqIndex === index && styles.faqArrowImageUp
+                      ]}
+                      resizeMode="contain"
+                    />
+                  </TouchableOpacity>
+                  {expandedFaqIndex === index && (
+                    <View style={styles.faqConbox}>
+                      <Text style={styles.faqCon}>
+                        {item.contents
+                          .replace(/<br\s*\/?>/gi, '\n')
+                          .replace(/&nbsp;/gi, ' ')
+                          .replace(/&lt;/gi, '<')
+                          .replace(/&gt;/gi, '>')
+                          .replace(/&amp;/gi, '&')
+                          .replace(/<[^>]*>/g, '')}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
         )}
 
         {/* 공지사항 */}
         {mainData.notice.length > 0 && (
           <View style={styles.whiteBox}>
-            <View style={[styles.titleBox, styles.titleBoxRow]}>
-              <Text style={styles.sectionTitle}>공지사항</Text>
+            <View style={styles.inHead}>
+              <View style={styles.titleWithIcon}>
+                <Image 
+                    source={require('../assets/images/ico_whitebox_notice.png')} 
+                    style={styles.titleIcon}
+                    resizeMode="contain"
+                />
+                <Text style={styles.whiteBoxTitle}>공지사항</Text>
+              </View>
               <TouchableOpacity style={styles.moreButtonContainer}>
                 <Text style={styles.moreButton}>전체보기 ›</Text>
               </TouchableOpacity>
@@ -782,33 +823,44 @@ const MainScreen = ({ navigation }) => {
         {/* 공시지표 */}
         {mainData.siteStats && (
           <View style={styles.whiteBox}>
-            <View style={styles.titleBox}>
-              <Text style={styles.sectionTitle}>공시지표</Text>
-              <Text style={styles.dateText}>
-                *{new Date().toLocaleDateString('ko-KR')} 기준
+            <View style={styles.inHead}>
+              <View style={styles.titleWithIcon}>
+                <Image 
+                  source={require('../assets/images/ico_whitebox_graph.png')} 
+                  style={styles.titleIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.whiteBoxTitle}>공시지표</Text>
+              </View>
+              <Text style={styles.indicatorDesc}>
+                *{new Date().toLocaleDateString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit'}).replace(/\. /g, '년 ').replace('.', '일')} 기준
               </Text>
             </View>
-            <View style={styles.indicatorContainer}>
-              <View style={styles.indicatorBox}>
-                <Text style={styles.indicatorLabel}>누적대출액</Text>
-                <Text style={styles.indicatorValue}>
-                  {formatCurrency(mainData.siteStats.loan_price)}원
-                </Text>
+            <View style={styles.maIndicator}>
+              <View style={styles.indicatorItembox}>
+                <View style={styles.indicatorDl}>
+                  <Text style={styles.indicatorDt}>누적대출액</Text>
+                  <Text style={styles.indicatorDd}>
+                    {formatCurrency(mainData.siteStats.loan_price)}원
+                  </Text>
+                </View>
                 <View style={styles.indicatorPct}>
-                  <Text style={styles.indicatorPctLabel}>상환율</Text>
-                  <Text style={styles.indicatorPctValue}>
+                  <Text style={styles.indicatorPctTit}>상환율</Text>
+                  <Text style={styles.indicatorPctCnt}>
                     {mainData.siteStats.repay_per}%
                   </Text>
                 </View>
               </View>
-              <View style={styles.indicatorBox}>
-                <Text style={styles.indicatorLabel}>대출잔액</Text>
-                <Text style={styles.indicatorValue}>
-                  {formatCurrency(mainData.siteStats.balance)}원
-                </Text>
+              <View style={styles.indicatorItembox}>
+                <View style={styles.indicatorDl}>
+                  <Text style={styles.indicatorDt}>대출잔액</Text>
+                  <Text style={styles.indicatorDd}>
+                    {formatCurrency(mainData.siteStats.balance)}원
+                  </Text>
+                </View>
                 <View style={styles.indicatorPct}>
-                  <Text style={styles.indicatorPctLabel}>연체율</Text>
-                  <Text style={styles.indicatorPctValue}>
+                  <Text style={styles.indicatorPctTit}>연체율</Text>
+                  <Text style={styles.indicatorPctCnt}>
                     {mainData.siteStats.overdue}%
                   </Text>
                 </View>
@@ -816,6 +868,103 @@ const MainScreen = ({ navigation }) => {
             </View>
           </View>
         )}
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.footCs}>
+            <View style={styles.footCsDt}>
+              <Image 
+                source={require('../assets/images/foot_cs.png')} 
+                style={styles.footCsIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.footCsTitle}>고객문의</Text>
+            </View>
+            <View style={styles.footCsDd}>
+              <Text style={styles.footCsTel}>02) 792.8934</Text>
+              <Text style={styles.footCsEmail}>cs@rootenergy.co.kr</Text>
+              <Text style={styles.footCsTime}>평일 10시~17시 (점심 12시~13시)</Text>
+            </View>
+          </View>
+
+          <View style={styles.footLogoSns}>
+            <View style={styles.footSns}>
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.youtube.com/channel/UCDG9mSh5Z-fQiNxvcFkimpQ')}>
+                <Image source={require('../assets/images/sns_youtube.png')} style={styles.snsIcon} resizeMode="contain" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.facebook.com/rootenergy')}>
+                <Image source={require('../assets/images/sns_facebook.png')} style={styles.snsIcon} resizeMode="contain" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => Linking.openURL('https://blog.naver.com/climatefintech')}>
+                <Image source={require('../assets/images/sns_blog.png')} style={styles.snsIcon} resizeMode="contain" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => Linking.openURL('https://pf.kakao.com/_CxaYbd')}>
+                <Image source={require('../assets/images/sns_talk.png')} style={styles.snsIcon} resizeMode="contain" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => Linking.openURL('https://rootenergy.channel.io')}>
+                <Image source={require('../assets/images/sns_cntalk.png')} style={styles.snsIcon} resizeMode="contain" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.footCon}>
+            <View style={styles.footMenu}>
+              <TouchableOpacity style={styles.footMenuItem}>
+                <Text style={styles.footMenuText}>공지사항</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.footMenuItem}>
+                <Text style={styles.footMenuText}>자주하는 질문</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.footMenuItem}>
+                <Text style={styles.footMenuText}>채용</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.footLinkBox}>
+              <View style={styles.footLink}>
+                <TouchableOpacity style={styles.footLinkItem}>
+                  <Text style={styles.footLinkText}>서비스 이용약관</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footLinkItem}>
+                  <Text style={styles.footLinkText}>전자금융거래약관</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footLinkItem}>
+                  <Text style={styles.footLinkText}>개인정보처리방침</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footLinkItem}>
+                  <Text style={styles.footLinkText}>신용정보 활용체계</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footLinkItem}>
+                  <Text style={styles.footLinkText}>연계투자계약 약관</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footLinkItem}>
+                  <Text style={styles.footLinkText}>연계대출계약 약관</Text>
+                </TouchableOpacity>
+              </View>
+              <Image 
+                source={require('../assets/images/foot_certified.png')} 
+                style={styles.footCertified}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+
+          <View style={styles.footDescBox}>
+            <Text style={styles.footDesc1}>
+              대표이사 윤태환 l 사업자 등록번호 106-87-04057{'\n'}
+              온라인투자연계금융업 2024-20{'\n'}
+              주소 서울특별시 성동구 뚝섬로1나길 5 l Tel. 02-792-8934{'\n'}
+              대출금리는 플랫폼 이용료를 포함한 최대 연 19.90% 이내{'\n'}
+              연체금리는 약정금리에 연 가산금리 3%로 법정금리 최고 연 20%{'\n'}
+              이내입니다. 대출 실행 후 언제든지 조기 상환(전액)이 가능하며,{'\n'}
+              중도상환 수수료는 면제됩니다.
+            </Text>
+            <Text style={styles.footDesc2}>
+              루트인프라금융㈜는 투자원금과 수익을 보장하지 않으며,{'\n'}
+              투자 손실에 대한 책임은 모두 투자자에게 있습니다.
+            </Text>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -1097,7 +1246,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 5,
   },
   paginationDot: {
     width: 5,
@@ -1111,15 +1260,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#2c3db8',
   },
   section: {
-    backgroundColor: '#F1F2FF',
+    backgroundColor: 'transparent',
     marginBottom: 12,
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 15,
   },
   environmentSection: {
-    backgroundColor: '#F1F2FF',
+    backgroundColor: 'transparent',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 35,
     paddingBottom: 16,
   },
   titleBox: {
@@ -1138,6 +1287,15 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontFamily: 'Pretendard',
   },
+  titleWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
   dateText: {
     fontSize: 12,
     color: '#999999',
@@ -1154,7 +1312,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   dataList: {
-    marginTop: 16,
+    marginTop: 10,
   },
   dataItem: {
     marginBottom: 8,
@@ -1253,10 +1411,11 @@ const styles = StyleSheet.create({
   },
   reviewSwiper: {
     position: 'relative',
-    padding: 15,
+    paddingHorizontal: 15,
+    paddingTop: 20,
     paddingBottom: 25,
     overflow: 'hidden',
-    backgroundColor: '#F1F2FF',
+    backgroundColor: 'transparent',
   },
   reviewPagination: {
     flexDirection: 'row',
@@ -1359,8 +1518,8 @@ const styles = StyleSheet.create({
   },
   introBox: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
-    padding: 10,
+    backgroundColor: '#fff',
+    padding: 15,
     borderRadius: 12,
     alignItems: 'center',
   },
@@ -1388,12 +1547,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   introSection: {
-    backgroundColor: '#F1F2FF',
+    backgroundColor: 'transparent',
     paddingBottom: 0,
     marginBottom: 0,
   },
   kakaoBannerWrapper: {
-    backgroundColor: '#F1F2FF',
+    backgroundColor: 'transparent',
     paddingTop: 26,
     paddingBottom: 16,
   },
@@ -1472,6 +1631,11 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     color: '#bfc3c7',
   },
+  rootNewsSection: {
+    marginTop: 16,
+    marginBottom: 30,
+    paddingHorizontal: 16,
+  },
   rootNewsBox: {
   },
   rootNewsList: {
@@ -1524,29 +1688,70 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   whiteBox: {
-    backgroundColor: '#F1F2FF',
-    marginBottom: 12,
-    padding: 20,
+    marginTop: 10,
+    paddingHorizontal: 16,
+    paddingTop: 15,
+    paddingBottom: 15,
+    backgroundColor: '#FFFFFF',
+    shadowColor: 'rgba(224, 225, 226, 0.50)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 1,
   },
-  faqItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  faqHeader: {
+  inHead: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  whiteBoxTitle: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '600',
+  },
+  inCont: {
+    marginTop: 12,
+    paddingTop: 12,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#f6f6f6',
+  },
+  faqItem: {
+    paddingVertical: 12,
+  },
+  faqTitbox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   faqQ: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#007AFF',
-    marginRight: 12,
+    color: '#2c3db8',
+    marginRight: 8,
   },
   faqTitle: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: '#333333',
+  },
+  faqArrowImage: {
+    width: 16,
+    height: 16,
+    marginLeft: 8,
+  },
+  faqArrowImageUp: {
+    transform: [{ rotate: '180deg' }],
+  },
+  faqConbox: {
+    marginTop: 12,
+    paddingTop: 12,
+    paddingLeft: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  faqCon: {
+    fontSize: 15,
+    color: '#666',
+    lineHeight: 20,
   },
   noticeItem: {
     flexDirection: 'row',
@@ -1566,40 +1771,183 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999999',
   },
-  indicatorContainer: {
-    gap: 12,
+  indicatorDesc: {
+    fontSize: 12,
+    color: '#999',
+    marginLeft: 'auto',
   },
-  indicatorBox: {
-    backgroundColor: '#F8F9FA',
-    padding: 16,
-    borderRadius: 12,
-  },
-  indicatorLabel: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 8,
-  },
-  indicatorValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
+  maIndicator: {
+    flexDirection: 'row',
+    marginTop: 20,
     marginBottom: 12,
+  },
+  indicatorItembox: {
+    width: '50%',
+  },
+  indicatorDl: {
+    paddingHorizontal: 4,
+  },
+  indicatorDt: {
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '400',
+    color: '#333',
+  },
+  indicatorDd: {
+    marginTop: 6,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '600',
+    color: '#333',
   },
   indicatorPct: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    padding: 8,
-    borderRadius: 8,
+    marginTop: 16,
+    paddingTop: 12,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#f6f6f6',
   },
-  indicatorPctLabel: {
+  indicatorPctTit: {
+    marginRight: 8,
     fontSize: 12,
-    color: '#666666',
+    color: '#a3a7ab',
+    opacity: 0.7,
   },
-  indicatorPctValue: {
+  indicatorPctCnt: {
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#a3a7ab',
+  },
+  // Footer styles
+  footer: {
+    paddingTop: 24,
+    paddingBottom: 38,
+    paddingHorizontal: 16,
+    backgroundColor: '#222',
+  },
+  footCs: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  footCsDt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  footCsIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 4,
+  },
+  footCsTitle: {
+    color: '#fff',
+    fontSize: 17,
+    lineHeight: 28,
+    fontWeight: '600',
+  },
+  footCsDd: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  footCsTel: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 28,
+    fontWeight: '700',
+  },
+  footCsEmail: {
+    color: '#fff',
+    marginTop: 2,
+    fontSize: 14,
+    lineHeight: 28,
+    fontWeight: '700',
+  },
+  footCsTime: {
+    marginTop: 10,
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 18,
+    opacity: 0.7,
+  },
+  footLogoSns: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 30,
+    paddingTop: 24,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(224, 225, 226, 0.1)',
+  },
+  footSns: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  },
+  snsIcon: {
+    width: 28,
+    height: 28,
+    marginLeft: 14,
+  },
+  footCon: {
+    paddingVertical: 24,
+    paddingHorizontal: 4,
+  },
+  footMenu: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  footMenuItem: {
+    marginRight: 12,
+  },
+  footMenuText: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  footLinkBox: {
+    position: 'relative',
+    paddingTop: 16,
+    paddingRight: 40,
+  },
+  footLink: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  footLinkItem: {
+    marginRight: 12,
+  },
+  footLinkText: {
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 24,
+  },
+  footCertified: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 36,
+    height: 61,
+  },
+  footDescBox: {
+    paddingTop: 22,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(224, 225, 226, 0.1)',
+  },
+  footDesc1: {
+    color: '#a3a7ab',
+    fontSize: 12,
+    lineHeight: 16,
+    opacity: 0.7,
+    fontWeight: '400',
+  },
+  footDesc2: {
+    marginTop: 11,
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 16,
+    opacity: 0.7,
+    fontWeight: '400',
   },
 });
 

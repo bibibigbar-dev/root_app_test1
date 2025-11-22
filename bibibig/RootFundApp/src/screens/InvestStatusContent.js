@@ -1,0 +1,1230 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Modal,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
+import ApiService from '../services/api';
+
+const InvestStatusContent = ({ navigation, route, user, member_id }) => {
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
+  const [investList, setInvestList] = useState([]);
+  const [searchText, setSearchText] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [showSellErrorModal, setShowSellErrorModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [bondSellPrice, setBondSellPrice] = useState('');
+  const [hopeSellPrice, setHopeSellPrice] = useState('');
+  const [scheduleData, setScheduleData] = useState([]);
+  const [expandedScheduleIndex, setExpandedScheduleIndex] = useState(null);
+
+  useEffect(() => {
+    loadInvestData();
+  }, []);
+
+  const loadInvestData = async () => {
+    setLoading(true);
+    try {
+      const memberId = member_id || user?.session?.member_id || user?.id;
+      
+      // GET 요청으로 쿼리 파라미터 전송
+      const params = {
+        member_id: memberId,
+      };
+      
+      // orderName이 있으면 추가
+      if (searchText) {
+        params.orderName = searchText;
+      }
+      
+      const response = await ApiService.api.get('/app/my/invest/list', {
+        params: params
+      });
+
+      console.log('투자현황 응답:', response.data);
+
+      if (response.data) {
+        setSummary(response.data.summary || {});
+        const list = response.data.list || [];
+        setInvestList(list);
+        
+        // 페이지 계산 (2개씩 표시)
+        const pages = Math.ceil(list.length / 2);
+        setTotalPages(pages > 0 ? pages : 1);
+      } else {
+        setSummary(null);
+        setInvestList([]);
+        setTotalPages(1);
+      }
+    } catch (error) {
+      console.error('투자현황 조회 실패:', error);
+      setSummary(null);
+      setInvestList([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    loadInvestData();
+  };
+
+  const handleLoadMore = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const formatCurrency = (value) => {
+    if (!value) return '0';
+    const stringValue = typeof value === 'string' ? value : String(value);
+    const numericValue = stringValue.replace(/[^0-9]/g, '');
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'FUNDING':
+        return { text: '펀딩중', color: '#2c3db8' };
+      case 'SUCCESS':
+        return { text: '펀딩성공', color: '#2c3db8' };
+      case 'REPAY':
+      case 'OVERDUE':
+        return { text: '상환중', color: '#2ebab4' };
+      case 'CANCEL':
+        return { text: '취소', color: '#666' };
+      case 'COMPLETE':
+        return { text: '상환완료', color: '#666' };
+      case 'M_COMPLETE':
+        return { text: '중도상환', color: '#666' };
+      case 'COLLECT':
+        return { text: '추심', color: '#666' };
+      case 'C_COMPLETE':
+        return { text: '추심완료', color: '#666' };
+      case 'C_LOSS':
+        return { text: '결손처리', color: '#666' };
+      default:
+        return { text: '펀딩중', color: '#2c3db8' };
+    }
+  };
+
+  const getStatusBgColor = (status) => {
+    if (status === 'FUNDING' || status === 'SUCCESS') return '#2c3db8';
+    if (status === 'REPAY' || status === 'OVERDUE') return '#2ebab4';
+    return '#666';
+  };
+
+  const getProductImage = (orderType) => {
+    switch (orderType) {
+      case '태양광':
+        return require('../assets/images/ico_status01.png');
+      case 'ESS':
+        return require('../assets/images/ico_status01.png'); // ESS 이미지가 없으므로 기본 이미지 사용
+      case '풍력':
+        return require('../assets/images/ico_status03.png');
+      case '전기차충전소':
+        return require('../assets/images/ico_status02.png');
+      default:
+        return require('../assets/images/ico_status01.png');
+    }
+  };
+
+  const handleInvestCancel = async (orderNumber) => {
+    Alert.alert(
+      '투자취소',
+      '정말 투자를 취소하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '확인',
+          onPress: async () => {
+            try {
+              const response = await ApiService.api.post('/app/product/invest/cancel', {
+                orderNumber,
+              });
+
+              if (response.data === '0') {
+                Alert.alert('알림', '투자가 취소되었습니다.', [
+                  { text: '확인', onPress: () => loadInvestData() }
+                ]);
+              } else {
+                Alert.alert('오류', '투자 취소 중 오류가 발생했습니다.');
+              }
+            } catch (error) {
+              console.error('투자 취소 실패:', error);
+              Alert.alert('오류', '투자 취소 중 오류가 발생했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleShowInvestCertify = async (idx) => {
+    try {
+      // 투자 확인서는 새 창으로 열리므로 웹뷰나 외부 브라우저로 처리
+      Alert.alert('알림', '투자 확인서는 웹에서 확인하실 수 있습니다.');
+    } catch (error) {
+      console.error('투자 확인서 조회 실패:', error);
+    }
+  };
+
+  const handleShowInvestReceipt = async (idx) => {
+    try {
+      // 원리금수취권 증서는 새 창으로 열리므로 웹뷰나 외부 브라우저로 처리
+      Alert.alert('알림', '원리금수취권 증서는 웹에서 확인하실 수 있습니다.');
+    } catch (error) {
+      console.error('원리금수취권 증서 조회 실패:', error);
+    }
+  };
+
+  const handleOpenSellRequest = async (item) => {
+    try {
+      const response = await ApiService.api.post('/app/my/invest/receipt/sell', {
+        idx: item.idx,
+      });
+
+      const data = typeof response.data === 'string' 
+        ? JSON.parse(response.data) 
+        : response.data;
+
+      setSelectedItem(data.invest);
+      
+      if (data.bond_cnt === '0') {
+        setShowSellModal(true);
+      } else {
+        setShowSellErrorModal(true);
+      }
+    } catch (error) {
+      console.error('판매신청 정보 조회 실패:', error);
+      Alert.alert('오류', '판매신청 정보를 불러오는 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleRequestBondSell = async () => {
+    if (!selectedItem) return;
+
+    const bondSellPriceNum = bondSellPrice.replace(/[^0-9]/g, '');
+    const hopeSellPriceNum = hopeSellPrice.replace(/[^0-9]/g, '');
+
+    if (parseInt(bondSellPriceNum) < 10000) {
+      Alert.alert('원리금수취권 판매신청', '양도 채권금액은 만원 이상 입력되어야 합니다.');
+      return;
+    }
+
+    const lastFour = bondSellPriceNum.substring(bondSellPriceNum.length - 4);
+    if (lastFour !== '0000') {
+      Alert.alert('원리금수취권 판매신청', '양도 채권금액은 만원단위로 입력되어야 합니다.');
+      return;
+    }
+
+    if (!bondSellPriceNum || bondSellPriceNum === '0') {
+      Alert.alert('원리금수취권 판매신청', '양도 채권금액을 확인해 주세요.');
+      return;
+    }
+
+    if (!hopeSellPriceNum || hopeSellPriceNum === '0') {
+      Alert.alert('원리금수취권 판매신청', '희망 판매금액을 확인해 주세요.');
+      return;
+    }
+
+    try {
+      const response = await ApiService.api.post('/app/my/invest/receipt/sell/request', {
+        idx: selectedItem.idx,
+        bond_sell_price: bondSellPriceNum,
+        hope_sell_price: hopeSellPriceNum,
+      });
+
+      if (response.data === '0') {
+        Alert.alert('원리금수취권 판매신청', '정상적으로 신청되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => {
+              setShowSellModal(false);
+              setBondSellPrice('');
+              setHopeSellPrice('');
+              loadInvestData();
+            },
+          },
+        ]);
+      } else if (response.data === '1') {
+        navigation.navigate('Login');
+      } else if (response.data === '3') {
+        Alert.alert('원리금수취권 판매신청', '양도 채권금액을 확인해 주세요.');
+      } else if (response.data === '4') {
+        Alert.alert('원리금수취권 판매신청', '희망 판매금액을 확인해 주세요.');
+      } else if (response.data === '7') {
+        Alert.alert('원리금수취권 판매신청', '양도 채권금액이 보유 채권금액보다 많습니다.');
+      } else {
+        Alert.alert('원리금수취권 판매신청', '처리도중 오류가 발생하였습니다.');
+      }
+    } catch (error) {
+      console.error('판매신청 실패:', error);
+      Alert.alert('원리금수취권 판매신청', '처리도중 오류가 발생하였습니다.');
+    }
+  };
+
+  const handleOpenScheduleModal = async (orderNumber) => {
+    try {
+      const response = await ApiService.api.post('/app/market/getRepayList', {
+        orderNumber,
+      });
+
+      if (response.data && response.data.repay && response.data.repay.list) {
+        setScheduleData(response.data.repay.list);
+        setSelectedItem({ orderNumber });
+        setShowScheduleModal(true);
+      }
+    } catch (error) {
+      console.error('상환 스케줄 조회 실패:', error);
+      Alert.alert('오류', '상환 스케줄을 불러오는 중 오류가 발생했습니다.');
+    }
+  };
+
+  const toggleScheduleItem = (index) => {
+    setExpandedScheduleIndex(expandedScheduleIndex === index ? null : index);
+  };
+
+  const visibleItems = investList.slice(0, currentPage * 2);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2c3db8" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView}>
+        {/* 투자 현황 요약 */}
+        {summary && (
+          <View style={styles.statusBox}>
+            <View style={styles.statusItem}>
+              <View style={styles.statusImgBox}>
+                <Image
+                  source={require('../assets/images/ico_my_status.png')}
+                  style={styles.statusIcon}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.statusData}>
+                <View style={styles.statusDataItem}>
+                  <Text style={[styles.statusDataLabel, styles.statusDataLabelBlue]}>나의 투자</Text>
+                  <Text style={[styles.statusDataValue, styles.statusDataValueBlue]}>
+                    {summary.cnt || 0}건
+                  </Text>
+                </View>
+                <Text style={styles.statusSlash}>/</Text>
+                <View style={styles.statusDataItem}>
+                  <Text style={styles.statusDataLabel}>
+                    총 누적 투자금액<Text style={styles.statusDataLabelEm}> / 현재 투자금액</Text>
+                  </Text>
+                  <Text style={styles.statusDataValue}>
+                    {formatCurrency(summary.price || 0)}원{' '}
+                    <Text style={styles.statusDataValueEm}>
+                      / {formatCurrency(summary.remain_price || 0)}원
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* 검색 영역 */}
+        <View style={styles.searchBox}>
+          <View style={styles.searchInputContainer}>
+            <TextInput
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="예) 고성군 솔라발전소"
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+              placeholderTextColor="#a3a7ab"
+            />
+            <TouchableOpacity
+              style={styles.searchButton}
+              onPress={handleSearch}
+            >
+              <Image
+                source={require('../assets/images/ico_search.png')}
+                style={styles.searchIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 목록 영역 */}
+        {investList.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyWrapper}>
+              <View style={styles.emptyIcon} />
+              <Text style={styles.emptyMsg}>
+                투자한 상품이 없습니다.{'\n'}지금 바로 투자해 주세요!
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <>
+            <View style={styles.listContainer}>
+              {visibleItems.map((item, index) => {
+                const statusInfo = getStatusText(item.status);
+                const bgColor = getStatusBgColor(item.status);
+                const productIcon = getProductImage(item.orderType);
+
+                return (
+                  <View key={item.idx || index} style={styles.invItem}>
+                    {/* 헤더 */}
+                    <View style={[styles.invHead, { backgroundColor: bgColor }]}>
+                      <Text style={styles.invHeadTitle}>
+                        채권번호 <Text style={styles.invHeadTitleEm}>RB-{item.idx}</Text>
+                      </Text>
+                      {item.status === 'FUNDING' && item.iv_status === 'INVEST' && (
+                        <TouchableOpacity
+                          style={styles.cancelButton}
+                          onPress={() => handleInvestCancel(item.orderNumber)}
+                        >
+                          <Text style={styles.cancelButtonText}>투자취소</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* 내용 */}
+                    <View style={styles.invCont}>
+                      <View style={styles.prdInfoBox}>
+                        <View style={styles.prdInfo}>
+                          <View style={styles.prdImgBox}>
+                            <Image
+                              source={getProductImage(item.orderType)}
+                              style={styles.prdIcon}
+                              resizeMode="contain"
+                            />
+                          </View>
+                          <View style={styles.prdTxtBox}>
+                            <Text style={styles.prdTit} numberOfLines={1}>
+                              {item.orderName}
+                            </Text>
+                            <Text style={styles.prdTxt}>
+                              {item.orderType} {item.orderNum}호
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.prdPrice}>
+                          <Text style={styles.prdPriceLabel}>투자금액</Text>
+                          <Text style={styles.prdPriceValue}>
+                            {formatCurrency(item.price)}원
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.prdDataBox}>
+                        <View style={styles.prdDataItem}>
+                          <Text style={styles.prdDataLabel}>연 수익률</Text>
+                          <Text style={styles.prdDataValue}>{item.rate}%</Text>
+                        </View>
+                        <View style={styles.prdDataItem}>
+                          <Text style={styles.prdDataLabel}>상환회차</Text>
+                          <Text style={styles.prdDataValue}>
+                            {item.instalment}/{item.period}
+                          </Text>
+                        </View>
+                        <View style={styles.prdDataItem}>
+                          <Text style={styles.prdDataLabel}>상환일</Text>
+                          <Text style={styles.prdDataValue}>{item.repay_date}</Text>
+                        </View>
+                        <View style={styles.prdDataItem}>
+                          <Text style={styles.prdDataLabel}>상태</Text>
+                          <Text style={[styles.prdDataValue, { color: statusInfo.color }]}>
+                            {statusInfo.text}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* 버튼 영역 */}
+                    <View style={styles.invBtnBox}>
+                      {item.iv_status === 'INVEST' && (
+                        <TouchableOpacity
+                          style={styles.invBtn}
+                          onPress={() => handleShowInvestCertify(item.idx)}
+                        >
+                          <Text style={styles.invBtnText}>투자 확인서</Text>
+                        </TouchableOpacity>
+                      )}
+                      {item.iv_status === 'TRANSFER' && (
+                        <>
+                          <TouchableOpacity
+                            style={styles.invBtn}
+                            onPress={() => handleShowInvestReceipt(item.idx)}
+                          >
+                            <Text style={styles.invBtnText}>원리금수취권 증서</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.invBtn}
+                            onPress={() => handleOpenScheduleModal(item.orderNumber)}
+                          >
+                            <Text style={styles.invBtnText}>상환내역</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                      {(item.status === 'REPAY' || item.status === 'OVERDUE') &&
+                        item.iv_status === 'TRANSFER' &&
+                        item.bond_yn === 'Y' && (
+                          <TouchableOpacity
+                            style={styles.invBtn}
+                            onPress={() => handleOpenSellRequest(item)}
+                          >
+                            <Text style={styles.invBtnText}>원리금수취권 신청</Text>
+                          </TouchableOpacity>
+                        )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* 더보기 버튼 */}
+            {currentPage < totalPages && (
+              <TouchableOpacity
+                style={styles.loadMoreButton}
+                onPress={handleLoadMore}
+              >
+                <Text style={styles.loadMoreText}>더보기</Text>
+                <Text style={styles.loadMorePage}>
+                  {currentPage}/{totalPages}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      {/* 원리금수취권 판매신청 모달 */}
+      <Modal
+        visible={showSellModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSellModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>원리금수취권 판매신청</Text>
+
+            <View style={styles.modalBody}>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>보유 채권금액</Text>
+                <Text style={styles.modalValue}>
+                  {formatCurrency(selectedItem?.bond_price || 0)} 원
+                </Text>
+              </View>
+
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>양도 채권금액</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={bondSellPrice}
+                  onChangeText={(text) => {
+                    const numeric = text.replace(/[^0-9]/g, '');
+                    setBondSellPrice(formatCurrency(numeric));
+                  }}
+                  placeholder="기호('-')없이 숫자만 입력"
+                  keyboardType="numeric"
+                  maxLength={13}
+                />
+              </View>
+
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>희망 판매금액</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={hopeSellPrice}
+                  onChangeText={(text) => {
+                    const numeric = text.replace(/[^0-9]/g, '');
+                    setHopeSellPrice(formatCurrency(numeric));
+                  }}
+                  placeholder="기호('-')없이 숫자만 입력"
+                  keyboardType="numeric"
+                  maxLength={13}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.modalNoticeText}>
+              신청 후 판매를 취소하는 경우 고객센터로 문의 바랍니다.
+            </Text>
+
+            <Text style={styles.modalConfirmText}>
+              원리금수취권 판매를{'\n'}신청하겠습니까?
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => {
+                  setShowSellModal(false);
+                  setBondSellPrice('');
+                  setHopeSellPrice('');
+                }}
+              >
+                <Text style={styles.modalButtonText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={handleRequestBondSell}
+              >
+                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                  신청하기
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 판매신청 불가 모달 */}
+      <Modal
+        visible={showSellErrorModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSellErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>원리금수취권 판매신청</Text>
+            <Text style={styles.modalErrorText}>
+              해당 채권에 대한 판매신청 내역이 존재합니다.{'\n'}
+              판매 취소 및 판매금액 변경시 고객센터로 문의 바랍니다.
+            </Text>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonConfirm]}
+              onPress={() => setShowSellErrorModal(false)}
+            >
+              <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                확인
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 상환 스케줄 모달 */}
+      <Modal
+        visible={showScheduleModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowScheduleModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, styles.scheduleModalContent]}>
+            <Text style={styles.modalTitle}>상환 스케줄</Text>
+            <ScrollView style={styles.scheduleScroll}>
+              {scheduleData.map((repay, index) => {
+                const isExpanded = expandedScheduleIndex === index;
+                const repayDate = repay.REAL_REPAY_DATE || repay.EX_RETURN_DATE || '';
+
+                return (
+                  <View key={index} style={styles.scheduleItem}>
+                    <TouchableOpacity
+                      style={styles.scheduleHead}
+                      onPress={() => toggleScheduleItem(index)}
+                    >
+                      <Text style={styles.scheduleHeadLabel}>
+                        {index + 1}회차
+                      </Text>
+                      <View style={styles.scheduleHeadRight}>
+                        <Text style={styles.scheduleHeadValue}>
+                          세후 {formatCurrency(repay.R_RETURN_PRICE || 0)} 원
+                        </Text>
+                        <Text style={styles.scheduleArrow}>
+                          {isExpanded ? '▲' : '▼'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                    {isExpanded && (
+                      <View style={styles.scheduleCont}>
+                        <View style={styles.scheduleRow}>
+                          <Text style={styles.scheduleLabel}>지급일</Text>
+                          <Text style={styles.scheduleValue}>{repayDate}</Text>
+                        </View>
+                        <View style={styles.scheduleRow}>
+                          <Text style={styles.scheduleLabel}>원금</Text>
+                          <Text style={styles.scheduleValue}>
+                            {formatCurrency(repay.PRINCIPAL || 0)} 원
+                          </Text>
+                        </View>
+                        <View style={styles.scheduleRow}>
+                          <Text style={styles.scheduleLabel}>이자</Text>
+                          <Text style={styles.scheduleValue}>
+                            {formatCurrency(repay.INTEREST || 0)} 원
+                          </Text>
+                        </View>
+                        <View style={styles.scheduleRow}>
+                          <Text style={styles.scheduleLabel}>이자소득세</Text>
+                          <Text style={styles.scheduleValue}>
+                            {formatCurrency(repay.I_TAX || 0)} 원
+                          </Text>
+                        </View>
+                        <View style={styles.scheduleRow}>
+                          <Text style={styles.scheduleLabel}>주민세</Text>
+                          <Text style={styles.scheduleValue}>
+                            {formatCurrency(repay.R_TAX || 0)} 원
+                          </Text>
+                        </View>
+                        <View style={styles.scheduleRow}>
+                          <Text style={styles.scheduleLabel}>플랫폼수수료</Text>
+                          <Text style={styles.scheduleValue}>
+                            {formatCurrency(repay.I_COMMISSION || 0)} 원
+                          </Text>
+                        </View>
+                        <View style={styles.scheduleRow}>
+                          <Text style={styles.scheduleLabel}>실지급액</Text>
+                          <Text style={styles.scheduleValue}>
+                            {formatCurrency(repay.R_RETURN_PRICE || 0)} 원
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonConfirm]}
+              onPress={() => setShowScheduleModal(false)}
+            >
+              <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                확인
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  statusBox: {
+    paddingVertical: 30,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f7fa',
+  },
+  statusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    shadowColor: '#68738f',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  statusImgBox: {
+    width: 46,
+    height: 46,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusIcon: {
+    width: 46,
+    height: 46,
+  },
+  statusData: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  statusDataItem: {
+    flex: 1,
+  },
+  statusDataLabel: {
+    color: '#666',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  statusDataLabelBlue: {
+    color: '#2c3db8',
+  },
+  statusDataLabelEm: {
+    color: '#a3a7ab',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  statusDataValue: {
+    marginTop: 4,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '600',
+    color: '#222',
+  },
+  statusDataValueBlue: {
+    color: '#2c3db8',
+  },
+  statusDataValueEm: {
+    color: '#a3a7ab',
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  statusSlash: {
+    marginHorizontal: 5,
+    color: '#e0e1e2',
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '300',
+  },
+  searchBox: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
+    width: 130,
+    height: 32,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
+    backgroundColor: '#fbfbfb',
+  },
+  searchInput: {
+    flex: 1,
+    height: 32,
+    paddingVertical: 0,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#222',
+  },
+  searchButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  searchIcon: {
+    width: 24,
+    height: 24,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  emptyWrapper: {
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    width: 40,
+    height: 40,
+    marginBottom: 16,
+    backgroundColor: '#f6f6f6',
+    borderRadius: 20,
+  },
+  emptyMsg: {
+    marginTop: 16,
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+    color: '#666',
+    textAlign: 'center',
+  },
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 40,
+    marginTop: 0,
+  },
+  invItem: {
+    flexDirection: 'column',
+    position: 'relative',
+    marginTop: 20,
+    marginBottom: 0,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    shadowColor: '#68738f',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  invHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 40,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+  },
+  invHeadTitle: {
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  invHeadTitleEm: {
+    fontWeight: '600',
+  },
+  cancelButton: {
+    paddingHorizontal: 7,
+    paddingVertical: 0,
+    height: 24,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(224, 225, 226, 0.5)',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '400',
+  },
+  invCont: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(224, 225, 226, 0.5)',
+    borderTopWidth: 0,
+  },
+  prdInfoBox: {
+    paddingVertical: 16,
+  },
+  prdInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  prdImgBox: {
+    width: 28,
+    height: 31,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  prdIcon: {
+    width: 28,
+    height: 31,
+  },
+  prdTxtBox: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  prdTit: {
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '600',
+    color: '#222',
+  },
+  prdTxt: {
+    marginTop: 2,
+    color: '#a3a7ab',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  prdPrice: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  prdPriceLabel: {
+    marginRight: 8,
+    color: '#666',
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '400',
+  },
+  prdPriceValue: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#222',
+  },
+  prdDataBox: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(246, 246, 246, 0.5)',
+  },
+  prdDataItem: {
+    flex: 1,
+    paddingHorizontal: 12,
+  },
+  prdDataLabel: {
+    color: '#a3a7ab',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  prdDataValue: {
+    marginTop: 8,
+    color: '#393f44',
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  invBtnBox: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#f6f6f6',
+  },
+  invBtn: {
+    flex: 1,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  invBtnText: {
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 40,
+    fontWeight: '500',
+  },
+  loadMoreButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 40,
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderWidth: 0.05,
+    borderColor: '#e0e1e2',
+    borderRadius: 20,
+    backgroundColor: '#fff',
+  },
+  loadMoreText: {
+    marginRight: 8,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  loadMorePage: {
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  scheduleModalContent: {
+    maxHeight: '90%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalBody: {
+    paddingHorizontal: 16,
+  },
+  modalRow: {
+    marginTop: 20,
+  },
+  modalLabel: {
+    marginBottom: 8,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  modalValue: {
+    flex: 1,
+    minHeight: 44,
+    paddingLeft: 8,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
+    color: '#222',
+  },
+  modalInput: {
+    height: 44,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
+    fontSize: 15,
+    backgroundColor: '#fbfbfb',
+    color: '#222',
+  },
+  modalNoticeText: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '400',
+    textAlign: 'center',
+  },
+  modalErrorText: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    color: '#393f44',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalConfirmText: {
+    marginTop: 24,
+    color: '#393f44',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    marginTop: 24,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    backgroundColor: '#fff',
+  },
+  modalButtonConfirm: {
+    backgroundColor: '#2c3db8',
+  },
+  modalButtonText: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: '#666',
+  },
+  modalButtonTextConfirm: {
+    color: '#fff',
+  },
+  scheduleScroll: {
+    maxHeight: 400,
+    marginTop: 16,
+  },
+  scheduleItem: {
+    marginBottom: 8,
+    borderWidth: 0.1,
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  scheduleHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  scheduleHeadLabel: {
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  scheduleHeadRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  scheduleHeadValue: {
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  scheduleArrow: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#666',
+  },
+  scheduleCont: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    borderTopWidth: 0.1,
+    borderTopColor: '#f6f6f6',
+  },
+  scheduleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    lineHeight: 1,
+  },
+  scheduleLabel: {
+    color: '#666',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  scheduleValue: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+    color: '#222',
+  },
+});
+
+export default InvestStatusContent;
+

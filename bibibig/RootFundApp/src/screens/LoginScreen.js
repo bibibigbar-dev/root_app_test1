@@ -16,7 +16,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreen = ({ navigation, route }) => {
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,9 +47,13 @@ const LoginScreen = ({ navigation }) => {
       const userData = await AsyncStorage.getItem('userData');
       const userToken = await AsyncStorage.getItem('userToken');
       
-      if (userData && userToken) {
-        // 이미 로그인된 사용자가 있으면 MyHome 화면으로 이동
-        navigation.replace('MyHome');
+      // returnTo가 있으면 (특정 페이지에서 로그인 버튼을 눌러서 온 경우)
+      // 자동 이동하지 않고 로그인 화면을 보여줌
+      const { returnTo } = route.params || {};
+      
+      if (userData && userToken && !returnTo) {
+        // returnTo가 없고 이미 로그인된 사용자가 있으면 메인 화면으로 이동
+        navigation.replace('Main');
       }
     } catch (error) {
       console.error('기존 로그인 확인 오류:', error);
@@ -94,7 +98,7 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-  const handleLogin = async (targetScreen = 'MyHome', setLoadingState) => {
+  const handleLogin = async (targetScreen = 'Main', targetParams = null, setLoadingState) => {
     console.log('🚀 로그인 시작');
     
     if (!email || !password) {
@@ -126,7 +130,11 @@ const LoginScreen = ({ navigation }) => {
         console.log('💾 AsyncStorage에 저장 완료');
         
         // 타겟 화면으로 이동
-        navigation.replace(targetScreen);
+        if (targetParams) {
+          navigation.replace(targetScreen, targetParams);
+        } else {
+          navigation.replace(targetScreen);
+        }
       } else {
         Alert.alert('로그인 실패', response.message || '계정 정보를 확인하여 주십시오.');
       }
@@ -138,11 +146,16 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleMainLogin = () => {
-    handleLogin('MyHome', setMainLoginLoading);
+    // route.params에서 returnTo와 returnParams 가져오기
+    const { returnTo, returnParams } = route.params || {};
+    const targetScreen = returnTo || 'Main';
+    const targetParams = returnParams || null;
+    
+    handleLogin(targetScreen, targetParams, setMainLoginLoading);
   };
 
   const handleWithdrawalLogin = () => {
-    handleLogin('Withdrawal', setWithdrawalLoginLoading);
+    handleLogin('Withdrawal', null, setWithdrawalLoginLoading);
   };
 
   const handleKakaoLogin = async () => {

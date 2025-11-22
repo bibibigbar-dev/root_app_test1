@@ -12,7 +12,7 @@ class ApiService {
     this.publicKey = null; // 공개키 캐시
     this.api = axios.create({
       baseURL: this.baseURL,
-      timeout: 30000, // 30초로 증가
+      timeout: 60000, // 60초로 증가
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Referer': 'RootFundApp://LoginScreen', // 앱의 로그인 화면

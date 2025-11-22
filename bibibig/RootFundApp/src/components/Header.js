@@ -9,15 +9,30 @@ import {
   Image,
   Platform,
   Animated,
+  Clipboard,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
-const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = false }) => {
+const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hideBorder = false, hideGnb = false }) => {
   const [menuVisible, setMenuVisible] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!user);
+  const [user, setUser] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const slideAnim = useRef(new Animated.Value(-1000)).current;
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  useEffect(() => {
+    // 화면이 포커스될 때마다 사용자 정보 재로드
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserData();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     if (menuVisible) {
@@ -34,6 +49,27 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
       }).start();
     }
   }, [menuVisible]);
+
+  const loadUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const userToken = await AsyncStorage.getItem('userToken');
+      
+      if (userData && userToken) {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        setIsLoggedIn(true);
+        console.log('Header - 로그인 정보:', parsedUser);
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+      }
+    } catch (error) {
+      console.error('사용자 정보 로드 오류:', error);
+      setUser(null);
+      setIsLoggedIn(false);
+    }
+  };
 
   const toggleMenu = () => {
     setMenuVisible(!menuVisible);
@@ -69,12 +105,31 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
   };
 
   return (
-    <SafeAreaView style={styles.headerContainer} edges={hideBorder ? ['top', 'left', 'right'] : ['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.headerContainer} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         {showBack ? (
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={onBackPress || (() => navigation.navigate('MyHome'))}
+            onPress={onBackPress || (async () => {
+              const loginCheck = await ApiService.checkLoginExpiration();
+              if (loginCheck.expired) {
+                navigation.navigate('Login');
+              } else {
+                const currentUser = await ApiService.getCurrentUser();
+                const member_id = currentUser?.session?.member_id || currentUser?.id;
+                // 현재 라우트 확인
+                const state = navigation.getState();
+                const currentRoute = state?.routes[state?.index];
+                
+                if (currentRoute?.name === 'MyPage') {
+                  // 이미 MyPage에 있으면 파라미터만 업데이트
+                  navigation.setParams({ user: currentUser, member_id, initialTab: 'assets' });
+                } else {
+                  // 다른 화면에 있으면 네비게이션
+                  navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'assets' });
+                }
+              }
+            })}
           >
             <Image 
               source={require('../assets/images/ico_my.png')} 
@@ -85,9 +140,25 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
         ) : (
           <TouchableOpacity 
             style={styles.myButton}
-            onPress={() => {
-              // 마이페이지로 이동 (추후 구현)
-              console.log('마이페이지');
+            onPress={async () => {
+              const loginCheck = await ApiService.checkLoginExpiration();
+              if (loginCheck.expired) {
+                navigation.navigate('Login');
+              } else {
+                const currentUser = await ApiService.getCurrentUser();
+                const member_id = currentUser?.session?.member_id || currentUser?.id;
+                // 현재 라우트 확인
+                const state = navigation.getState();
+                const currentRoute = state?.routes[state?.index];
+                
+                if (currentRoute?.name === 'MyPage') {
+                  // 이미 MyPage에 있으면 파라미터만 업데이트
+                  navigation.setParams({ user: currentUser, member_id, initialTab: 'assets' });
+                } else {
+                  // 다른 화면에 있으면 네비게이션
+                  navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'assets' });
+                }
+              }
             }}
           >
             <Image 
@@ -122,37 +193,41 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
       </View>
 
       {/* GNB (하단 네비게이션) */}
-      <View style={[styles.gnbBox, hideBorder && styles.noBorder]}>
-        <View style={styles.gnb}>
-          <TouchableOpacity 
-            style={styles.gnbItem}
-            onPress={() => {
-              // 투자하기 (추후 구현)
-              console.log('투자하기');
-            }}
-          >
-            <Text style={styles.gnbText}>투자하기</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.gnbItem}
-            onPress={() => {
-              // 법인투자 (추후 구현)
-              console.log('법인투자');
-            }}
-          >
-            <Text style={styles.gnbText}>법인투자</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.gnbItem}
-            onPress={() => {
-              // 고객센터 (추후 구현)
-              console.log('고객센터');
-            }}
-          >
-            <Text style={styles.gnbText}>고객센터</Text>
-          </TouchableOpacity>
+      {!hideGnb ? (
+        <View style={[styles.gnbBox, hideBorder && styles.noBorder]}>
+          <View style={styles.gnb}>
+            <TouchableOpacity 
+              style={styles.gnbItem}
+              onPress={() => {
+                setMenuVisible(false);
+                navigation.navigate('ProductList', { user });
+              }}
+            >
+              <Text style={styles.gnbText}>투자하기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.gnbItem}
+              onPress={() => {
+                setMenuVisible(false);
+                navigation.navigate('CorporateInvestment', { user });
+              }}
+            >
+              <Text style={styles.gnbText}>법인투자</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.gnbItem}
+              onPress={() => {
+                setMenuVisible(false);
+                navigation.navigate('CustomerService', { user });
+              }}
+            >
+              <Text style={styles.gnbText}>고객센터</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={[styles.gnbBox, styles.gnbBoxEmpty]} />
+      )}
 
       {/* 메뉴 모달 */}
       <Modal
@@ -176,8 +251,18 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
               </Text>
               {user && (
                 <View style={styles.userType}>
+                  <TouchableOpacity 
+                    style={styles.tip}
+                    onPress={async () => {
+                      setMenuVisible(false);
+                      const currentUser = await ApiService.getCurrentUser();
+                      navigation.navigate('UpwardRequest', { user: currentUser || user });
+                    }}
+                  >
+                    <Text style={styles.tipText}>상향신청</Text>
+                  </TouchableOpacity>
                   <Text style={styles.userTypeText}>
-                    {user.member?.class_kr || '일반'}
+                    {user.session?.f_member_class_kr?.replace(/<br\s*\/?>/gi, '\n') || '일반'}
                   </Text>
                 </View>
               )}
@@ -186,15 +271,31 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
             {/* 로그인/계좌 정보 박스 (절대 위치) */}
             {user ? (
               <View style={styles.bankBox}>
+                <Image 
+                  source={require('../assets/images/logo_bank_nh.png')} 
+                  style={styles.bankIcon}
+                  resizeMode="contain"
+                />
                 <View style={styles.nameNum}>
-                  <Image 
-                    source={require('../assets/images/img_bank_nh.png')} 
-                    style={styles.bankIcon}
-                    resizeMode="contain"
-                  />
                   <Text style={styles.accountNum}>
-                    {user.member?.v_account || '-'}
+                    {user.session?.v_account || '-'}
                   </Text>
+                  <TouchableOpacity 
+                    style={styles.copyButton}
+                    onPress={() => {
+                      const account = user.session?.v_account || '';
+                      if (account && account !== '-') {
+                        Clipboard.setString(account);
+                        Alert.alert('알림', '가상계좌가 복사되었습니다.');
+                      }
+                    }}
+                  >
+                    <Image 
+                      source={require('../assets/images/ico_copy.png')} 
+                      style={styles.copyIcon}
+                      resizeMode="contain"
+                    />
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.amountBox}>
                   <Text style={styles.amountLabel}>예치금</Text>
@@ -222,6 +323,10 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                     navigation.navigate('SignUp');
                   }}
                 >
+                  <View style={styles.signupTip}>
+                    <Text style={styles.signupTipText}>지속가능한 친환경 투자 시작하기</Text>
+                    <View style={styles.signupTipArrow} />
+                  </View>
                   <Text style={styles.loginJoinText}>회원가입</Text>
                 </TouchableOpacity>
               </View>
@@ -229,8 +334,31 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
 
             <ScrollView style={styles.menuInfo}>
               {/* 메인 메뉴 */}
-              <View style={styles.menuMain}>
-                <TouchableOpacity style={styles.menuMainItem}>
+              <View style={[styles.menuMain, user && styles.menuMainWithBankBox]}>
+                <TouchableOpacity 
+                  style={styles.menuMainItem}
+                  onPress={async () => {
+                    setMenuVisible(false);
+                    const loginCheck = await ApiService.checkLoginExpiration();
+                    if (loginCheck.expired) {
+                      navigation.navigate('Login');
+                    } else {
+                      const currentUser = await ApiService.getCurrentUser();
+                      const member_id = currentUser?.session?.member_id || currentUser?.id;
+                      // 현재 라우트 확인
+                      const state = navigation.getState();
+                      const currentRoute = state?.routes[state?.index];
+                      
+                      if (currentRoute?.name === 'MyPage') {
+                        // 이미 MyPage에 있으면 파라미터만 업데이트
+                        navigation.setParams({ user: currentUser, member_id, initialTab: 'invest' });
+                      } else {
+                        // 다른 화면에 있으면 네비게이션
+                        navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'invest' });
+                      }
+                    }
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_main01.png')} 
                     style={[styles.menuMainIcon, { tintColor: null }]}
@@ -238,7 +366,14 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                   />
                   <Text style={styles.menuMainText}>투자현황</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuMainItem}>
+                <TouchableOpacity 
+                  style={styles.menuMainItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    const member_id = user?.session?.member_id || user?.id;
+                    navigation.navigate('MyPage', { user, member_id });
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_main02.png')} 
                     style={[styles.menuMainIcon, { tintColor: null }]}
@@ -246,7 +381,13 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                   />
                   <Text style={styles.menuMainText}>마이페이지</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuMainItem}>
+                <TouchableOpacity 
+                  style={styles.menuMainItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('Promotion', { user });
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_main03.png')} 
                     style={[styles.menuMainIcon, { tintColor: null }]}
@@ -271,7 +412,13 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuListItem}>
+                <TouchableOpacity 
+                  style={styles.menuListItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('Loan', { user });
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_list02.png')} 
                     style={styles.menuListIcon} 
@@ -284,7 +431,13 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuListItem}>
+                <TouchableOpacity 
+                  style={styles.menuListItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('CorporateInvestment', { user });
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_list03.png')} 
                     style={styles.menuListIcon} 
@@ -297,7 +450,13 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuListItem}>
+                <TouchableOpacity 
+                  style={styles.menuListItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('CompanyIntro');
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_list04.png')} 
                     style={styles.menuListIcon} 
@@ -310,7 +469,13 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuListItem}>
+                <TouchableOpacity 
+                  style={styles.menuListItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('CustomerService', { user });
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_list04.png')} 
                     style={styles.menuListIcon} 
@@ -323,7 +488,13 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuListItem}>
+                <TouchableOpacity 
+                  style={styles.menuListItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('BondMarket', { user });
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_list05.png')} 
                     style={styles.menuListIcon} 
@@ -336,7 +507,13 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuListItem}>
+                <TouchableOpacity 
+                  style={styles.menuListItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('NeighborRequest', { user });
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_list06.png')} 
                     style={styles.menuListIcon} 
@@ -349,7 +526,13 @@ const Header = ({ navigation, user, showBack = false, onBackPress, hideBorder = 
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuListItem}>
+                <TouchableOpacity 
+                  style={styles.menuListItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('HowToUse');
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_list08.png')} 
                     style={styles.menuListIcon} 
@@ -440,10 +623,14 @@ const styles = StyleSheet.create({
   gnbBox: {
     backgroundColor: '#FFFFFF',
   },
+  gnbBoxEmpty: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(224, 225, 226, 0.5)',
+  },
   gnb: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(224, 225, 226, 0.5)',
   },
@@ -454,8 +641,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gnbText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#333333',
   },
   menuWrap: {
@@ -491,16 +678,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   userType: {
-    width: 47,
-    height: 47,
+    position: 'relative',
+    width: 52,
+    height: 52,
     borderRadius: 47,
+    borderWidth: 1,
+    borderColor: '#2c3db8',
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 4,
+  },
+  tip: {
+    position: 'absolute',
+    top: 0,
+    right: '100%',
+    marginRight: -3,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#77abf8',
+  },
+  tipText: {
+    color: '#fff',
+    fontSize: 10,
+    lineHeight: 16,
+    fontWeight: '500',
   },
   userTypeText: {
     color: '#2c3db8',
     fontSize: 12,
+    lineHeight: 14.4,
+    textAlign: 'center',
     fontWeight: '600',
   },
   menuInfo: {
@@ -514,7 +723,8 @@ const styles = StyleSheet.create({
     top: 148,
     left: 20,
     right: 20,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#E0E1E2',
     borderRadius: 10,
@@ -525,16 +735,23 @@ const styles = StyleSheet.create({
   nameNum: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
   },
   bankIcon: {
-    width: 24,
-    height: 15,
-    marginRight: 8,
+    width: 60,
+    height: 20,
   },
   accountNum: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
+  },
+  copyButton: {
+    padding: 2,
+    marginLeft: 8,
+  },
+  copyIcon: {
+    width: 15,
+    height: 15,
   },
   amountBox: {
     flexDirection: 'row',
@@ -555,7 +772,7 @@ const styles = StyleSheet.create({
   },
   loginJoin: {
     position: 'absolute',
-    top: 148,
+    top: 154,
     left: 20,
     right: 20,
     flexDirection: 'row',
@@ -568,7 +785,7 @@ const styles = StyleSheet.create({
   },
   loginJoinItem: {
     flex: 1,
-    height: 56,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -583,12 +800,49 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  signupTip: {
+    position: 'absolute',
+    bottom: 48,
+    left: '50%',
+    transform: [{ translateX: -70 }],
+    paddingVertical: 3,
+    paddingHorizontal: 5,
+    borderRadius: 5,
+    backgroundColor: '#2ebab4',
+  },
+  signupTipText: {
+    color: '#fff',
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+  },
+  signupTipArrow: {
+    position: 'absolute',
+    top: '100%',
+    left: '50%',
+    marginLeft: -5,
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 5,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#2ebab4',
+    borderBottomWidth: 0,
+  },
   menuMain: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 50,
     paddingTop: 20,
     paddingBottom: 15,
+  },
+  menuMainWithBankBox: {
+    paddingTop: 60,
   },
   menuMainItem: {
     alignItems: 'center',
