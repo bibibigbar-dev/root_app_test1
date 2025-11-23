@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>루트펀드 딥링크 테스트</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f5f7fa;
+        }
+        h1 {
+            color: #007AFF;
+            text-align: center;
+        }
+        h2 {
+            color: #333;
+            margin-top: 30px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007AFF;
+        }
+        .button {
+            display: block;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background-color: #007AFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+        }
+        .button:active {
+            transform: translateY(0);
+        }
+        .section {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        button {
+            width: 100%;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 루트펀드 딥링크 테스트</h1>
+    
+    <div class="note success">
+        ✅ 이 페이지는 로컬 개발 환경에서 딥링크를 테스트하기 위한 페이지입니다.
+    </div>
+
+    <div class="info">
+        💡 <strong>사용 방법:</strong><br>
+        1. 모바일 기기와 개발 컴퓨터를 같은 Wi-Fi에 연결<br>
+        2. 터미널에서: <code>python3 -m http.server 8000</code><br>
+        3. 모바일 브라우저에서: <code>http://[컴퓨터IP]:8000/test-deeplink.html</code><br>
+        4. 버튼을 클릭하여 앱이 열리는지 확인
+    </div>
+    
+    <div class="section">
+        <h2>🎯 출금 관련 (추천)</h2>
+        <a href="rootfund://withdrawal" class="button">📱 출금 신청 화면</a>
+        <a href="rootfund://withdrawal-login" class="button">🔐 출금 로그인 화면</a>
+        <div class="note">
+            로그인이 안 되어 있으면 자동으로 출금 로그인 화면으로 이동합니다.
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>📲 커스텀 스킴 (rootfund://)</h2>
+        <a href="rootfund://main" class="button">홈 - 메인 화면</a>
+        <a href="rootfund://login" class="button">로그인 화면</a>
+        <a href="rootfund://mypage" class="button">마이페이지</a>
+        <a href="rootfund://products" class="button">상품 목록</a>
+        <a href="rootfund://promotion" class="button">프로모션</a>
+        <a href="rootfund://customer-service" class="button">고객센터</a>
+        <a href="rootfund://company-intro" class="button">회사 소개</a>
+        <a href="rootfund://bond-market" class="button">채권거래소</a>
+        <div class="note">
+            커스텀 스킴은 로컬 환경에서도 항상 작동합니다! ✅
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>🌐 웹 URL (https://rootenergy.co.kr)</h2>
+        <a href="https://rootenergy.co.kr/withdrawal" class="button">출금 신청 (HTTPS)</a>
+        <a href="https://rootenergy.co.kr/withdrawal-login" class="button">출금 로그인 (HTTPS)</a>
+        <a href="https://rootenergy.co.kr/main" class="button">메인 (HTTPS)</a>
+        <a href="https://rootenergy.co.kr/mypage" class="button">마이페이지 (HTTPS)</a>
+        <div class="note">
+            ⚠️ Universal Links는 서버 설정이 필요합니다.<br>
+            로컬 개발 시에는 커스텀 스킴을 사용하세요.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🧪 JavaScript 테스트</h2>
+        <button onclick="testDeepLink('rootfund://withdrawal')">출금 신청 열기</button>
+        <button onclick="testDeepLink('rootfund://main')">메인 화면 열기</button>
+        <button onclick="testSmartLink()">스마트 링크 (앱/웹 자동 선택)</button>
+        <div class="note">
+            JavaScript를 사용하여 프로그래밍 방식으로 딥링크를 테스트합니다.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📝 ADB 명령어 (Android)</h2>
+        <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto;">
+# 기기 확인
+adb devices
+
+# 출금 신청 화면 열기
+adb shell am start -W -a android.intent.action.VIEW -d "rootfund://withdrawal"
+
+# 웹 URL로 열기
+adb shell am start -W -a android.intent.action.VIEW -d "https://rootenergy.co.kr/withdrawal"
+        </pre>
+    </div>
+
+    <div class="section">
+        <h2>🍎 xcrun 명령어 (iOS)</h2>
+        <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto;">
+# 시뮬레이터에서 출금 신청 화면 열기
+xcrun simctl openurl booted "rootfund://withdrawal"
+
+# 웹 URL로 열기
+xcrun simctl openurl booted "https://rootenergy.co.kr/withdrawal"
+        </pre>
+    </div>
+
+    <script>
+        function testDeepLink(url) {
+            console.log('딥링크 시도:', url);
+            
+            // 앱 실행 시도
+            window.location.href = url;
+            
+            // 타임아웃 후 결과 알림
+            setTimeout(() => {
+                const message = '앱이 실행되었나요?\n\n' +
+                    '실행되지 않았다면:\n' +
+                    '1. 앱이 설치되어 있는지 확인\n' +
+                    '2. 앱을 재시작\n' +
+                    '3. 기기를 재시작';
+                alert(message);
+            }, 2000);
+        }
+
+        function testSmartLink() {
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            
+            console.log('디바이스 정보:', {
+                isMobile,
+                isIOS,
+                isAndroid,
+                userAgent: navigator.userAgent
+            });
+            
+            if (isMobile) {
+                // 모바일: 앱 딥링크 시도
+                alert('앱 실행을 시도합니다...');
+                window.location.href = 'rootfund://withdrawal';
+                
+                // 1.5초 후 앱이 실행되지 않으면 대체 동작
+                setTimeout(() => {
+                    // 실제로는 앱스토어/플레이스토어로 이동
+                    if (isIOS) {
+                        console.log('iOS: App Store로 이동 예정');
+                    } else if (isAndroid) {
+                        console.log('Android: Play Store로 이동 예정');
+                    }
+                }, 1500);
+            } else {
+                // 데스크톱: 웹페이지로 이동
+                alert('데스크톱 환경입니다.\n웹 페이지를 열겠습니다.');
+                window.open('https://rootenergy.co.kr/withdrawal', '_blank');
+            }
+        }
+
+        // 페이지 로드 시 환경 정보 표시
+        window.addEventListener('load', function() {
+            console.log('=== 딥링크 테스트 페이지 ===');
+            console.log('URL:', window.location.href);
+            console.log('User Agent:', navigator.userAgent);
+            console.log('Platform:', navigator.platform);
+            
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            console.log('Is Mobile:', isMobile);
+            
+            // 모바일이 아닌 경우 경고
+            if (!isMobile) {
+                const warning = document.createElement('div');
+                warning.className = 'note';
+                warning.innerHTML = '⚠️ <strong>데스크톱 환경 감지됨</strong><br>' +
+                    '딥링크 테스트는 실제 모바일 기기나 에뮬레이터에서 진행해주세요.<br>' +
+                    'ADB(Android) 또는 xcrun(iOS) 명령어를 사용하는 것을 권장합니다.';
+                document.body.insertBefore(warning, document.body.firstChild.nextSibling);
+            }
+        });
+    </script>
+</body>
+</html>
+

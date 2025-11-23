@@ -112,11 +112,6 @@ const LoanListContent = ({ navigation, route, user, member_id }) => {
     navigation.navigate('LoanDetail', { orderNumber, user, member_id });
   };
 
-  const handleLoanRequest = () => {
-    // 대출신청내역 화면으로 이동
-    navigation.navigate('LoanRequest', { user, member_id });
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -141,10 +136,7 @@ const LoanListContent = ({ navigation, route, user, member_id }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.choiceChip, activeSubTab === 'request' && styles.choiceChipActive]}
-              onPress={() => {
-                setActiveSubTab('request');
-                handleLoanRequest();
-              }}
+              onPress={() => setActiveSubTab('request')}
             >
               <Text style={[styles.choiceChipText, activeSubTab === 'request' && styles.choiceChipTextActive]}>
                 대출신청내역

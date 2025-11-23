@@ -241,7 +241,6 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
         <Header navigation={navigation} title="상품 상세" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
-          <Text style={styles.loadingText}>로딩 중...</Text>
         </View>
       </View>
     );

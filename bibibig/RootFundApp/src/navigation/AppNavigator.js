@@ -1,7 +1,9 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { Linking } from 'react-native';
 import LoginScreen from '../screens/LoginScreen';
+import WithdrawalLoginScreen from '../screens/WithdrawalLoginScreen';
 import MainScreen from '../screens/MainScreen';
 import MyHomeScreen from '../screens/MyHomeScreen';
 import WithdrawalScreen from '../screens/WithdrawalScreen';
@@ -22,6 +24,7 @@ import LoanScreen from '../screens/LoanScreen';
 import BondMarketScreen from '../screens/BondMarketScreen';
 import CustomerServiceScreen from '../screens/CustomerServiceScreen';
 import PromotionScreen from '../screens/PromotionScreen';
+import PromotionDetailScreen from '../screens/PromotionDetailScreen';
 import MyPageTabContainer from '../screens/MyPageTabContainer';
 import NeighborRequestScreen from '../screens/NeighborRequestScreen';
 import RepaymentHistoryScreen from '../screens/RepaymentHistoryScreen';
@@ -32,9 +35,44 @@ import BondMarketHowToUseScreen from '../screens/BondMarketHowToUseScreen';
 
 const Stack = createStackNavigator();
 
+// 딥링크 설정
+const linking = {
+  prefixes: ['rootfund://', 'https://rootenergy.co.kr', 'http://rootenergy.co.kr'],
+  config: {
+    screens: {
+      Login: 'login',
+      WithdrawalLogin: 'withdrawal-login',
+      Main: 'main',
+      Withdrawal: 'withdrawal',
+      MyHome: 'myhome',
+      FindEmail: 'find-email',
+      FindPassword: 'find-password',
+      SignUp: 'signup',
+      CorporateInvestment: 'corporate-investment',
+      ProductList: 'products',
+      ProductDetail: 'product/:orderKey',
+      InvestRequest: 'invest-request/:orderKey',
+      HowToUse: 'how-to-use',
+      CompanyIntro: 'company-intro',
+      Loan: 'loan',
+      BondMarket: 'bond-market',
+      CustomerService: 'customer-service',
+      Promotion: 'promotion',
+      PromotionDetail: 'promotion/:idx',
+      MyPage: 'mypage',
+      NeighborRequest: 'neighbor-request',
+      RepaymentHistory: 'repayment-history',
+      BalanceHistory: 'balance-history',
+      UpwardRequest: 'upward-request',
+      UpwardRequestDone: 'upward-request-done',
+      BondMarketHowToUse: 'bond-market-how-to-use',
+    },
+  },
+};
+
 const AppNavigator = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking} fallback={<></>}>
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{
@@ -42,6 +80,7 @@ const AppNavigator = () => {
         }}
       >
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="WithdrawalLogin" component={WithdrawalLoginScreen} />
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen name="MyHome" component={MyHomeScreen} />
         <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
@@ -62,6 +101,7 @@ const AppNavigator = () => {
         <Stack.Screen name="BondMarket" component={BondMarketScreen} />
         <Stack.Screen name="CustomerService" component={CustomerServiceScreen} />
         <Stack.Screen name="Promotion" component={PromotionScreen} />
+        <Stack.Screen name="PromotionDetail" component={PromotionDetailScreen} />
         <Stack.Screen name="MyPage" component={MyPageTabContainer} />
         <Stack.Screen name="NeighborRequest" component={NeighborRequestScreen} />
         <Stack.Screen name="RepaymentHistory" component={RepaymentHistoryScreen} />

@@ -34,6 +34,8 @@ const CustomerServiceScreen = ({ navigation, route }) => {
   const [showYearModal, setShowYearModal] = useState(false); // 연도 선택 모달
   const [productYear, setProductYear] = useState(null); // 상품정보용
   const [productMonth, setProductMonth] = useState(null); // 상품정보용
+  const [showProductYearModal, setShowProductYearModal] = useState(false); // 상품정보 연도 선택 모달
+  const [showProductMonthModal, setShowProductMonthModal] = useState(false); // 상품정보 월 선택 모달
   
   // FAQ 카테고리
   const [faqCategory, setFaqCategory] = useState(0); // 0: 투자, 1: 일반계정, 2: 대출, 3: 커뮤니티펀드
@@ -77,6 +79,13 @@ const CustomerServiceScreen = ({ navigation, route }) => {
     }
   }, [selectedYear]);
 
+  // 상품정보 년도/월 변경 시 데이터 조회
+  useEffect(() => {
+    if (productYear && productMonth && activeTab === 3 && disclosureCategory === 1) {
+      fetchProductData(productYear, productMonth);
+    }
+  }, [productYear, productMonth]);
+
   // 최대주주 정보 조회 함수
   const fetchYearData = async (yyyy) => {
     try {
@@ -94,6 +103,29 @@ const CustomerServiceScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('최대주주 정보 조회 실패:', error);
+    }
+  };
+
+  // 상품정보 데이터 조회 함수
+  const fetchProductData = async (yyyy, mm) => {
+    try {
+      const mmStr = mm < 10 ? `0${mm}` : mm.toString();
+      const response = await ApiService.api.get('/app/operate/get/datas', {
+        params: {
+          type: 'osdata',
+          yyyy: yyyy.toString(),
+          mm: mmStr,
+        }
+      });
+      
+      if (response.data) {
+        setDisclosureData(prev => ({
+          ...prev,
+          productData: response.data,
+        }));
+      }
+    } catch (error) {
+      console.error('상품정보 조회 실패:', error);
     }
   };
 
@@ -552,42 +584,21 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                       <View style={styles.subSTitleBox}>
                         <Text style={styles.subSTitle}>상품유형별 취급 현황</Text>
                         {disclosureData.cur_yyyy && (
-                          <View style={{ flexDirection: 'row', gap: 8 }}>
-                            <View style={styles.pickerWrapper}>
-                              <Picker
-                                selectedValue={productYear}
-                                onValueChange={(itemValue) => setProductYear(itemValue)}
-                                style={styles.yearPicker}
-                              >
-                                {Array.from(
-                                  { length: parseInt(disclosureData.cur_yyyy) - 2019 + 1 }, 
-                                  (_, i) => 2019 + i
-                                ).map(year => (
-                                  <Picker.Item key={year} label={`${year}년`} value={year} />
-                                ))}
-                              </Picker>
-                            </View>
-                            <View style={styles.pickerWrapper}>
-                              <Picker
-                                selectedValue={productMonth}
-                                onValueChange={(itemValue) => setProductMonth(itemValue)}
-                                style={styles.yearPicker}
-                              >
-                                {Array.from(
-                                  { length: productYear === parseInt(disclosureData.cur_yyyy) 
-                                    ? parseInt(disclosureData.cur_mm) 
-                                    : 12 
-                                  }, 
-                                  (_, i) => i + 1
-                                ).map(month => (
-                                  <Picker.Item 
-                                    key={month} 
-                                    label={`${month < 10 ? '0' : ''}${month}월`} 
-                                    value={month} 
-                                  />
-                                ))}
-                              </Picker>
-                            </View>
+                          <View style={{ flexDirection: 'row', marginLeft: 'auto' }}>
+                            <TouchableOpacity 
+                              style={[styles.yearSelector, { marginRight: 8 }]}
+                              onPress={() => setShowProductYearModal(true)}
+                            >
+                              <Text style={styles.yearSelectorText}>{productYear}년 ▼</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={styles.yearSelector}
+                              onPress={() => setShowProductMonthModal(true)}
+                            >
+                              <Text style={styles.yearSelectorText}>
+                                {productMonth < 10 ? '0' : ''}{productMonth}월 ▼
+                              </Text>
+                            </TouchableOpacity>
                           </View>
                         )}
                       </View>
@@ -725,7 +736,7 @@ const CustomerServiceScreen = ({ navigation, route }) => {
 
                     {/* 손실률 현황 (상품정보 탭에도 표시) */}
                     {disclosureData.lossRateStatus && Object.keys(disclosureData.lossRateStatus).length > 0 && (
-                      <View style={[styles.subWhitebox, styles.mt8]}>
+                      <View style={[styles.subWhitebox, styles.mt8, styles.pb36]}>
                         <View style={styles.subSTitleBox}>
                           <Text style={styles.subSTitle}>손실률 현황</Text>
                         </View>
@@ -761,7 +772,7 @@ const CustomerServiceScreen = ({ navigation, route }) => {
 
                     {/* 자기계산 연계투자 현황 (상품정보 탭에도 표시) */}
                     {disclosureData.linkInvestData && Object.keys(disclosureData.linkInvestData).length > 0 && (
-                      <View style={[styles.subWhitebox, styles.mt8, styles.mb40]}>
+                      <View style={[styles.subWhitebox, styles.mt8, styles.pb36]}>
                         <View style={styles.subSTitleBox}>
                           <Text style={styles.subSTitle}>자기계산 연계투자 현황</Text>
                         </View>
@@ -814,6 +825,127 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                         </View>
                       </View>
                     )}
+
+                    {/* 거래구조 및 영업방식 */}
+                    <View style={[styles.subWhitebox, styles.mt8, styles.pb36]}>
+                      <View style={styles.subSTitleBox}>
+                        <Text style={styles.subSTitle}>거래구조 및 영업방식</Text>
+                      </View>
+                      <View style={styles.dotTextList}>
+                        <View style={styles.dotTextItem}>
+                          <Text style={styles.dotTextBullet}>•</Text>
+                          <Text style={styles.dotTextContent}>
+                            루트인프라금융㈜는 차입자로부터 대출신청을, 투자자로부터 투자신청을 받습니다.
+                          </Text>
+                        </View>
+                        <View style={styles.dotTextItem}>
+                          <Text style={styles.dotTextBullet}>•</Text>
+                          <Text style={styles.dotTextContent}>
+                            투자자는 농협은행이 관리하는 계좌(예치기관 계좌)로 투자금을 입금하고, 농협은행은 루트인프라금융㈜ 지시에 따라 차입자에게 대출금을 지급합니다.
+                          </Text>
+                        </View>
+                        <View style={styles.dotTextItem}>
+                          <Text style={styles.dotTextBullet}>•</Text>
+                          <Text style={styles.dotTextContent}>
+                            차입자는 예치기관 계좌로 상환금을 납부하고, 농협은행은 루트인프라금융㈜ 지시에 따라 상환금을 투자자에게 정산합니다.
+                          </Text>
+                        </View>
+                        <View style={styles.dotTextItem}>
+                          <Text style={styles.dotTextBullet}>•</Text>
+                          <Text style={styles.dotTextContent}>
+                            위 과정에서 루트인프라금융㈜는 차입자와 투자자로부터 소정의 플랫폼이용료를 지급받습니다.
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.subConImgbox}>
+                        <Image
+                          source={require('../assets/images/img_business_method.png')}
+                          style={styles.businessMethodImg}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </View>
+
+                    {/* 차입자의 상환능력 평가체계 등 */}
+                    <View style={[styles.subWhitebox, styles.mt8, styles.pb36, styles.mb40]}>
+                      <View style={styles.subSTitleBox}>
+                        <Text style={styles.subSTitle}>차입자의 상환능력 평가체계</Text>
+                      </View>
+                      <View style={[styles.pr20, styles.pl20]}>
+                        <Text style={styles.infoText}>
+                          당사는 재생에너지 발전사업자에 대한 특화된 p2p 금융을 제공하기 위하여 전문적인 심사역이 {'<신용평가업무기준>'}에 따라 차입자의 상환능력, 담보의 적정성 평가 등을 종합적으로 평가하여 대출이 실행됩니다. 특히 차입자의 신용등급을 10등급으로 분류하여 6등급 이상의 경우에만 대출함을 원칙으로 합니다.{'\n'}
+                          재생에너지 발전사업자에 대하여 자체 개발한 신용평가시스템(Credit Scoring System)을 기반으로 정량적 평가기준인 사업의 안정성, 연체 위험성. 원금회수 가능성(만기상환) 등과 정성적 평가기준인 정책당국의 평가 요인 등을 고려하여 차입자의 상환능력을 종합적으로 평가합니다. 구체적인 내용은 프로그램화되어 있습니다.
+                        </Text>
+                      </View>
+
+                      <View style={styles.subSTitleBox}>
+                        <Text style={styles.subSTitle}>대출이자에 관한 사항</Text>
+                      </View>
+                      <View style={[styles.pr20, styles.pl20]}>
+                        <Text style={styles.infoText}>
+                          대출금리는 연 15% 이하로 상품 유형과 조건에 따라 개별적으로 산정됩니다(연체금리 : 대출금리+연 3% 이내)
+                        </Text>
+                      </View>
+
+                      <View style={styles.subSTitleBox}>
+                        <Text style={styles.subSTitle}>플랫폼 이용수수료</Text>
+                      </View>
+                      <View style={[styles.pr20, styles.pl20]}>
+                        <Text style={styles.infoText}>
+                          대출자의 경우, 대출금액에 따라 4.0% 이내에서 개별상품별로 수수료를 부과하고 있습니다. 수수료의 부과는 모집금액에 대한 자금집행 시점에 선취하여 공제합니다.{'\n'}
+                          투자자의 경우, 투자금액에 대해 월 0.1% 매월 이자지급시 공제됩니다.{'\n'}
+                          플랫폼이용수수료에는 담보권 설정비용, 신용조회비용, 연계대출의 만기 전에 차입자가 조기상환함에 따라 발생하는 비용 등은 포함되지 않습니다.
+                        </Text>
+                      </View>
+
+                      <View style={styles.subSTitleBox}>
+                        <Text style={styles.subSTitle}>상환방식에 관한 사항</Text>
+                      </View>
+                      <View style={[styles.pr20, styles.pl20]}>
+                        <Text style={styles.infoText}>
+                          원금상환방식의 유형은 만기일시상환, 원금균등상환, 원리금균등상환 방식이 있습니다. 개별 상품에서 원금상환방식을 안내하고 있습니다.{'\n'}
+                          - 만기일시상환: 투자기간 종료일에 원금과 마지막 회차 이자가 상환되는 방식{'\n'}
+                          - 원금균등상환: 투자원금을 투자기간으로 나눈 금액에 월별이자를 합산하여 상환하는 방식{'\n'}
+                          - 원리금균등상환: 투자원금과 이자를 투자기간동안 고정이자율로 산정하여 매월 같은 금액으로 나누어 상환하는 방식
+                        </Text>
+                      </View>
+
+                      <View style={styles.subSTitleBox}>
+                        <Text style={styles.subSTitle}>투자금 예치기관에 관한 사항</Text>
+                      </View>
+                      <View style={[styles.pr20, styles.pl20]}>
+                        <Text style={styles.infoText}>
+                          루트인프라금융㈜는 이용자의 자산을 보호하기 위해 농협은행과 투자예치금 및 투자 채권에 대한 신탁관리 시스템을 구축하여 운영하고 있습니다.
+                        </Text>
+                        <View style={styles.nhTextBox}>
+                          <Text style={styles.nhText}>NH농협은행</Text>
+                        </View>
+                        <Text style={[styles.starNotif, styles.mt20]}>
+                          ※ NH농협은행은 투자금 보관 등 계좌개설, 투자금 및 대출금 지급대행, 원리금 수납대행 업무 등을 수행합니다.
+                        </Text>
+                      </View>
+
+                      <View style={styles.subSTitleBox}>
+                        <Text style={styles.subSTitle}>채무불이행시 채권추심 등 원리금 회수방식에 관한 사항</Text>
+                      </View>
+                      <View style={[styles.pr20, styles.pl20]}>
+                        <Text style={styles.infoText}>
+                          투자자 보호를 위하여 연체 중인 채권을 회수하는 방식으로 별도의 법무법인 또는 신용정보회사에 채권 추심을 위임하거나. 채권매입추심업자에게 채권을 매각하여 원리금 회수 절차를 진행합니다.{'\n'}
+                          연체채권 추심과정에서 발생하는 수수료 및 법적조치 비용은 채무자 등으로부터 상환된 원리금에서 공제될 수 있으며, 투자자의 투자금 및 수익금이 일부 감소될 수 있습니다. 추심관리 비용으로는 재산조사 및 민사소송 진행비용, 가압류 등 관련비용. 매각자문사 보수. 신용정보회사 업무 착수비용 및 회수성공수수료 등이 포함됩니다.
+                        </Text>
+                      </View>
+
+                      <View style={styles.subSTitleBox}>
+                        <Text style={styles.subSTitle}>계약의 해제·해지에 관한 사항</Text>
+                      </View>
+                      <View style={[styles.pr20, styles.pl20]}>
+                        <Text style={styles.infoText}>
+                          투자자는 투자금 모집 완료 전에 투자 철회 가능하며 회사는 투자금 반환 의무가 있습니다. 다만 자금모집 완료된 이후에는 투자 철회할 수 없습니다.{'\n'}
+                          회사는 ① 차입자 정보에 변동이 있는 경우, ② 파산, 개인회생 등 채무불이행 위험이 의심되는 경우, ③ 연계대출 신청이 취소되는 경우 해당 사유를 통지하고 투자 취소와 함께 투자금 반환합니다.
+                        </Text>
+                      </View>
+                    </View>
+
                   </ScrollView>
                 )}
               </View>
@@ -1110,7 +1242,7 @@ const CustomerServiceScreen = ({ navigation, route }) => {
         )}
       </ScrollView>
 
-      {/* 연도 선택 모달 */}
+      {/* 최대주주 정보 연도 선택 모달 */}
       <Modal
         visible={showYearModal}
         transparent={true}
@@ -1158,6 +1290,107 @@ const CustomerServiceScreen = ({ navigation, route }) => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* 상품정보 연도 선택 모달 */}
+      <Modal
+        visible={showProductYearModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowProductYearModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowProductYearModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>연도 선택</Text>
+              <TouchableOpacity onPress={() => setShowProductYearModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={Array.from(
+                { length: parseInt(disclosureData.cur_yyyy || 2024) - 2019 + 1 }, 
+                (_, i) => 2019 + i
+              )}
+              keyExtractor={(item) => item.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.yearItem,
+                    productYear === item && styles.yearItemSelected
+                  ]}
+                  onPress={() => {
+                    setProductYear(item);
+                    setShowProductYearModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.yearItemText,
+                    productYear === item && styles.yearItemTextSelected
+                  ]}>
+                    {item}년
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 상품정보 월 선택 모달 */}
+      <Modal
+        visible={showProductMonthModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowProductMonthModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowProductMonthModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>월 선택</Text>
+              <TouchableOpacity onPress={() => setShowProductMonthModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={Array.from(
+                { length: productYear === parseInt(disclosureData.cur_yyyy) 
+                  ? parseInt(disclosureData.cur_mm) 
+                  : 12 
+                }, 
+                (_, i) => i + 1
+              )}
+              keyExtractor={(item) => item.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.yearItem,
+                    productMonth === item && styles.yearItemSelected
+                  ]}
+                  onPress={() => {
+                    setProductMonth(item);
+                    setShowProductMonthModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.yearItemText,
+                    productMonth === item && styles.yearItemTextSelected
+                  ]}>
+                    {item < 10 ? '0' : ''}{item}월
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -1178,14 +1411,14 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginTop: 0, // -4.8rem
     marginBottom: 16, // 1.6rem
-    height: 140, // 더 아래까지 내려오도록 높이 증가
+    height: 130, // 더 아래까지 내려오도록 높이 증가
     overflow: 'hidden',
     borderBottomLeftRadius: 20, // 2rem - 하단만 둥글게
     borderBottomRightRadius: 20, // 2rem - 하단만 둥글게
   },
   bgbox: {
     width: '105%',
-    height: 140,
+    height: 130,
     justifyContent: 'flex-end',
     paddingBottom: 20, // 3rem
     paddingLeft: 20, // 2rem
@@ -1576,12 +1809,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 100,
-    height: 36,
+    minWidth: 75,
+    height: 33,
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#e0e1e2',
-    borderRadius: 4,
+    borderRadius: 30,
     backgroundColor: '#fff',
     marginLeft: 'auto',
   },
@@ -1648,6 +1881,7 @@ const styles = StyleSheet.create({
   },
   starNotif: {
     marginTop: 12,
+    paddingHorizontal: 15, // 2rem
     fontSize: 13,
     lineHeight: 20,
     fontWeight: '400',
@@ -1660,36 +1894,40 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   tableContainer: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#e0e1e2',
-    borderRadius: 8,
+    marginTop: 16, // 1.6rem
+    width: '100%',
+    borderWidth: 0,
+    borderRadius: 0,
     overflow: 'hidden',
+    paddingHorizontal: 15, // 2rem
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f5f7fa',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
+    backgroundColor: 'rgba(246, 246, 246, 0.5)', // common.css의 배경색
+    borderBottomWidth: 0,
   },
   tableRow: {
     flexDirection: 'row',
+    borderBottomWidth: 0,
+  },
+  tableRowTotal: {
+    backgroundColor: 'transparent',
+  },
+  tableCell: {
+    paddingVertical: 10, // 1rem
+    paddingHorizontal: 6, // 0.6rem
+    fontSize: 15, // 1.5rem
+    lineHeight: 19.5, // 1.5 * 1.3
+    fontWeight: '400',
+    color: '#393f44',
+    textAlign: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#f6f6f6',
   },
-  tableRowTotal: {
-    backgroundColor: '#f9f9f9',
-  },
-  tableCell: {
-    padding: 12,
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#222',
-    textAlign: 'center',
-  },
   tableHeaderCell: {
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: '400',
+    color: '#393f44',
+    borderBottomWidth: 0,
   },
   tableCellNum: {
     textAlign: 'right',
@@ -1714,6 +1952,58 @@ const styles = StyleSheet.create({
   stepImage: {
     width: '100%',
     height: 60,
+  },
+  dotTextList: {
+    paddingHorizontal: 20,
+    marginTop: 16,
+  },
+  dotTextItem: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  dotTextBullet: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#666',
+    marginRight: 8,
+    marginTop: 0,
+  },
+  dotTextContent: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '400',
+    color: '#666',
+  },
+  subConImgbox: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  businessMethodImg: {
+    width: '100%',
+    height: undefined,
+    aspectRatio: 335 / 200,
+  },
+  infoText: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '400',
+    color: '#666',
+  },
+  nhTextBox: {
+    marginTop: 10,
+    marginHorizontal: 10,
+    backgroundColor: '#f1f4f6',
+    padding: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nhText: {
+    fontSize: 17,
+    lineHeight: 20,
+    fontWeight: '700',
+    color: '#666',
   },
   loadMoreContainer: {
     display: 'flex',

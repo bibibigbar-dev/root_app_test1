@@ -69,8 +69,7 @@ const MyHomeScreen = ({ navigation }) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>로딩 중...</Text>
+        <ActivityIndicator size="large" color="#2c3db8" />
       </View>
     );
   }

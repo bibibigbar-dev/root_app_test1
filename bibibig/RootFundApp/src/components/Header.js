@@ -123,10 +123,10 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
                 
                 if (currentRoute?.name === 'MyPage') {
                   // 이미 MyPage에 있으면 파라미터만 업데이트
-                  navigation.setParams({ user: currentUser, member_id, initialTab: 'assets' });
+                  navigation.setParams({ user: currentUser, member_id, initialTab: 'info' });
                 } else {
                   // 다른 화면에 있으면 네비게이션
-                  navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'assets' });
+                  navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'info' });
                 }
               }
             })}
@@ -153,10 +153,10 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
                 
                 if (currentRoute?.name === 'MyPage') {
                   // 이미 MyPage에 있으면 파라미터만 업데이트
-                  navigation.setParams({ user: currentUser, member_id, initialTab: 'assets' });
+                  navigation.setParams({ user: currentUser, member_id, initialTab: 'info' });
                 } else {
                   // 다른 화면에 있으면 네비게이션
-                  navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'assets' });
+                  navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'info' });
                 }
               }
             }}
@@ -458,7 +458,7 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
                   }}
                 >
                   <Image 
-                    source={require('../assets/images/ico_menu_list04.png')} 
+                    source={require('../assets/images/ico_menu_list07.png')} 
                     style={styles.menuListIcon} 
                     resizeMode="contain"
                   />
@@ -819,7 +819,7 @@ const styles = StyleSheet.create({
   },
   signupTipArrow: {
     position: 'absolute',
-    top: '100%',
+    top: '145%',
     left: '50%',
     marginLeft: -5,
     width: 0,
@@ -872,8 +872,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F6F6F6',
   },
   menuListIcon: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     marginRight: 12,
     tintColor: '#666666',
   },

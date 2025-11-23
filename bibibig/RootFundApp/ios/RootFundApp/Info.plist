@@ -60,5 +60,18 @@
 		<string>Pretendard-Regular.otf</string>
 		<string>Pretendard-SemiBold.otf</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>co.kr.rootfund</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>rootfund</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

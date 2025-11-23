@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Header from '../components/Header';
@@ -20,11 +21,13 @@ const MyPageTabContainer = ({ navigation, route }) => {
   const { user, member_id, initialTab } = route.params || {};
   const [activeTab, setActiveTab] = useState(initialTab || 'info'); // 'info' 또는 'schedule'
   const [memberData, setMemberData] = useState(null);
+  const tabScrollViewRef = React.useRef(null);
 
-  // route.params.initialTab이 변경될 때 activeTab 업데이트
+  // route.params.initialTab이 변경될 때 activeTab 업데이트 및 스크롤
   useEffect(() => {
     if (initialTab && initialTab !== activeTab) {
       setActiveTab(initialTab);
+      scrollToTab(initialTab);
     }
   }, [initialTab]);
 
@@ -33,9 +36,43 @@ const MyPageTabContainer = ({ navigation, route }) => {
     React.useCallback(() => {
       if (route.params?.initialTab && route.params.initialTab !== activeTab) {
         setActiveTab(route.params.initialTab);
+        scrollToTab(route.params.initialTab);
       }
     }, [route.params?.initialTab])
   );
+
+  // 탭으로 스크롤하는 함수
+  const scrollToTab = (tabKey) => {
+    const tabs = [
+      { key: 'assets', label: '자산관리' },
+      { key: 'loan', label: '대출내역' },
+      { key: 'invest', label: '투자현황' },
+      { key: 'review', label: '투자후기' },
+      { key: 'schedule', label: '상환스케줄' },
+      { key: 'info', label: '개인정보관리' },
+    ];
+    
+    const tabIndex = tabs.findIndex(tab => tab.key === tabKey);
+    if (tabIndex !== -1 && tabScrollViewRef.current) {
+      // 마지막 탭이면 끝까지 스크롤
+      if (tabIndex === tabs.length - 1) {
+        setTimeout(() => {
+          tabScrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      } else {
+        // 각 탭의 너비를 대략 120px로 가정
+        const tabWidth = 100;
+        const scrollPosition = tabIndex * tabWidth;
+        
+        setTimeout(() => {
+          tabScrollViewRef.current?.scrollTo({
+            x: scrollPosition,
+            animated: true,
+          });
+        }, 100);
+      }
+    }
+  };
 
   useEffect(() => {
     loadMemberData();
@@ -44,13 +81,26 @@ const MyPageTabContainer = ({ navigation, route }) => {
   const loadMemberData = async () => {
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      const response = await ApiService.api.get('/app/my/info');
+      
+      // 먼저 user 세션에서 기본 정보 설정
+      if (user?.session) {
+        setMemberData({
+          r_name: user.session.r_name || user.name,
+          f_member_class_kr: user.session.f_member_class_kr || '개인<br>투자자',
+        });
+      }
+      
+      // API로 최신 정보 가져오기
+      const response = await ApiService.api.get('/app/my/info', {
+        params: { member_id: memberId }
+      });
       
       if (response.data && response.data.member) {
         setMemberData(response.data.member);
       }
     } catch (error) {
       console.error('회원정보 조회 실패:', error);
+      // API 실패해도 user 세션 정보는 유지
     }
   };
 
@@ -91,13 +141,26 @@ const MyPageTabContainer = ({ navigation, route }) => {
       <Header navigation={navigation} user={user} />
       
       <ScrollView style={styles.content}>
+        {/* Back 버튼 */}
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon}
+          />
+        </TouchableOpacity>
+
         {/* 헤더 */}
         <View style={styles.mypageHead}>
           <Text style={styles.txtWelcome}>
-            <Text style={styles.txtWelcomeEm}>{memberData?.r_name || user?.name}님</Text>, 부자되세요!
+            <Text style={styles.txtWelcomeEm}>
+              {memberData?.r_name || user?.session?.r_name || user?.name || '사용자'}님
+            </Text>, 부자되세요!
           </Text>
           <View style={styles.userType}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.tip}
               onPress={() => {
                 navigation.navigate('UpwardRequest', { user, member_id });
@@ -113,6 +176,7 @@ const MyPageTabContainer = ({ navigation, route }) => {
 
         {/* 탭 메뉴 */}
         <ScrollView 
+          ref={tabScrollViewRef}
           horizontal 
           showsHorizontalScrollIndicator={false}
           style={styles.tabMenu}
@@ -151,6 +215,14 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  backButton: {
+    paddingTop: 16,
+    paddingLeft: 20,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
   mypageHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -184,7 +256,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: '100%',
-    marginRight: -8,
+    marginRight: -2,
     paddingHorizontal: 6,
     paddingVertical: 0,
     borderRadius: 8,
@@ -210,8 +282,8 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginRight: 8,
+    paddingHorizontal: 12,
+    marginRight: 4,
   },
   tabItemActive: {
     borderBottomWidth: 2,

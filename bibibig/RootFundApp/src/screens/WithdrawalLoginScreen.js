@@ -16,12 +16,11 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
-const LoginScreen = ({ navigation, route }) => {
+const WithdrawalLoginScreen = ({ navigation, route }) => {
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberEmail, setRememberEmail] = useState(true);
-  const [mainLoginLoading, setMainLoginLoading] = useState(false);
   const [withdrawalLoginLoading, setWithdrawalLoginLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const passwordRef = useRef(null);
@@ -47,13 +46,9 @@ const LoginScreen = ({ navigation, route }) => {
       const userData = await AsyncStorage.getItem('userData');
       const userToken = await AsyncStorage.getItem('userToken');
       
-      // returnTo가 있으면 (특정 페이지에서 로그인 버튼을 눌러서 온 경우)
-      // 자동 이동하지 않고 로그인 화면을 보여줌
-      const { returnTo } = route.params || {};
-      
-      if (userData && userToken && !returnTo) {
-        // returnTo가 없고 이미 로그인된 사용자가 있으면 메인 화면으로 이동
-        navigation.replace('Main');
+      if (userData && userToken) {
+        // 이미 로그인된 사용자가 있으면 출금 화면으로 바로 이동
+        navigation.replace('Withdrawal');
       }
     } catch (error) {
       console.error('기존 로그인 확인 오류:', error);
@@ -96,62 +91,6 @@ const LoginScreen = ({ navigation, route }) => {
     } catch (error) {
       console.error('이메일 저장 오류:', error);
     }
-  };
-
-  const handleLogin = async (targetScreen = 'Main', targetParams = null, setLoadingState) => {
-    console.log('🚀 로그인 시작');
-    
-    if (!email || !password) {
-      console.log('❌ 입력값 검증 실패:', { email: !!email, password: !!password });
-      Alert.alert('로그인', '이메일과 비밀번호를 입력해주세요.');
-      return;
-    }
-
-    setLoadingState(true);
-    
-    try {
-      await saveRememberedEmail();
-      
-      const loginData = { email, password };
-      console.log('📤 API 호출 전 데이터:', { email, password: '***' });
-      
-      const response = await ApiService.login(loginData);
-      console.log('📥 API 응답:', response);
-      
-      if (response.success && response.user) {
-        console.log('✅ 로그인 성공! 저장할 사용자 데이터:');
-        console.log('📋 response.user:', JSON.stringify(response.user, null, 2));
-        console.log('📋 세션 데이터:', JSON.stringify(response.user.session, null, 2));
-        
-        // 로그인 성공 시 사용자 정보 저장
-        await AsyncStorage.setItem('userData', JSON.stringify(response.user));
-        await AsyncStorage.setItem('userToken', response.user.token);
-        
-        console.log('💾 AsyncStorage에 저장 완료');
-        
-        // 타겟 화면으로 이동
-        if (targetParams) {
-          navigation.replace(targetScreen, targetParams);
-        } else {
-          navigation.replace(targetScreen);
-        }
-      } else {
-        Alert.alert('로그인 실패', response.message || '계정 정보를 확인하여 주십시오.');
-      }
-    } catch (error) {
-      Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
-    } finally {
-      setLoadingState(false);
-    }
-  };
-
-  const handleMainLogin = () => {
-    // route.params에서 returnTo와 returnParams 가져오기
-    const { returnTo, returnParams } = route.params || {};
-    const targetScreen = returnTo || 'Main';
-    const targetParams = returnParams || null;
-    
-    handleLogin(targetScreen, targetParams, setMainLoginLoading);
   };
 
   const handleWithdrawalLogin = async () => {
@@ -202,11 +141,6 @@ const LoginScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleKakaoLogin = async () => {
-    Alert.alert('카카오 로그인', '카카오 로그인 기능은 준비 중입니다.');
-    // TODO: 카카오 로그인 구현
-  };
-
   const handleFindEmail = () => {
     navigation.navigate('FindEmail');
   };
@@ -240,7 +174,7 @@ const LoginScreen = ({ navigation, route }) => {
         {/* 로고 섹션 */}
         <View style={styles.logoSection}>
           <View style={styles.logoSpacer} />
-          <Text style={styles.subtitle}>환경을 생각하는 투자 플랫폼</Text>
+          <Text style={styles.subtitle}>출금 신청을 위한 로그인</Text>
           <View style={styles.logoImageContainer}>
             <Image 
               source={require('../assets/images/thumbnail_logo_en.jpg')} 
@@ -276,7 +210,7 @@ const LoginScreen = ({ navigation, route }) => {
               secureTextEntry
               autoCapitalize="none"
               returnKeyType="done"
-              onSubmitEditing={handleMainLogin}
+              onSubmitEditing={handleWithdrawalLogin}
             />
           </View>
 
@@ -291,37 +225,16 @@ const LoginScreen = ({ navigation, route }) => {
             <Text style={styles.checkboxLabel}>로그인 저장하기</Text>
           </TouchableOpacity>
 
-          {/* 로그인 버튼 */}
-          <TouchableOpacity 
-            style={[styles.loginButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
-            onPress={handleMainLogin}
-            disabled={mainLoginLoading || withdrawalLoginLoading}
-          >
-            <Text style={styles.loginButtonText}>로그인</Text>
-          </TouchableOpacity>
-
-          {/* 카카오 로그인 버튼 */}
-          <TouchableOpacity 
-            style={[styles.kakaoButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]}
-            onPress={handleKakaoLogin}
-            disabled={mainLoginLoading || withdrawalLoginLoading}
-          >
-            <View style={styles.kakaoIcon}>
-              <Text style={styles.kakaoIconText}>K</Text>
-            </View>
-            <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
-          </TouchableOpacity>
-
           {/* 출금신청 로그인 버튼 */}
           <TouchableOpacity 
-            style={[styles.withdrawalButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
+            style={[styles.loginButton, withdrawalLoginLoading && styles.disabledButton]} 
             onPress={handleWithdrawalLogin}
-            disabled={mainLoginLoading || withdrawalLoginLoading}
+            disabled={withdrawalLoginLoading}
           >
             {withdrawalLoginLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.withdrawalButtonText}>출금신청 로그인</Text>
+              <Text style={styles.loginButtonText}>출금신청 로그인</Text>
             )}
           </TouchableOpacity>
 
@@ -343,14 +256,6 @@ const LoginScreen = ({ navigation, route }) => {
               </Text>
             </TouchableOpacity>
           </View>
-
-          {/* 로그인 skip 버튼 */}
-          <TouchableOpacity 
-            style={styles.skipButton}
-            onPress={() => navigation.replace('Main')}
-          >
-            <Text style={styles.skipButtonText}>메인페이지로 이동</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -375,11 +280,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666666',
-  },
   logoSection: {
     alignItems: 'center',
     marginBottom: 50,
@@ -388,9 +288,10 @@ const styles = StyleSheet.create({
     height: 40,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#666666',
+    fontSize: 16,
+    color: '#007AFF',
     marginBottom: 10,
+    fontWeight: '600',
   },
   logoImageContainer: {
     height: 40,
@@ -403,12 +304,6 @@ const styles = StyleSheet.create({
   logoImage: {
     width: '80%',
     height: 160,
-  },
-  logoText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    letterSpacing: 2,
   },
   loginForm: {
     flex: 1,
@@ -460,54 +355,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 30,
   },
   disabledButton: {
     backgroundColor: '#CCCCCC',
   },
   loginButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  kakaoButton: {
-    height: 48,
-    backgroundColor: '#FEE500',
-    borderRadius: 10,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  withdrawalButton: {
-    height: 48,
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  withdrawalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  kakaoIcon: {
-    width: 24,
-    height: 24,
-    backgroundColor: '#000000',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  kakaoIconText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  kakaoButtonText: {
-    color: '#000000',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -540,17 +394,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#007AFF',
   },
-  skipButton: {
-    marginTop: 30,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  skipButtonText: {
-    fontSize: 18,
-    color: '#999999',
-    textDecorationLine: 'underline',
-  },
 });
 
-export default LoginScreen;
+export default WithdrawalLoginScreen;
+

@@ -710,6 +710,138 @@ DwIDAQAB
     }
   }
 
+  // 출금 신청 로그인
+  async withdrawalLogin(credentials) {
+    try {
+      console.log('🔐 출금 신청 로그인 요청:', credentials);
+      console.log('🌐 API URL:', `${this.baseURL}/app/withdrawal/loginProcess`);
+      
+      // 1. 먼저 setreqmodes 호출해서 보안 데이터 가져오기
+      const reqModes = await this.setReqModes({});
+      
+      // 2. 비밀번호 암호화
+      const encryptedPassword = await this.encryptPassword(credentials.password);
+      
+      // 3. 로그인 데이터 구성
+      const loginData = {
+        id: credentials.email.toString(),
+        password: encryptedPassword,
+        _bcsrmd1: reqModes.data1 || '',
+        _bcsrmd2: reqModes.data2 || ''
+      };
+      
+      console.log('📤 최종 출금 로그인 데이터:', { 
+        id: loginData.id, 
+        password: '***',
+        _bcsrmd1: loginData._bcsrmd1 ? '***' : '',
+        _bcsrmd2: loginData._bcsrmd2 ? '***' : ''
+      });
+      
+      // Form-data 형태로 변환
+      const formData = this.convertToFormData(loginData);
+      
+      // Referer 헤더 추가 (백엔드에서 체크)
+      const response = await this.api.post('/app/withdrawal/loginProcess', formData, {
+        headers: {
+          'Referer': 'RootFundApp://LoginScreen'
+        }
+      });
+      
+      console.log('✅ 출금 로그인 응답:', response.data);
+      
+      if (response.data) {
+        console.log('🔍 응답 데이터 분석:', {
+          rtnvalue: response.data.rtnvalue,
+          memo: response.data.memo,
+          hasSession: !!response.data.session,
+          hasMember: !!response.data.member,
+          hasBanks: !!response.data.banks
+        });
+
+        // rtnvalue가 "0" 또는 0이면 성공
+        if (response.data.rtnvalue === "0" || response.data.rtnvalue === 0) {
+          console.log('✅ 출금 로그인 성공 - 세션 및 은행 데이터 처리');
+          
+          // 백엔드에서 전달받은 데이터 추출 (rsdata 없이 직접 전달됨)
+          const sessionData = response.data.session || {};
+          const memberData = response.data.member || {};
+          const banks = response.data.banks || [];
+          
+          console.log('📋 백엔드 세션 데이터:', sessionData);
+          console.log('📋 백엔드 회원 데이터:', memberData);
+          console.log('📋 은행 목록:', banks.length, '개');
+          
+          // 로그인 만료 시간 설정 (24시간 후)
+          const expirationTime = Date.now() + (24 * 60 * 60 * 1000);
+          
+          // 사용자 데이터 구성
+          const userData = {
+            id: sessionData.member_id || credentials.email,
+            email: sessionData.email || credentials.email,
+            name: sessionData.member_name || sessionData.r_name || '사용자',
+            token: response.data.token || 'app-token-' + Date.now(),
+            loginId: credentials.email,
+            loginTime: Date.now(),
+            expirationTime: expirationTime,
+            session: {
+              member_id: sessionData.member_id,
+              memGuid: sessionData.memGuid,
+              email: sessionData.email,
+              web_id: sessionData.web_id,
+              member_name: sessionData.member_name,
+              r_name: sessionData.r_name,
+              balance: sessionData.balance,
+              member_class: sessionData.member_class,
+              f_member_class_kr: sessionData.f_member_class_kr,
+              member_type: sessionData.member_type,
+              member_grade: sessionData.member_grade,
+              sort: sessionData.sort,
+              v_account: sessionData.v_account,
+              bank_nm: memberData.bank_nm,
+              account: memberData.account,
+              account_holder_name: memberData.name
+            },
+            member: memberData,
+            ...response.data
+          };
+          
+          console.log('💾 저장할 사용자 데이터:', userData);
+          
+          return { 
+            success: true, 
+            user: userData,
+            banks: banks
+          };
+        } else {
+          console.log('❌ 출금 로그인 실패:', response.data.memo);
+          return { 
+            success: false, 
+            message: response.data.memo || '로그인에 실패했습니다.' 
+          };
+        }
+      }
+      
+      return { success: false, message: '로그인 실패' };
+    } catch (error) {
+      console.error('❌ Withdrawal login error:', error);
+      console.error('❌ Error details:', error.response?.data);
+      
+      let errorMessage = '로그인 중 오류가 발생했습니다.';
+      
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage = '서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error.message.includes('Network Error') || error.code === 'ECONNREFUSED') {
+        errorMessage = '네트워크 연결을 확인해주세요.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error.response?.data?.memo) {
+        errorMessage = error.response.data.memo;
+      }
+      
+      return { success: false, message: errorMessage };
+    }
+  }
+
   // 네트워크 오류 분석
   analyzeNetworkError(error) {
     const errorCode = error.code;

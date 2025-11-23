@@ -243,7 +243,6 @@ const ProductListScreen = ({ navigation, route }) => {
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2c3db8" />
-            <Text style={styles.loadingText}>로딩 중...</Text>
           </View>
         )}
 

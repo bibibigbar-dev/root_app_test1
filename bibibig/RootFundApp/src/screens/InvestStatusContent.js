@@ -312,32 +312,32 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
       <ScrollView style={styles.scrollView}>
         {/* 투자 현황 요약 */}
         {summary && (
-          <View style={styles.statusBox}>
-            <View style={styles.statusItem}>
-              <View style={styles.statusImgBox}>
+          <View style={styles.myStatusBox}>
+            <View style={styles.myStatus}>
+              <View style={styles.imgbox}>
                 <Image
                   source={require('../assets/images/ico_my_status.png')}
-                  style={styles.statusIcon}
+                  style={styles.imgboxImg}
                   resizeMode="contain"
                 />
               </View>
-              <View style={styles.statusData}>
-                <View style={styles.statusDataItem}>
-                  <Text style={[styles.statusDataLabel, styles.statusDataLabelBlue]}>나의 투자</Text>
-                  <Text style={[styles.statusDataValue, styles.statusDataValueBlue]}>
-                    {summary.cnt || 0}건
+              <View style={styles.myData}>
+                <View style={styles.myDataDl}>
+                  <Text style={[styles.myDataDt, styles.colorBlue]}>나의 투자</Text>
+                  <Text style={[styles.myDataDd, styles.colorBlue]}>
+                    <Text style={styles.colorBlue}>{summary.cnt || 0}</Text>건
                   </Text>
                 </View>
-                <Text style={styles.statusSlash}>/</Text>
-                <View style={styles.statusDataItem}>
-                  <Text style={styles.statusDataLabel}>
-                    총 누적 투자금액<Text style={styles.statusDataLabelEm}> / 현재 투자금액</Text>
+                <View style={styles.myDataDl}>
+                  <Text style={styles.myDataDt}>총 누적 투자금액</Text>
+                  <Text style={styles.myDataDd}>
+                    <Text>{formatCurrency(summary.price || 0)}</Text>원
                   </Text>
-                  <Text style={styles.statusDataValue}>
-                    {formatCurrency(summary.price || 0)}원{' '}
-                    <Text style={styles.statusDataValueEm}>
-                      / {formatCurrency(summary.remain_price || 0)}원
-                    </Text>
+                </View>
+                <View style={styles.myDataDl}>
+                  <Text style={styles.myDataDt}>현재 투자금액</Text>
+                  <Text style={styles.myDataDd}>
+                    <Text>{formatCurrency(summary.remain_price || 0)}</Text>원
                   </Text>
                 </View>
               </View>
@@ -373,9 +373,13 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
         {/* 목록 영역 */}
         {investList.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <View style={styles.emptyWrapper}>
-              <View style={styles.emptyIcon} />
-              <Text style={styles.emptyMsg}>
+            <View style={styles.loadingWrapperRepay}>
+              <Image 
+                source={require('../assets/images/loading2.png')} 
+                style={styles.loadingIco}
+                resizeMode="contain"
+              />
+              <Text style={styles.loadingMsg}>
                 투자한 상품이 없습니다.{'\n'}지금 바로 투자해 주세요!
               </Text>
             </View>
@@ -391,9 +395,9 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
                 return (
                   <View key={item.idx || index} style={styles.invItem}>
                     {/* 헤더 */}
-                    <View style={[styles.invHead, { backgroundColor: bgColor }]}>
-                      <Text style={styles.invHeadTitle}>
-                        채권번호 <Text style={styles.invHeadTitleEm}>RB-{item.idx}</Text>
+                    <View style={[styles.inHead, { backgroundColor: bgColor }]}>
+                      <Text style={styles.inHeadTitle}>
+                        채권번호 <Text style={styles.inHeadTitleEm}>RB-{item.idx}</Text>
                       </Text>
                       {item.status === 'FUNDING' && item.iv_status === 'INVEST' && (
                         <TouchableOpacity
@@ -406,7 +410,7 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
                     </View>
 
                     {/* 내용 */}
-                    <View style={styles.invCont}>
+                    <View style={styles.inCont}>
                       <View style={styles.prdInfoBox}>
                         <View style={styles.prdInfo}>
                           <View style={styles.prdImgBox}>
@@ -458,13 +462,13 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
                     </View>
 
                     {/* 버튼 영역 */}
-                    <View style={styles.invBtnBox}>
+                    <View style={styles.inBtnBox}>
                       {item.iv_status === 'INVEST' && (
                         <TouchableOpacity
                           style={styles.invBtn}
                           onPress={() => handleShowInvestCertify(item.idx)}
                         >
-                          <Text style={styles.invBtnText}>투자 확인서</Text>
+                          <Text style={styles.inBtn}>투자 확인서</Text>
                         </TouchableOpacity>
                       )}
                       {item.iv_status === 'TRANSFER' && (
@@ -473,13 +477,13 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
                             style={styles.invBtn}
                             onPress={() => handleShowInvestReceipt(item.idx)}
                           >
-                            <Text style={styles.invBtnText}>원리금수취권 증서</Text>
+                            <Text style={styles.inBtn}>원리금수취권 증서</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={styles.invBtn}
                             onPress={() => handleOpenScheduleModal(item.orderNumber)}
                           >
-                            <Text style={styles.invBtnText}>상환내역</Text>
+                            <Text style={styles.inBtn}>상환내역</Text>
                           </TouchableOpacity>
                         </>
                       )}
@@ -490,7 +494,7 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
                             style={styles.invBtn}
                             onPress={() => handleOpenSellRequest(item)}
                           >
-                            <Text style={styles.invBtnText}>원리금수취권 신청</Text>
+                            <Text style={styles.inBtn}>원리금수취권 신청</Text>
                           </TouchableOpacity>
                         )}
                     </View>
@@ -501,15 +505,17 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
 
             {/* 더보기 버튼 */}
             {currentPage < totalPages && (
-              <TouchableOpacity
-                style={styles.loadMoreButton}
-                onPress={handleLoadMore}
-              >
-                <Text style={styles.loadMoreText}>더보기</Text>
-                <Text style={styles.loadMorePage}>
-                  {currentPage}/{totalPages}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.listMore}>
+                <TouchableOpacity
+                  style={styles.listMoreBtn}
+                  onPress={handleLoadMore}
+                >
+                  <Text style={styles.listMoreTxt}>더보기</Text>
+                  <Text style={styles.listMoreTxt}>
+                    {currentPage}/{totalPages}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </>
         )}
@@ -732,6 +738,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
+  myStatusBox: {
+    padding: 30,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f7fa',
+  },
+  myStatus: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    shadowColor: 'rgba(104, 111, 115, 0.15)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  imgbox: {
+    flex: 0,
+    marginRight: 12,
+  },
+  imgboxImg: {
+    width: 46,
+    height: 46,
+  },
+  myData: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  myDataDl: {
+    marginRight: 12,
+  },
+  myDataDt: {
+    color: '#666',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+    //textAlign: 'right',
+  },
+  myDataDtEm: {
+    color: '#a3a7ab',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  myDataDd: {
+    marginTop: 4,
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: '600',
+    color: '#222',
+  },
+  colorBlue: {
+    color: '#2c3db8',
+  },
   statusBox: {
     paddingVertical: 30,
     paddingHorizontal: 16,
@@ -814,7 +877,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 'auto',
-    width: 130,
+    width: 200,
     height: 32,
     paddingHorizontal: 15,
     borderWidth: 1,
@@ -825,7 +888,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 32,
-    paddingVertical: 0,
     fontSize: 14,
     lineHeight: 21,
     fontWeight: '600',
@@ -848,6 +910,24 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 40,
   },
+  loadingWrapperRepay: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
+  },
+  loadingIco: {
+    width: 40,
+    height: 40,
+  },
+  loadingMsg: {
+    marginTop: 16,
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+    color: '#222',
+    textAlign: 'center',
+  },
   emptyWrapper: {
     alignItems: 'center',
   },
@@ -868,23 +948,80 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 10,
     paddingBottom: 40,
     marginTop: 0,
   },
   invItem: {
+    display: 'flex',
     flexDirection: 'column',
     position: 'relative',
     marginTop: 20,
-    marginBottom: 0,
     borderRadius: 10,
     backgroundColor: '#fff',
-    shadowColor: '#68738f',
+    shadowColor: 'rgba(104, 111, 115, 0.15)',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 1,
     shadowRadius: 10,
     elevation: 3,
-    overflow: 'hidden',
+  },
+  inHead: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 40,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    backgroundColor: '#222',
+  },
+  bgBlue: {
+    backgroundColor: '#2c3db8',
+  },
+  bgMint: {
+    backgroundColor: '#2ebab4',
+  },
+  bgGray: {
+    backgroundColor: '#666',
+  },
+  inHeadTitle: {
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  inHeadTitleEm: {
+    fontWeight: '600',
+  },
+  inHeadTxtRight: {
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  inCont: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(224, 225, 226, 0.5)',
+    borderTop: 0,
+    borderBottom: 0,
+  },
+  inBtnBox: {
+    display: 'flex',
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#f6f6f6',
+  },
+  inBtn: {
+    flex: 1,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 40,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   invHead: {
     flexDirection: 'row',
@@ -1024,23 +1161,34 @@ const styles = StyleSheet.create({
     lineHeight: 40,
     fontWeight: '500',
   },
-  loadMoreButton: {
-    flexDirection: 'row',
+  listMore: {
+    display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 40,
+  },
+  listMoreBtn: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 40,
-    borderWidth: 0.05,
+    borderWidth: 0.5,
     borderColor: '#e0e1e2',
     borderRadius: 20,
     backgroundColor: '#fff',
+  },
+  listMoreTxt: {
+    marginRight: 8,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 19.5,
+    fontWeight: '400',
   },
   loadMoreText: {
     marginRight: 8,
     color: '#666',
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 19.5,
     fontWeight: '400',
   },
   loadMorePage: {

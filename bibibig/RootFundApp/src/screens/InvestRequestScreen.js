@@ -17,6 +17,7 @@ import Header from '../components/Header';
 import ApiService from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const width = Dimensions.get('window').width;
 
 const InvestRequestScreen = ({ navigation, route }) => {
   const { orderKey, productData } = route.params || {};
@@ -28,6 +29,7 @@ const InvestRequestScreen = ({ navigation, route }) => {
   const [investAmount, setInvestAmount] = useState('');
   const [availableBalance, setAvailableBalance] = useState(0);
   const [depositBalance, setDepositBalance] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     loadInvestData();
@@ -86,7 +88,6 @@ const InvestRequestScreen = ({ navigation, route }) => {
         <Header navigation={navigation} title="투자하기" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
-          <Text style={styles.loadingText}>로딩 중...</Text>
         </View>
       </View>
     );
@@ -110,41 +111,34 @@ const InvestRequestScreen = ({ navigation, route }) => {
       <ScrollView style={styles.content}>
         {/* 상품 정보 카드 */}
         <View style={styles.blBox}>
-          <View style={styles.blBoxBefore} />
           <View style={styles.productItem}>
-            <View style={styles.imgbox}>
+            <View style={styles.productImgbox}>
               {circleThumbnail.length > 0 ? (
-                <Image source={{ uri: circleThumbnail[0].filePath }} style={styles.img} resizeMode="cover" />
+                <Image source={{ uri: circleThumbnail[0].filePath }} style={styles.productImg} resizeMode="cover" />
               ) : fileThumbnail.length > 0 ? (
-                <Image source={{ uri: fileThumbnail[0].filePath }} style={styles.img} resizeMode="cover" />
+                <Image source={{ uri: fileThumbnail[0].filePath }} style={styles.productImg} resizeMode="cover" />
               ) : (
-                <Image source={require('../assets/images/re_bc5_custom.png')} style={styles.img} resizeMode="cover" />
+                <Image source={require('../assets/images/re_bc5_custom.png')} style={styles.productImg} resizeMode="cover" />
               )}
+              <Image 
+                source={
+                  prod.orderType === '태양광' ? require('../assets/images/img_product01_s.png') :
+                  prod.orderType === '풍력' ? require('../assets/images/img_product02_s.png') :
+                  prod.orderType === 'ESS' ? require('../assets/images/img_product04_s.png') :
+                  prod.orderType === '전기차충전소' ? require('../assets/images/img_product03_s.png') :
+                  require('../assets/images/img_product01_s.png')
+                }
+                style={styles.productSImg}
+                resizeMode="contain"
+              />
             </View>
             
-            <View style={styles.inbox}>
-              <Text style={styles.prdNum}>{prod.orderType} {prod.orderNum}호</Text>
-              <Text style={styles.prdName}>{prod.orderName}</Text>
-              
-              <View style={styles.progressGroup}>
-                <View style={styles.progressBar}>
-                  <LinearGradient
-                    colors={['#8FC5FF', '#5DA7FF', '#2C7FE8', '#2c3db8']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.progressVal, { width: `${prod.percent}%` }]}
-                  />
-                </View>
-                
-                <View style={styles.progressInfo}>
-                  <Text style={styles.totalText}>
-                    <Text style={styles.totalEm}>{formatNumber(prod.investment)}원</Text>
-                    {' / '}
-                    {formatNumber(prod.price)}원
-                  </Text>
-                  <Text style={styles.pctText}>{prod.percent}%</Text>
-                </View>
-              </View>
+            <View style={styles.productTxtbox}>
+              <Text style={styles.productNum}>{prod.orderType} {prod.orderNum}호</Text>
+              <Text style={styles.productName}>{prod.orderName}</Text>
+              <Text style={styles.productDate}>
+                모집기간 {prod.start_date}({prod.start_week}) ~ {prod.end_date}({prod.end_week})
+              </Text>
             </View>
           </View>
         </View>
@@ -154,45 +148,151 @@ const InvestRequestScreen = ({ navigation, route }) => {
           <View style={styles.dlFlexlist}>
             <View style={styles.dlItem}>
               <Text style={styles.dt}>연 수익률</Text>
-              <Text style={styles.dd}>{prod.rate}%</Text>
+              <Text style={styles.dd}><Text style={styles.ddStrong}>{prod.rate}%</Text></Text>
             </View>
             <View style={styles.dlItem}>
               <Text style={styles.dt}>투자기간</Text>
-              <Text style={styles.dd}>{prod.period_text}개월</Text>
+              <Text style={styles.dd}><Text style={styles.ddStrong}>{prod.period_text}개월</Text></Text>
+            </View>
+            <View style={styles.dlItem}>
+              <Text style={styles.dt}>상품번호</Text>
+              <Text style={styles.dd}><Text style={styles.ddStrong}>{prod.orderNumber}</Text></Text>
             </View>
             <View style={styles.dlItem}>
               <Text style={styles.dt}>상환방식</Text>
               <Text style={styles.dd}>
-                {prod.repay_type === '1' ? '원금균등상환' :
-                 prod.repay_type === '2' ? '만기일시상환' :
-                 prod.repay_type === '3' ? '원리금균등상환' : '-'}
+                <Text style={styles.ddStrong}>
+                  {prod.repay_type === '1' ? '원금균등상환' :
+                   prod.repay_type === '2' ? '만기일시상환' :
+                   prod.repay_type === '3' ? '원리금균등상환' : '-'}
+                </Text>
               </Text>
             </View>
             <View style={styles.dlItem}>
-              <Text style={styles.dt}>최소 투자금액</Text>
-              <Text style={styles.dd}>{formatNumber(prod.min_price)}원</Text>
+              <Text style={styles.dt}>상품종류</Text>
+              <Text style={styles.dd}><Text style={styles.ddStrong}>{prod.orderType}</Text></Text>
             </View>
+            <View style={styles.dlItem}>
+              <Text style={styles.dt}>자금용도</Text>
+              <Text style={styles.dd}>
+                <Text style={styles.ddStrong}>
+                  {(prod.sort === 'bridge' || prod.sort === 'innovation') ? '건설자금' : '운영 자금'}
+                </Text>
+              </Text>
+            </View>
+          </View>
+          
+          {/* 투자 진행률 */}
+          <View style={styles.progressGroup}>
+            <Text style={styles.txtStit}>투자 진행률</Text>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressVal, { width: `${prod.percent}%` }]} />
+              <View style={styles.progressTip}>
+                <Text style={styles.progressTipText}>모집 잔액 {formatNumber(prod.left_price)}원</Text>
+              </View>
+            </View>
+            <View style={styles.progressInfo}>
+              <Text style={styles.progressTotal}>
+                <Text style={styles.progressTotalEm}>{formatNumber(prod.investment)}원</Text>
+                <Text style={styles.progressTotalGray}> / {formatNumber(prod.price)}원</Text>
+              </Text>
+              <Text style={styles.progressPct}>{prod.percent}%</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 투자 방법 슬라이더 */}
+        <View style={styles.invMethodSwiper}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={(e) => {
+              const slideIndex = Math.round(e.nativeEvent.contentOffset.x / (width - 32));
+              setCurrentSlide(slideIndex);
+            }}
+            scrollEventThrottle={16}
+          >
+            {/* 슬라이드 1 */}
+            <View style={[styles.swiperSlide, { width: width - 32 }]}>
+              <View style={styles.inbox}>
+                <View style={styles.imgbox}>
+                  <Image 
+                    source={require('../assets/images/re_bc5_custom.png')} 
+                    style={styles.methodImg}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.txtbox}>
+                  <Text style={styles.methodTit}>개인전용{'\n'}가상계좌번호 확인</Text>
+                  <Text style={styles.methodTxt}>아래 가상계좌번호를{'\n'}확인해주세요</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 슬라이드 2 */}
+            <View style={[styles.swiperSlide, { width: width - 32 }]}>
+              <View style={styles.inbox}>
+                <View style={styles.imgbox}>
+                  <Image 
+                    source={require('../assets/images/re_bc5_custom.png')} 
+                    style={styles.methodImg}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.txtbox}>
+                  <Text style={styles.methodTit}>예치금 입금</Text>
+                  <Text style={styles.methodTxt}>*가입 시 등록한{'\n'}출금계좌에서만 입금가능</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 슬라이드 3 */}
+            <View style={[styles.swiperSlide, { width: width - 32 }]}>
+              <View style={styles.inbox}>
+                <View style={styles.imgbox}>
+                  <Image 
+                    source={require('../assets/images/re_bc5_custom.png')} 
+                    style={styles.methodImg}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.txtbox}>
+                  <Text style={styles.methodTit}>투자 준비 완료</Text>
+                  <Text style={styles.methodTxt}>이제 마음껏 투자하세요!</Text>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Pagination */}
+          <View style={styles.swiperPagination}>
+            <View style={[styles.paginationBullet, currentSlide === 0 && styles.paginationBulletActive]} />
+            <View style={[styles.paginationBullet, currentSlide === 1 && styles.paginationBulletActive]} />
+            <View style={[styles.paginationBullet, currentSlide === 2 && styles.paginationBulletActive]} />
           </View>
         </View>
 
         {/* 예치금 카드 */}
         <View style={styles.bankCard}>
           <View style={styles.cntbox}>
-            <Text style={styles.tit}>투자 가능 금액</Text>
+            <Text style={styles.cardTit}>투자 가능 금액</Text>
             <View style={styles.cnt}>
               <Text style={styles.cntEm}>{formatNumber(availableBalance)}</Text>
-              <Text>원</Text>
+              <Text style={styles.cntTxt}>원</Text>
             </View>
           </View>
           <View style={styles.bankInfo}>
-            <Text style={styles.bankInfoDt}>예치금</Text>
-            <Text style={styles.bankInfoDd}>{formatNumber(depositBalance)}원</Text>
+            <View style={styles.bankInfoDl}>
+              <Text style={styles.bankInfoDt}>예치금</Text>
+              <Text style={styles.bankInfoDd}>{formatNumber(depositBalance)}원</Text>
+            </View>
           </View>
         </View>
 
         {/* 투자 금액 입력 */}
         <View style={styles.bankAmount}>
-          <Text style={styles.title}>투자 금액</Text>
+          <Text style={styles.amountTitle}>투자 금액</Text>
           
           <View style={styles.dlAmount}>
             <View style={styles.dlAmountItem}>
@@ -214,7 +314,7 @@ const InvestRequestScreen = ({ navigation, route }) => {
               onChangeText={handleAmountChange}
               keyboardType="numeric"
             />
-            <Text style={styles.txt}>원</Text>
+            <Text style={styles.amountTxt}>원</Text>
           </View>
         </View>
 
@@ -254,89 +354,246 @@ const styles = StyleSheet.create({
   },
   // bl_box
   blBox: {
-    position: 'relative',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 10,
+    marginTop: 16,
+  },
+  productItem: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 20,
+    paddingHorizontal: 16,
+    borderWidth: 0.5,
+    borderColor: '#e0e1e2',
     borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    overflow: 'hidden',
     backgroundColor: '#fff',
   },
-  blBoxBefore: {
+  productImgbox: {
+    flex: 0,
+    position: 'relative',
+    marginRight: 16,
+  },
+  productImg: {
+    width: 47,
+    height: 47,
+    borderRadius: 47 / 2,
+  },
+  productSImg: {
+    position: 'absolute',
+    right: -6,
+    bottom: -5,
+    width: 22,
+    height: 24,
+  },
+  productTxtbox: {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+  },
+  productNum: {
+    color: '#393f44',
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '400',
+  },
+  productName: {
+    marginTop: 4,
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+    color: '#222',
+  },
+  productDate: {
+    marginTop: 6,
+    color: '#a3a7ab',
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '400',
+  },
+  // sub_whitebox
+  subWhitebox: {
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    backgroundColor: '#fff',
+    shadowColor: 'rgba(224, 225, 226, 0.50)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    elevation: 1,
+  },
+  // dl_flexlist
+  dlFlexlist: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    paddingHorizontal: 4,
+  },
+  dlItem: {
+    width: '50%',
+    paddingTop: 16,
+    paddingHorizontal: 16,
+  },
+  dt: {
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '400',
+  },
+  dd: {
+    marginTop: 6,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '400',
+    color: '#222',
+  },
+  ddStrong: {
+    fontWeight: '600',
+  },
+  // progress_group
+  progressGroup: {
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  txtStit: {
+    marginBottom: 10,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '400',
+  },
+  progressBar: {
+    position: 'relative',
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#e0e1e2',
+    overflow: 'hidden',
+  },
+  progressVal: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     left: 0,
-    width: 4,
-    backgroundColor: '#2c3db8',
-    zIndex: 1,
-  },
-  productItem: {
-    flexDirection: 'row',
-    padding: 16,
-  },
-  imgbox: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginRight: 12,
-  },
-  img: {
-    width: '100%',
     height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#495ad8',
   },
-  inbox: {
-    flex: 1,
+  progressTip: {
+    position: 'absolute',
+    bottom: '100%',
+    right: 0,
+    marginBottom: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingBottom: 4,
+    borderWidth: 1,
+    borderColor: '#197cff',
+    backgroundColor: '#197cff',
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '400',
+    borderRadius: 5,
   },
-  prdNum: {
-    color: '#666',
-    fontSize: 12,
-    lineHeight: 15.6,
+  progressTipText: {
+    color: '#fff',
+    fontSize: 11,
+    lineHeight: 13,
     fontWeight: '400',
   },
-  prdName: {
-    marginTop: 4,
-    fontSize: 15,
-    lineHeight: 19.5,
-    fontWeight: '600',
-    color: '#333',
-  },
-  progressGroup: {
-    marginTop: 8,
-  },
-  progressBar: {
-    height: 5,
-    backgroundColor: '#e0e1e2',
-    borderRadius: 2.5,
-    overflow: 'hidden',
-  },
-  progressVal: {
-    height: '100%',
-  },
   progressInfo: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 6,
   },
-  totalText: {
-    fontSize: 12,
+  progressTotal: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '600',
+  },
+  progressTotalEm: {
+    color: '#393f44',
+  },
+  progressTotalGray: {
     color: '#bfc3c7',
-    fontWeight: '600',
   },
-  totalEm: {
+  progressPct: {
+    flex: 0,
     color: '#393f44',
-  },
-  pctText: {
     fontSize: 12,
+    lineHeight: 17,
     fontWeight: '600',
+  },
+  // inv_method_swiper
+  invMethodSwiper: {
+    position: 'relative',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 25,
+    overflow: 'hidden',
+  },
+  swiperSlide: {
+    height: 'auto',
+  },
+  inbox: {
+    position: 'relative',
+    height: '100%',
+  },
+  imgbox: {
+    width: '100%',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    shadowColor: 'rgba(104, 111, 115, 0.15)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  methodImg: {
+    width: '100%',
+    height: undefined,
+    aspectRatio: 335 / 160,
+  },
+  txtbox: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    padding: 24,
+    paddingHorizontal: 20,
+  },
+  methodTit: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '700',
+    color: '#222',
+  },
+  methodTxt: {
+    marginTop: 4,
     color: '#393f44',
+    fontSize: 15,
+    lineHeight: 22.5,
+    fontWeight: '600',
+  },
+  swiperPagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  paginationBullet: {
+    width: 5,
+    height: 5,
+    marginHorizontal: 2,
+    borderRadius: 2.5,
+    backgroundColor: '#aab1bc',
+  },
+  paginationBulletActive: {
+    width: 16,
+    backgroundColor: '#2c3db8',
   },
   // sub_whitebox
   subWhitebox: {
@@ -377,16 +634,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 40,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: 'rgba(104, 111, 115, 0.15)',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 1,
     shadowRadius: 10,
     elevation: 5,
   },
   cntbox: {
-    padding: 24,
+    display: 'flex',
+    flexDirection: 'column',
     paddingTop: 24,
     paddingBottom: 20,
+    paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: '#2c3db8',
     borderBottomWidth: 0,
@@ -395,31 +654,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
   },
-  tit: {
+  cardTit: {
     color: '#393f44',
     fontSize: 20,
     lineHeight: 26,
     fontWeight: '700',
   },
   cnt: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 6,
+  },
+  cntEm: {
+    marginRight: 2,
+    fontSize: 30,
+    lineHeight: 42,
+    fontWeight: '700',
+    color: '#393f44',
+  },
+  cntTxt: {
     color: '#393f44',
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '700',
   },
-  cntEm: {
-    marginRight: 2,
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#393f44',
-  },
   bankInfo: {
     position: 'relative',
-    padding: 10,
+    paddingVertical: 10,
     paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: '#2c3db8',
@@ -427,6 +690,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
     backgroundColor: '#f8faff',
+  },
+  bankInfoDl: {
+    display: 'flex',
   },
   bankInfoDt: {
     marginBottom: 12,
@@ -436,6 +702,8 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   bankInfoDd: {
+    display: 'flex',
+    alignItems: 'center',
     fontSize: 18,
     lineHeight: 22,
     fontWeight: '600',
@@ -445,18 +713,20 @@ const styles = StyleSheet.create({
   bankAmount: {
     marginHorizontal: 16,
     marginTop: 34,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 30,
     borderRadius: 10,
     backgroundColor: '#2c3db8',
   },
-  title: {
+  amountTitle: {
     color: '#fff',
     fontSize: 20,
     lineHeight: 26,
     fontWeight: '600',
   },
   dlAmount: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -485,6 +755,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 38,
     paddingRight: 20,
+    borderWidth: 0,
     borderBottomWidth: 2,
     borderBottomColor: '#fff',
     backgroundColor: 'transparent',
@@ -493,7 +764,7 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: '600',
   },
-  txt: {
+  amountTxt: {
     position: 'absolute',
     top: 0,
     right: 0,

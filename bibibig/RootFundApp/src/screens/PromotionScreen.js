@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ImageBackground,
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
@@ -50,8 +51,7 @@ const PromotionScreen = ({ navigation, route }) => {
   };
 
   const handlePromotionDetail = (idx) => {
-    // TODO: 프로모션 상세 페이지로 이동
-    console.log('프로모션 상세:', idx);
+    navigation.navigate('PromotionDetail', { idx });
   };
 
   const visibleItems = promotionList.slice(0, currentPage * itemsPerPage);
@@ -61,11 +61,16 @@ const PromotionScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <Header navigation={navigation} title="프로모션" />
       
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 헤더 */}
         <View style={styles.subHead}>
-          <View style={styles.bgbox} />
-          <Text style={styles.headTitle}>프로모션</Text>
+          <ImageBackground 
+            source={require('../assets/images/bg_sub_promotion.png')}
+            style={styles.bgbox}
+            resizeMode="cover"
+          >
+            <Text style={styles.headTitle}>프로모션</Text>
+          </ImageBackground>
         </View>
 
         {/* 탭 메뉴 */}
@@ -105,8 +110,12 @@ const PromotionScreen = ({ navigation, route }) => {
           </View>
         ) : promotionList.length === 0 ? (
           <View style={styles.loadingWrapperPromotion}>
-            <View style={styles.emptyIcon} />
-            <Text style={styles.emptyMsg}>
+            <Image 
+              source={require('../assets/images/loading4.png')}
+              style={styles.ico}
+              resizeMode="contain"
+            />
+            <Text style={styles.msg}>
               {activeTab === 0 ? '현재 진행 중인 프로모션이 없습니다.' : '종료된 프로모션이 없습니다.'}
             </Text>
           </View>
@@ -169,25 +178,25 @@ const styles = StyleSheet.create({
   },
   subHead: {
     position: 'relative',
-    height: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 0, // -4.8rem
+    marginBottom: 16, // 1.6rem
+    height: 130, // 더 아래까지 내려오도록 높이 증가
     overflow: 'hidden',
+    borderBottomLeftRadius: 20, // 2rem - 하단만 둥글게
+    borderBottomRightRadius: 20, // 2rem - 하단만 둥글게
   },
   bgbox: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#f5f7fa',
+    width: '105%',
+    height: 130,
+    justifyContent: 'flex-end',
+    paddingBottom: 20, // 3rem
+    paddingLeft: 20, // 2rem
   },
   headTitle: {
-    fontSize: 24,
-    lineHeight: 32,
+    fontSize: 20, // 2rem
+    lineHeight: 28, // 1.4 * 20
     fontWeight: '700',
-    color: '#222',
-    zIndex: 1,
+    color: '#fff',
   },
   tabSwiper: {
     height: 30,
@@ -231,20 +240,20 @@ const styles = StyleSheet.create({
   loadingWrapperPromotion: {
     marginTop: 60,
     marginBottom: 40,
+    flexDirection: 'column',
     alignItems: 'center',
+    textAlign: 'center',
   },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f5f7fa',
+  ico: {
+    width: 40,
+    height: 40,
   },
-  emptyMsg: {
-    marginTop: 20,
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '400',
-    color: '#666',
+  msg: {
+    marginTop: 16,
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+    color: '#222',
   },
   galleryListFull: {
     paddingHorizontal: 8,

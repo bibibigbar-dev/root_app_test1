@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import ApiService from '../services/api';
 
@@ -247,7 +248,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>로딩중...</Text>
+        <ActivityIndicator size="large" color="#2c3db8" />
       </View>
     );
   }
@@ -256,125 +257,140 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
     <View style={styles.container}>
       <View style={styles.formContainer}>
         {/* 로그인 정보 */}
-        <View style={styles.whitebox}>
-          <View style={styles.formRow}>
-            <Text style={styles.formLabel}>로그인 ID</Text>
-            <View style={styles.formValue}>
-              <Text style={styles.valueText}>{memberData?.web_id}</Text>
+        <View style={[styles.subWhitebox, styles.pb30]}>
+          <View style={styles.flexTr}>
+            <Text style={styles.flexTh}>로그인 ID</Text>
+            <View style={styles.flexTd}>
+              <View style={styles.flexInput}>
+                <Text style={styles.txtVal}>{memberData?.web_id}</Text>
+              </View>
             </View>
           </View>
-          <View style={styles.formRow}>
-            <Text style={styles.formLabel}>추천인 코드</Text>
-            <View style={styles.formValue}>
-              <Text style={styles.valueText}>{memberData?.nomin_id || '-'}</Text>
+          <View style={styles.flexTr}>
+            <Text style={styles.flexTh}>추천인 코드</Text>
+            <View style={styles.flexTd}>
+              <View style={styles.flexInput}>
+                <Text style={styles.txtVal}>{memberData?.nomin_id || '-'}</Text>
+              </View>
             </View>
           </View>
-          <View style={styles.formRow}>
-            <Text style={styles.formLabel}>비밀번호</Text>
-            <View style={styles.formValue}>
-              <TextInput
-                style={styles.input}
-                placeholder="현재 비밀번호 입력"
-                secureTextEntry
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-              />
-              <TextInput
-                style={[styles.input, styles.inputMargin]}
-                placeholder="변경 비밀번호 입력"
-                secureTextEntry
-                value={newPassword}
-                onChangeText={setNewPassword}
-              />
-              <TextInput
-                style={[styles.input, styles.inputMargin]}
-                placeholder="변경 비밀번호 재입력"
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* 개인정보 */}
-        <View style={styles.whitebox}>
-          <View style={styles.formRow}>
-            <Text style={styles.formLabel}>이름</Text>
-            <View style={styles.formValue}>
-              <Text style={styles.valueText}>{memberData?.r_name}</Text>
-            </View>
-          </View>
-          <View style={styles.formRow}>
-            <Text style={styles.formLabel}>생년월일</Text>
-            <View style={styles.formValue}>
-              <TextInput
-                style={styles.input}
-                value={birthdate}
-                editable={false}
-              />
-            </View>
-          </View>
-          <View style={styles.formRow}>
-            <Text style={styles.formLabel}>휴대폰번호</Text>
-            <View style={styles.formValue}>
-              <View style={styles.inputWithButton}>
+          <View style={styles.flexTr}>
+            <Text style={styles.flexTh}>비밀번호</Text>
+            <View style={styles.flexTd}>
+              <View style={styles.flexInput}>
                 <TextInput
-                  style={[styles.input, styles.inputFlex]}
+                  style={styles.flexInputText}
+                  placeholder="현재 비밀번호 입력"
+                  secureTextEntry
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                />
+              </View>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.flexInputText}
+                  placeholder="변경 비밀번호 입력"
+                  secureTextEntry
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                />
+              </View>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.flexInputText}
+                  placeholder="변경 비밀번호 재입력"
+                  secureTextEntry
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+              </View>
+            </View>
+          </View>
+          <View style={[styles.hrLine, styles.mt30, styles.mr16, styles.ml16]} />
+          <View style={styles.flexTr}>
+            <Text style={styles.flexTh}>이름</Text>
+            <View style={styles.flexTd}>
+              <View style={styles.flexInput}>
+                <Text style={styles.txtVal}>{memberData?.r_name}</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.flexTr}>
+            <Text style={styles.flexTh}>생년월일</Text>
+            <View style={styles.flexTd}>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.flexInputText}
+                  value={birthdate}
+                  editable={false}
+                />
+              </View>
+            </View>
+          </View>
+          <View style={styles.flexTr}>
+            <Text style={styles.flexTh}>휴대폰번호</Text>
+            <View style={styles.flexTd}>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.flexInputText}
                   value={phone}
                   editable={false}
                 />
-                <TouchableOpacity style={styles.button}>
-                  <Text style={styles.buttonText}>휴대전화 변경</Text>
+                <TouchableOpacity style={styles.btnStyle}>
+                  <Text style={styles.btnStyleText}>휴대전화 변경</Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
-          <View style={styles.formRow}>
-            <Text style={styles.formLabel}>주소</Text>
-            <View style={styles.formValue}>
-              <View style={styles.inputWithButton}>
+          <View style={styles.flexTr}>
+            <Text style={styles.flexTh}>주소</Text>
+            <View style={styles.flexTd}>
+              <View style={styles.flexInput}>
                 <TextInput
-                  style={[styles.input, styles.inputFlex]}
+                  style={styles.flexInputText}
                   value={zipcode}
                   editable={false}
                 />
                 <TouchableOpacity 
-                  style={styles.button}
+                  style={styles.btnStyle}
                   onPress={() => {
                     Alert.alert('알림', '주소 검색 기능은 추후 구현 예정입니다.');
                   }}
                 >
-                  <Text style={styles.buttonText}>주소찾기</Text>
+                  <Text style={styles.btnStyleText}>주소찾기</Text>
                 </TouchableOpacity>
               </View>
-              <TextInput
-                style={[styles.input, styles.inputMargin]}
-                value={address1}
-                onChangeText={setAddress1}
-              />
-              <TextInput
-                style={[styles.input, styles.inputMargin]}
-                placeholder="상세주소"
-                value={address2}
-                onChangeText={setAddress2}
-              />
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.flexInputText}
+                  value={address1}
+                  onChangeText={setAddress1}
+                />
+              </View>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.flexInputText}
+                  placeholder="상세주소"
+                  value={address2}
+                  onChangeText={setAddress2}
+                />
+              </View>
             </View>
           </View>
-          <View style={styles.formRow}>
-            <Text style={styles.formLabel}>직업</Text>
-            <View style={styles.formValue}>
-              <TouchableOpacity 
-                style={styles.selectButton}
-                onPress={() => setShowJobModal(true)}
-              >
-                <Text style={styles.selectButtonText}>
-                  {jobOptions.find(opt => opt.value === jobCode)?.label || '선택해주세요'}
-                </Text>
-                <Text style={styles.selectArrow}>▼</Text>
-              </TouchableOpacity>
+          <View style={styles.flexTr}>
+            <Text style={styles.flexTh}>직업</Text>
+            <View style={styles.flexTd}>
+              <View style={styles.flexInput}>
+                <TouchableOpacity 
+                  style={styles.selectButton}
+                  onPress={() => setShowJobModal(true)}
+                >
+                  <Text style={styles.selectButtonText}>
+                    {jobOptions.find(opt => opt.value === jobCode)?.label || '선택해주세요'}
+                  </Text>
+                  <Text style={styles.selectArrow}>▼</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -598,6 +614,117 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  subWhitebox: {
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    backgroundColor: '#fff',
+    shadowColor: 'rgba(224, 225, 226, 0.5)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    elevation: 1,
+  },
+  flexTr: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 20,
+    marginHorizontal: 20,
+  },
+  flexLabel: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '400',
+    color: '#666',
+    marginBottom: 12,
+  },
+  flexTh: {
+    flex: 0,
+    display: 'flex',
+    alignItems: 'center',
+    width: 69,
+    minHeight: 44,
+    marginRight: 12,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  flexTd: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 1.5,
+    fontWeight: '400',
+  },
+  flexTdFlexInput: {
+    marginTop: 0,
+  },
+  flexInput: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  flexInputText: {
+    flex: 1,
+    minWidth: 0,
+    height: 44,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
+    fontSize: 15,
+    lineHeight: 1.5,
+    fontWeight: '600',
+    backgroundColor: '#fbfbfb',
+    color: '#222',
+  },
+  txtVal: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    minHeight: 44,
+    paddingLeft: 8,
+    fontSize: 15,
+    lineHeight: 16,
+    fontWeight: '600',
+    color: '#222',
+  },
+  pb30: {
+    paddingBottom: 30,
+  },
+  hrLine: {
+    height: 1,
+    backgroundColor: '#f6f6f6',
+  },
+  mt30: {
+    marginTop: 30,
+  },
+  mr16: {
+    marginRight: 16,
+  },
+  ml16: {
+    marginLeft: 16,
+  },
+  btnStyle: {
+    height: 44,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginLeft: 8,
+  },
+  btnStyleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#222',
+  },
+  flexInputMargin: {
+    marginTop: 8,
+  },
   whiteboxMargin: {
     marginTop: 20,
   },
@@ -645,7 +772,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   button: {
-    height: 48,
+    height: 44,
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: '#e0e1e2',
@@ -660,15 +787,16 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   selectButton: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    height: 48,
+    height: 44,
     borderWidth: 1,
-    borderColor: '#e0e1e2',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#fbfbfb',
   },
   selectButtonText: {
     fontSize: 15,

@@ -347,7 +347,11 @@ const UpwardRequestScreen = ({ navigation, route }) => {
             style={styles.fileuploadBox}
             onPress={handleFileSelect}
           >
-            <View style={styles.fileuploadIco} />
+            <Image 
+              source={require('../assets/images/ico_fileupload.png')}
+              style={styles.fileuploadIco}
+              resizeMode="contain"
+            />
             <Text style={styles.fileuploadTxt}>파일추가</Text>
           </TouchableOpacity>
 
