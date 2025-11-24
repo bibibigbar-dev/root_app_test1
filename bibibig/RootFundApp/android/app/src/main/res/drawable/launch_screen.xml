@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@color/splash_background"/>
+    <item android:drawable="@android:color/white"/>
     <item>
         <bitmap
-            android:gravity="fill_vertical|center_horizontal"
+            android:gravity="fill_horizontal|center_vertical"
             android:src="@drawable/launch_screen"/>
     </item>
 </layer-list>

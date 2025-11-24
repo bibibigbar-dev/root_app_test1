@@ -1036,6 +1036,60 @@ DwIDAQAB
     }
   }
 
+  // 계좌 변경
+  async changeAccount(accountData) {
+    try {
+      console.log('🔵 계좌 변경 요청:', accountData);
+      
+      // 계좌번호를 Base64 URL 인코딩
+      const encodedAccount = Buffer.from(accountData.account).toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+      
+      const changeAccountData = {
+        member_id: accountData.member_id,
+        bank_cd: accountData.bank_cd,
+        account: encodedAccount,
+        bbachk: 'Y',
+        gubun: accountData.gubun || ''
+      };
+      
+      console.log('📤 계좌 변경 전송 데이터:', changeAccountData);
+      
+      const formData = this.convertToFormData(changeAccountData);
+      const response = await this.api.post('/app/member/process/changeAccount', formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+      
+      console.log('✅ 계좌 변경 응답:', response.data);
+      
+      // 응답이 단순 숫자인 경우 처리
+      if (typeof response.data === 'number' || typeof response.data === 'string') {
+        const rtnvalue = response.data.toString();
+        return {
+          success: rtnvalue === '0',
+          data: { rtnvalue: rtnvalue }
+        };
+      }
+      
+      return {
+        success: response.data && (response.data.rtnvalue === '0' || response.data.rtnvalue === 0),
+        data: response.data || { rtnvalue: '-1' }
+      };
+      
+    } catch (error) {
+      console.error('❌ 계좌 변경 오류:', error);
+      return { 
+        success: false, 
+        message: '네트워크 오류가 발생했습니다.',
+        data: { rtnvalue: '-1' }
+      };
+    }
+  }
+
   // 투자 현황 조회
   async getInvestmentStatus() {
     try {

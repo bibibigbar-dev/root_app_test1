@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Linking } from 'react-native';
+import { Linking, ActivityIndicator, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from '../screens/LoginScreen';
 import WithdrawalLoginScreen from '../screens/WithdrawalLoginScreen';
 import MainScreen from '../screens/MainScreen';
 import MyHomeScreen from '../screens/MyHomeScreen';
 import WithdrawalScreen from '../screens/WithdrawalScreen';
+import AccountChangeScreen from '../screens/AccountChangeScreen';
 import FindEmailScreen from '../screens/FindEmailScreen';
 import FindPasswordScreen from '../screens/FindPasswordScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -71,10 +73,43 @@ const linking = {
 };
 
 const AppNavigator = () => {
+  const [initialRoute, setInitialRoute] = useState(null);
+
+  useEffect(() => {
+    checkLoginStatus();
+  }, []);
+
+  const checkLoginStatus = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const userToken = await AsyncStorage.getItem('userToken');
+      
+      if (userData && userToken) {
+        // 로그인되어 있으면 Main으로
+        setInitialRoute('Main');
+      } else {
+        // 로그인 안 되어 있으면 Login으로
+        setInitialRoute('Login');
+      }
+    } catch (error) {
+      console.error('로그인 상태 확인 오류:', error);
+      setInitialRoute('Login');
+    }
+  };
+
+  if (!initialRoute) {
+    // 로딩 중
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer linking={linking} fallback={<></>}>
       <Stack.Navigator
-        initialRouteName="Login"
+        initialRouteName={initialRoute}
         screenOptions={{
           headerShown: false,
         }}
@@ -84,6 +119,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen name="MyHome" component={MyHomeScreen} />
         <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
+        <Stack.Screen name="AccountChange" component={AccountChangeScreen} />
         <Stack.Screen name="FindEmail" component={FindEmailScreen} />
         <Stack.Screen name="FindPassword" component={FindPasswordScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,12 @@ import {
   FlatList,
   Linking,
   Image,
+  Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const sanitizeText = (value) => {
   if (value === null || value === undefined) {
@@ -51,25 +54,24 @@ const getSafeBalanceText = (value, formatCurrencyFn) => {
   return `${formatCurrencyFn(numeric)} 원`;
 };
 
-const WithdrawalScreen = ({ navigation }) => {
+const WithdrawalScreen = ({ navigation, route }) => {
   const [user, setUser] = useState(null);
   const [bankName, setBankName] = useState('');
   const [bankAccount, setBankAccount] = useState('');
   const [accountHolder, setAccountHolder] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  
-  // 계좌변경 모달 관련 state
-  const [showAccountModal, setShowAccountModal] = useState(false);
-  const [banks, setBanks] = useState([]);
-  const [selectedBankCode, setSelectedBankCode] = useState('');
-  const [selectedBankName, setSelectedBankName] = useState('');
-  const [newAccountNumber, setNewAccountNumber] = useState('');
-  const [showBankPicker, setShowBankPicker] = useState(false);
 
   useEffect(() => {
     loadUserData();
-  }, []);
+    
+    // 계좌 변경 후 새로고침
+    if (route?.params?.refresh) {
+      console.log('🔄 계좌 변경 후 데이터 새로고침');
+      // 파라미터 초기화
+      navigation.setParams({ refresh: undefined });
+    }
+  }, [route?.params?.refresh]);
 
   const loadUserData = async () => {
     try {
@@ -232,83 +234,6 @@ const WithdrawalScreen = ({ navigation }) => {
         { bank_cd: '089', bank_nm: '케이뱅크' },
         { bank_cd: '090', bank_nm: '카카오뱅크' },
       ]);
-    }
-  };
-
-  const handleOpenAccountModal = () => {
-    loadBankList();
-    setShowAccountModal(true);
-    setNewAccountNumber('');
-    setSelectedBankCode('');
-    setSelectedBankName('은행을 선택하세요');
-  };
-
-  const handleCloseAccountModal = () => {
-    setShowAccountModal(false);
-    setShowBankPicker(false);
-    setNewAccountNumber('');
-    setSelectedBankCode('');
-    setSelectedBankName('은행을 선택하세요');
-  };
-
-  const handleChangeAccount = async () => {
-    // 은행 선택 확인
-    if (!selectedBankCode || selectedBankCode === '') {
-      Alert.alert('계좌 변경', '은행을 선택하여 주십시오.');
-      return;
-    }
-
-    // 계좌번호 입력 확인
-    if (!newAccountNumber || newAccountNumber.trim() === '') {
-      Alert.alert('계좌 변경', '계좌번호를 입력해주세요.');
-      return;
-    }
-
-    // 숫자만 입력되었는지 확인
-    if (isNaN(newAccountNumber) || !/^\d+$/.test(newAccountNumber)) {
-      Alert.alert('계좌 변경', '가상계좌 번호를 확인하여 주십시오.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      const response = await ApiService.post('/app/member/process/changeAccount', {
-        bank_cd: selectedBankCode.toString(),
-        bank_nm: selectedBankName.toString(),
-        account: newAccountNumber.toString(),
-        bbachk: 'Y'
-      });
-
-      console.log('계좌 변경 응답:', response);
-
-      // 응답 코드에 따른 처리
-      if (response.data === '0' || response.data === 0 || response.rtnvalue === '0' || response.rtnvalue === 0) {
-        Alert.alert('성공', '계좌가 변경되었습니다.', [
-          {
-            text: '확인',
-            onPress: () => {
-              setShowAccountModal(false);
-              loadUserData(); // 사용자 정보 새로고침
-            },
-          },
-        ]);
-      } else if (response.data === '1' || response.data === '2' || response.data === '3') {
-        Alert.alert('계좌 등록', '잘못된 데이터 입니다.');
-      } else if (response.data === '5') {
-        Alert.alert('계좌인증', '확인할 수 없는 계좌입니다.\n계좌를 확인하여 주십시오.');
-      } else if (response.data === '6') {
-        Alert.alert('계좌인증', '인증받은 정보와 계좌주가 일치하지 않습니다.\n타인의 명의를 도용시 법적 책임을 받을 수 있습니다.');
-      } else if (response.data === '8') {
-        Alert.alert('NHOPENAPI 오류', '현재 농협과의 통신이 원활하지 않습니다.\n잠시후에 다시 시도하여 주십시오.');
-      } else {
-        Alert.alert('계좌인증', response.message || '처리도중 오류가 발생하였습니다.');
-      }
-    } catch (error) {
-      console.error('계좌 변경 오류:', error);
-      Alert.alert('계좌 등록', '처리도중 오류가 발생하였습니다.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -499,7 +424,7 @@ const WithdrawalScreen = ({ navigation }) => {
           <View style={styles.accountChangeButtonContainer}>
             <TouchableOpacity 
               style={styles.accountChangeButton}
-              onPress={handleOpenAccountModal}
+              onPress={() => navigation.navigate('AccountChange')}
             >
               <Text style={styles.accountChangeButtonText}>계좌변경</Text>
             </TouchableOpacity>
@@ -581,123 +506,6 @@ const WithdrawalScreen = ({ navigation }) => {
           <Text style={styles.customerInfoTime}>평일 10시~17시 (점심 12시~13시)</Text>
         </View>
       </ScrollView>
-
-      {/* 계좌변경 모달 */}
-      <Modal
-        visible={showAccountModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleCloseAccountModal}
-      >
-        <TouchableOpacity 
-          style={styles.modalMask} 
-          activeOpacity={1} 
-          onPress={handleCloseAccountModal}
-        >
-          <TouchableOpacity 
-            style={styles.modalWrapper} 
-            activeOpacity={1} 
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalBox}>
-              {/* 제목 */}
-              <Text style={styles.modalTitle}>출금계좌 변경</Text>
-
-              <View style={styles.modalContent}>
-                {/* 예금주 */}
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabel}>예금주</Text>
-                  <View style={styles.modalInputContainer}>
-                    <Text style={styles.modalTextValue}>{accountHolder}</Text>
-                  </View>
-                </View>
-
-                {/* 은행선택 */}
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabel}>은행선택</Text>
-                  <TouchableOpacity
-                    style={styles.modalSelectButton}
-                    onPress={() => setShowBankPicker(true)}
-                  >
-                    <Text style={styles.modalSelectText}>
-                      {selectedBankName || '은행을 선택하세요'}
-                    </Text>
-                    <Text style={styles.modalSelectArrow}>▼</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* 계좌번호 */}
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabel}>계좌번호</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="기호('-')없이 숫자만 입력"
-                    placeholderTextColor="#999"
-                    value={newAccountNumber}
-                    onChangeText={setNewAccountNumber}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              {/* 버튼 */}
-              <View style={styles.modalButtonBox}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalCancelButton]}
-                  onPress={handleCloseAccountModal}
-                >
-                  <Text style={styles.modalCancelButtonText}>취소</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalConfirmButton]}
-                  onPress={handleChangeAccount}
-                >
-                  <Text style={styles.modalConfirmButtonText}>변경</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* 은행 선택 모달 */}
-      <Modal
-        visible={showBankPicker}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowBankPicker(false)}
-      >
-        <TouchableOpacity 
-          style={styles.pickerModalMask} 
-          activeOpacity={1} 
-          onPress={() => setShowBankPicker(false)}
-        >
-          <View style={styles.pickerModalContent}>
-            <View style={styles.pickerHeader}>
-              <Text style={styles.pickerTitle}>은행 선택</Text>
-              <TouchableOpacity onPress={() => setShowBankPicker(false)}>
-                <Text style={styles.pickerCloseButton}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={banks}
-              keyExtractor={(item) => item.bank_cd}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.pickerItem}
-                  onPress={() => {
-                    setSelectedBankCode(item.bank_cd);
-                    setSelectedBankName(item.bank_nm);
-                    setShowBankPicker(false);
-                  }}
-                >
-                  <Text style={styles.pickerItemText}>{item.bank_nm}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 };
@@ -802,7 +610,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   accountChangeButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#666666',
   },
@@ -1032,13 +840,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   modalField: {
-    marginBottom: 20,
+    marginBottom: 25,
   },
   modalLabel: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   modalInputContainer: {
     backgroundColor: '#F8F9FA',
@@ -1049,9 +857,67 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   modalTextValue: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#222',
+  },
+  modalSelectButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  modalSelectText: {
+    fontSize: 16,
+    color: '#222',
+  },
+  modalSelectArrow: {
+    fontSize: 12,
+    color: '#666',
+  },
+  modalInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    fontSize: 16,
+    color: '#222',
+  },
+  modalButtonBox: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  modalConfirmButton: {
+    backgroundColor: '#007AFF',
+  },
+  modalConfirmButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   modalSelectButton: {
     flexDirection: 'row',
@@ -1111,19 +977,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  // 은행 선택 피커 모달
-  pickerModalMask: {
+  // 은행 선택 모달 스타일
+  bankPickerModalMask: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  pickerModalContent: {
+  bankPickerModalContent: {
+    width: '85%',
+    maxWidth: 400,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  pickerHeader: {
+  bankPickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1131,25 +999,56 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-  pickerTitle: {
-    fontSize: 18,
+  bankPickerTitle: {
+    fontSize: 20,
     fontWeight: '700',
     color: '#222',
   },
-  pickerCloseButton: {
-    fontSize: 24,
+  bankPickerCloseButton: {
+    fontSize: 28,
     color: '#666',
-    paddingHorizontal: 10,
+    fontWeight: '300',
   },
-  pickerItem: {
-    paddingVertical: 16,
+  bankPickerScrollView: {
+    height: 360, // 3개 카드 높이 (120 * 3)
+  },
+  bankPickerScrollContent: {
+    paddingVertical: 120, // 위아래 패딩으로 중앙 정렬 효과
+  },
+  bankPickerItem: {
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
   },
-  pickerItemText: {
+  bankPickerCard: {
+    width: '100%',
+    height: 100,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  bankPickerCardActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+    transform: [{ scale: 1.05 }],
+  },
+  bankPickerName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+  },
+  bankPickerNameActive: {
+    color: '#FFFFFF',
+    fontSize: 22,
+  },
+  emptyBankText: {
     fontSize: 16,
-    color: '#222',
+    color: '#999',
+    textAlign: 'center',
   },
 });
 
