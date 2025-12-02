@@ -10,7 +10,6 @@ import {
   Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Header from '../components/Header';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -42,8 +41,6 @@ const CompanyIntroScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="회사소개" />
-      
       <ScrollView 
         style={styles.content}
         showsHorizontalScrollIndicator={false}

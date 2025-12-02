@@ -830,11 +830,15 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalTitle: {
-    fontSize: 22,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
     color: '#222',
-    marginBottom: 24,
     textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
   },
   modalContent: {
     marginBottom: 24,

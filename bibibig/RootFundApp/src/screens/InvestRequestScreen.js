@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
-import Header from '../components/Header';
 import ApiService from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -85,8 +84,7 @@ const InvestRequestScreen = ({ navigation, route }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Header navigation={navigation} title="투자하기" />
-        <View style={styles.loadingContainer}>
+      <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -96,8 +94,7 @@ const InvestRequestScreen = ({ navigation, route }) => {
   if (!prod) {
     return (
       <View style={styles.container}>
-        <Header navigation={navigation} title="투자하기" />
-        <View style={styles.loadingContainer}>
+      <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>상품 정보를 불러올 수 없습니다.</Text>
         </View>
       </View>
@@ -106,8 +103,6 @@ const InvestRequestScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="투자하기" />
-      
       <ScrollView style={styles.content}>
         {/* 상품 정보 카드 */}
         <View style={styles.blBox}>

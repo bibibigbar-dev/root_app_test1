@@ -406,9 +406,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   modalTitle: {
-    fontSize: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
     color: '#222',
+    textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
   },
   modalCloseButton: {
     fontSize: 28,

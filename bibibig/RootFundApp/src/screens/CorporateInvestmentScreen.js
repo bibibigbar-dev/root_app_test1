@@ -8,7 +8,6 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
-import Header from '../components/Header';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -22,8 +21,6 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={user} hideBorder={true} />
-      
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* 상단 비주얼 */}
         <View style={styles.subVisual}>

@@ -16,7 +16,6 @@ try {
 } catch (e) {
   console.warn('react-native-document-picker가 설치되지 않았습니다.');
 }
-import Header from '../components/Header';
 import ApiService from '../services/api';
 
 const UpwardRequestScreen = ({ navigation, route }) => {
@@ -192,21 +191,6 @@ const UpwardRequestScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={user} showBack={true} />
-      
-      <View style={styles.headCon}>
-        <TouchableOpacity 
-          style={styles.btnBack}
-          onPress={() => navigation.goBack()}
-        >
-          <Image 
-            source={require('../assets/images/ico_back.png')} 
-            style={styles.backIcon} 
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.scrollView}>
         <View style={styles.subTitleBox}>
           <Text style={styles.title}>투자등급 상향신청</Text>
@@ -417,28 +401,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  headCon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-    paddingHorizontal: 16,
-    backgroundColor: '#fff',
-  },
-  btnBack: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backIcon: {
-    width: 24,
-    height: 24,
-  },
   scrollView: {
     flex: 1,
   },
   subTitleBox: {
-    marginTop: 24,
+    marginTop: 40,
     paddingHorizontal: 20,
   },
   title: {
@@ -673,7 +640,7 @@ const styles = StyleSheet.create({
   btnBox: {
     flexDirection: 'row',
     marginTop: 40,
-    marginBottom: 56,
+    marginBottom: 50,
     paddingHorizontal: 16,
     gap: 8,
   },

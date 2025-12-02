@@ -18,6 +18,7 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedRepayment, setSelectedRepayment] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showAllRepayments, setShowAllRepayments] = useState(false);
   
   // 현재 날짜
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -27,6 +28,7 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
 
   useEffect(() => {
     loadCalendarData();
+    setShowAllRepayments(false); // 월 변경 시 더보기 상태 초기화
   }, [currentYear, currentMonth]);
 
   const loadCalendarData = async () => {
@@ -123,6 +125,34 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
       calendarDays.push(null);
     }
 
+    // 상환일 날짜 목록 추출 (빨간색 점 표시용)
+    const repaymentDates = new Set();
+    if (calendarData.list) {
+      calendarData.list.forEach(item => {
+        const repayDate = item.repay_date || item.repayDate;
+        if (repayDate) {
+          // 날짜 형식 변환
+          let dateStr = repayDate;
+          if (repayDate.includes('.')) {
+            // YY.MM.DD 형식 처리 (예: 25.12.02 -> 2025-12-02)
+            const parts = repayDate.split('.');
+            if (parts.length >= 3) {
+              const year = parts[0].length === 2 ? `20${parts[0]}` : parts[0];
+              dateStr = `${year}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+            }
+          } else if (repayDate.includes('-')) {
+            // YYYY-MM-DD 형식은 그대로 사용
+            dateStr = repayDate;
+          }
+          // 날짜만 추출 (시간 부분 제거)
+          if (dateStr.includes(' ')) {
+            dateStr = dateStr.split(' ')[0];
+          }
+          repaymentDates.add(dateStr);
+        }
+      });
+    }
+
     // 날짜 추가
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
@@ -132,6 +162,10 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
         return itemDate.startsWith(dateStr);
       });
       
+      // 상환일 날짜인지 확인
+      const isRepaymentDate = repaymentDates.has(dateStr) || 
+        Array.from(repaymentDates).some(date => date.startsWith(dateStr));
+      
       const isToday = currentYear === today.getFullYear() && 
                       currentMonth === today.getMonth() + 1 && 
                       day === todayDate;
@@ -139,6 +173,7 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
       calendarDays.push({
         day,
         hasRepayment,
+        isRepaymentDate,
         isToday,
       });
     }
@@ -189,14 +224,12 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
               return (
                 <TouchableOpacity
                   key={index}
-                  style={[
-                    styles.dateCell,
-                    dateItem.isToday && styles.dateCellToday,
-                  ]}
+                  style={styles.dateCell}
                   onPress={() => handleDatePress(dateItem.day)}
                 >
                   <View style={[
                     styles.dateBox,
+                    dateItem.isToday && styles.dateBoxToday,
                     dateItem.hasRepayment && styles.dateBoxHasRepayment,
                   ]}>
                     <Text style={[
@@ -210,6 +243,9 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
                         styles.repaymentIndicator,
                         dateItem.isToday && styles.repaymentIndicatorToday
                       ]} />
+                    )}
+                    {dateItem.isRepaymentDate && (
+                      <View style={styles.repaymentDateIndicator} />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -261,13 +297,13 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
 
   const getProductImage = (orderType) => {
     if (orderType === '태양광') {
-      return require('../assets/images/ico_status01.png');
+      return require('../assets/images/img_product01_s.png');
     } else if (orderType === 'ESS') {
-      return require('../assets/images/ico_status04.png');
+      return require('../assets/images/img_product02_s.png');
     } else if (orderType === '풍력') {
-      return require('../assets/images/ico_status03.png');
+      return require('../assets/images/img_product03_s.png');
     } else if (orderType === '전기차충전소') {
-      return require('../assets/images/ico_status02.png');
+      return require('../assets/images/img_product02_s.png');
     }
     return null;
   };
@@ -294,12 +330,17 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
       );
     }
 
+    const displayList = showAllRepayments ? calendarData.list : calendarData.list.slice(0, 2);
+    const hasMore = calendarData.list.length > 2;
+    const currentCount = displayList.length;
+    const totalCount = calendarData.list.length;
+
     return (
       <View style={styles.listContainer}>
         <View style={styles.subTitleBox}>
           <Text style={styles.subTitle}>상환 상품</Text>
         </View>
-        {calendarData.list.map((item, index) => {
+        {displayList.map((item, index) => {
           const orderType = item.orderType || item.order_type || '';
           const productImage = getProductImage(orderType);
           const statusBg = getStatusBgColor(item.o_status || item.oStatus);
@@ -380,6 +421,14 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
             </View>
           );
         })}
+        {hasMore && !showAllRepayments && (
+          <TouchableOpacity
+            style={styles.moreButton}
+            onPress={() => setShowAllRepayments(true)}
+          >
+            <Text style={styles.moreButtonText}>더보기 ({currentCount}/{totalCount})</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -405,20 +454,18 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
         animationType="fade"
         onRequestClose={() => setShowDetailModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>상환 상세 정보</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowDetailModal(false)}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDetailModal(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
             {selectedRepayment && (
-              <ScrollView style={styles.modalBody}>
+              <View style={styles.modalBody}>
                 <View style={styles.boxCalc}>
                   <View style={styles.boxCalcTotal}>
                     <Text style={styles.boxCalcTotalDt}>
@@ -475,19 +522,19 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
                     </Text>
                   </View>
                 </View>
-              </ScrollView>
+                
+                <View style={styles.modalBtnBox}>
+                  <TouchableOpacity
+                    style={styles.modalBtn}
+                    onPress={() => setShowDetailModal(false)}
+                  >
+                    <Text style={styles.modalBtnText}>확인</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
-            
-            <View style={styles.modalBtnBox}>
-              <TouchableOpacity
-                style={styles.modalBtn}
-                onPress={() => setShowDetailModal(false)}
-              >
-                <Text style={styles.modalBtnText}>확인</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -606,12 +653,18 @@ const styles = StyleSheet.create({
     // 오늘 날짜 스타일은 dateBox에서 처리
   },
   dateBox: {
-    width: 36,
+    width: 40,
     height: 32,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
     position: 'relative',
+  },
+  dateBoxToday: {
+    borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: 'rgba(119, 171, 248, 0.30)',
+    backgroundColor: 'rgba(119, 171, 248, 0.05)',
   },
   dateBoxHasRepayment: {
     // 상환일 있는 날짜 스타일
@@ -626,14 +679,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   dateCellToday: {
-    borderWidth: 0.5,
-    borderColor: 'rgba(119, 171, 248, 0.30)',
-    backgroundColor: 'rgba(119, 171, 248, 0.05)',
+    // 오늘 날짜 스타일은 dateBoxToday에서 처리
   },
   repaymentIndicator: {
     position: 'absolute',
     top: 9,
-    right: 3,
+    right: 2,
     width: 4,
     height: 4,
     borderRadius: 2,
@@ -642,23 +693,33 @@ const styles = StyleSheet.create({
   repaymentIndicatorToday: {
     backgroundColor: '#ff5042',
   },
+  repaymentDateIndicator: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ff0000',
+  },
   summaryContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    margin: 20,
+    marginHorizontal: 16,
     marginTop: 20,
+    marginBottom: 20,
     gap: 8,
   },
   summaryBox: {
-    flex: 1,
-    minWidth: '47%',
+    width: '48%',
     padding: 16,
     borderWidth: 0.5,
     borderColor: '#e0e1e2',
     borderRadius: 10,
-    shadowColor: '#516c89',
+    backgroundColor: '#fff',
+    shadowColor: 'rgba(81, 108, 137, 0.05)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -721,12 +782,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 10,
     backgroundColor: '#fff',
+    borderWidth: 0.5,
+    borderColor: 'rgba(224, 225, 226, 0.5)',
     shadowColor: '#68738f',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 3,
-    overflow: 'hidden',
   },
   invItemHead: {
     flexDirection: 'row',
@@ -737,6 +799,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
+    overflow: 'hidden',
   },
   invItemHeadTitle: {
     color: '#fff',
@@ -749,10 +812,7 @@ const styles = StyleSheet.create({
   },
   invItemCont: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderWidth: 0.5,
-    borderColor: 'rgba(224, 225, 226, 0.5)',
-    borderTopWidth: 0,
+    paddingBottom: 6,
   },
   prdInfoBox: {
     paddingVertical: 16,
@@ -789,7 +849,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 12,
   },
   prdPriceDt: {
     marginRight: 8,
@@ -809,6 +869,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: 'rgba(246, 246, 246, 0.50)',
+    marginBottom: 5,
   },
   prdDataBoxDl: {
     flex: 1,
@@ -838,13 +899,30 @@ const styles = StyleSheet.create({
   },
   invItemBtn: {
     flex: 1,
-    paddingVertical: 16,
+    height: 40,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   invItemBtnText: {
     color: '#666',
     fontSize: 13,
     lineHeight: 40,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  moreButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+  },
+  moreButtonText: {
+    color: '#666',
+    fontSize: 14,
     fontWeight: '500',
   },
   modalOverlay: {
@@ -869,11 +947,15 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   modalTitle: {
-    fontSize: 20,
-    lineHeight: 28,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
     color: '#222',
     textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
     flex: 1,
   },
   modalCloseButton: {
@@ -888,19 +970,22 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     paddingHorizontal: 16,
+    paddingTop: 24,
     paddingBottom: 16,
   },
   boxCalc: {
-    marginTop: 16,
     paddingHorizontal: 4,
   },
   boxCalcTotal: {
     marginBottom: 0,
+    alignItems: 'center',
   },
   boxCalcTotalDt: {
     color: '#393f44',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   boxCalcTotalDtSpan: {
     fontWeight: '600',
@@ -909,17 +994,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    lineHeight: 13,
+    marginTop: 10,
+    lineHeight: 15,
   },
   boxCalcDt: {
     color: '#666',
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: 16,
+    lineHeight: 19,
     fontWeight: '400',
   },
   boxCalcDd: {
-    fontSize: 13,
+    fontSize: 16,
     lineHeight: 17,
     fontWeight: '400',
     color: '#222',
@@ -930,8 +1015,7 @@ const styles = StyleSheet.create({
   modalBtnBox: {
     flexDirection: 'row',
     marginTop: 24,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   modalBtn: {
     flex: 1,

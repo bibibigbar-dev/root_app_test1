@@ -15,7 +15,6 @@ import {
 // import DocumentPicker from 'react-native-document-picker';
 // import { launchImageLibrary } from 'react-native-image-picker';
 import ApiService from '../services/api';
-import Header from '../components/Header';
 
 const NeighborRequestScreen = ({ navigation, route }) => {
   const [user, setUser] = useState(null);
@@ -216,8 +215,6 @@ const NeighborRequestScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={user} showBack={true} />
-
       <ScrollView style={styles.scrollView}>
         <View style={styles.titleBox}>
           <Text style={styles.title}>이웃신청</Text>
@@ -631,10 +628,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e1e2',
   },
   modalTitle: {
-    fontSize: 20,
-    lineHeight: 28,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
     color: '#222',
+    textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
   },
   modalCloseButton: {
     width: 24,

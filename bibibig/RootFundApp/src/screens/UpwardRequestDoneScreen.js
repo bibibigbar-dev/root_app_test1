@@ -6,13 +6,10 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import Header from '../components/Header';
 
 const UpwardRequestDoneScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={route?.params?.user} showBack={true} />
-      
       <View style={styles.headCon}>
         <TouchableOpacity 
           style={styles.btnBack}

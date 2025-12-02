@@ -147,11 +147,14 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
       setSelectedItem(item);
       setReviewIdx(data.review_cnt === '0' ? '' : data.rdto?.review_idx || '');
       setReviewText(data.review_cnt === '0' ? '' : data.rdto?.review || '');
-      setOpenYn(data.review_cnt === '0' ? true : data.rdto?.open_yn === 'Y');
-
+      
       if (mode === 'view') {
+        // 보기 모달에서는 서버에서 받은 값 사용
+        setOpenYn(data.review_cnt === '0' ? true : (data.rdto?.open_yn === 'Y'));
         setShowViewModal(true);
       } else {
+        // 작성/수정 모달에서는 항상 기본값으로 체크되어 있음 (true)
+        setOpenYn(true);
         setShowWriteModal(true);
       }
     } catch (error) {
@@ -393,22 +396,34 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
         animationType="fade"
         onRequestClose={() => setShowWriteModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowWriteModal(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={styles.modalTitle}>투자 이용후기 작성</Text>
 
             <View style={styles.modalBody}>
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>상품명</Text>
-                <Text style={styles.modalValue}>
-                  {selectedItem?.orderName || ''}
-                </Text>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>상품명</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <View style={styles.txtVal}>
+                  <Text style={styles.txtValText}>{selectedItem?.orderName || ''}</Text>
+                </View>
               </View>
 
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>이용후기</Text>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>이용후기</Text>
+              </View>
+              <View style={styles.flexInput}>
                 <TextInput
-                  style={styles.modalTextarea}
+                  style={styles.textarea}
                   value={reviewText}
                   onChangeText={setReviewText}
                   placeholder="투자 이용후기를 입력해주세요"
@@ -418,44 +433,44 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
                 />
               </View>
 
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>공개글 여부</Text>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>공개글 여부</Text>
+              </View>
+              <View style={styles.flexInput}>
                 <TouchableOpacity
-                  style={styles.checkboxContainer}
+                  style={styles.labelBox}
                   onPress={() => setOpenYn(!openYn)}
                 >
                   <View style={[styles.checkbox, openYn && styles.checkboxChecked]}>
                     {openYn && <Text style={styles.checkboxCheck}>✓</Text>}
                   </View>
-                  <Text style={styles.checkboxLabel}>
+                  <Text style={styles.labelBoxText}>
                     (게시판 공개를 원하지 않을 경우 체크 해제)
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <Text style={styles.modalConfirmText}>
+            <Text style={styles.buyTxt}>
               해당 상품에 대한 투자 이용후기를{'\n'}등록 하시겠습니까?
             </Text>
 
-            <View style={styles.modalButtons}>
+            <View style={styles.btnBox}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
+                style={[styles.btnStyle, styles.btnStyleCancel]}
                 onPress={() => setShowWriteModal(false)}
               >
-                <Text style={styles.modalButtonText}>취소</Text>
+                <Text style={styles.btnStyleTextCancel}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
+                style={[styles.btnStyle, styles.btnStyleConfirm, styles.btnStyleSecond]}
                 onPress={handleSaveReview}
               >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
-                  등록하기
-                </Text>
+                <Text style={styles.btnStyleTextConfirm}>등록하기</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       {/* 후기 보기/삭제 모달 */}
@@ -465,22 +480,34 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
         animationType="fade"
         onRequestClose={() => setShowViewModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowViewModal(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={styles.modalTitle}>투자 이용후기</Text>
 
             <View style={styles.modalBody}>
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>상품명</Text>
-                <Text style={styles.modalValue}>
-                  {selectedItem?.orderName || ''}
-                </Text>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>상품명</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <View style={styles.txtVal}>
+                  <Text style={styles.txtValText}>{selectedItem?.orderName || ''}</Text>
+                </View>
               </View>
 
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>이용후기</Text>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>이용후기</Text>
+              </View>
+              <View style={styles.flexInput}>
                 <TextInput
-                  style={styles.modalTextarea}
+                  style={[styles.textarea, styles.textareaDisabled]}
                   value={reviewText}
                   editable={false}
                   multiline
@@ -489,37 +516,37 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
                 />
               </View>
 
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>공개글 여부</Text>
-                <View style={styles.checkboxContainer}>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>공개글 여부</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <View style={styles.labelBox}>
                   <View style={[styles.checkbox, openYn && styles.checkboxChecked]}>
                     {openYn && <Text style={styles.checkboxCheck}>✓</Text>}
                   </View>
-                  <Text style={styles.checkboxLabel}>
+                  <Text style={styles.labelBoxText}>
                     (게시판 공개를 원하지 않을 경우 체크 해제)
                   </Text>
                 </View>
               </View>
             </View>
 
-            <View style={styles.modalButtons}>
+            <View style={styles.btnBox}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
+                style={[styles.btnStyle, styles.btnStyleCancel]}
                 onPress={() => setShowViewModal(false)}
               >
-                <Text style={styles.modalButtonText}>취소</Text>
+                <Text style={styles.btnStyleTextCancel}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
+                style={[styles.btnStyle, styles.btnStyleConfirm]}
                 onPress={handleDeleteReview}
               >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
-                  삭제하기
-                </Text>
+                <Text style={styles.btnStyleTextConfirm}>삭제하기</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -683,7 +710,7 @@ const styles = StyleSheet.create({
   },
   prdDataItem: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
   prdDataLabel: {
     color: '#a3a7ab',
@@ -743,67 +770,91 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(34, 34, 34, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   modalContent: {
     width: '100%',
     maxWidth: 400,
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 24,
+    paddingTop: 24,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '700',
+    color: '#222',
     textAlign: 'center',
-    marginBottom: 16,
   },
   modalBody: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
+    paddingTop: 16,
   },
-  modalRow: {
+  flexTit: {
     marginTop: 20,
   },
-  modalLabel: {
-    marginBottom: 8,
+  flexTitText: {
+    marginVertical: -4,
     color: '#666',
     fontSize: 13,
-    lineHeight: 16,
+    lineHeight: 20,
     fontWeight: '400',
   },
-  modalValue: {
+  flexInput: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  txtVal: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     minHeight: 44,
     paddingLeft: 8,
+  },
+  txtValText: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 24,
     fontWeight: '600',
     color: '#222',
   },
-  modalTextarea: {
-    minHeight: 120,
-    padding: 12,
+  textarea: {
+    flex: 1,
+    minWidth: 0,
+    height: 120,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
     borderWidth: 1,
     borderColor: '#f2f2f2',
     borderRadius: 10,
-    fontSize: 15,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '600',
     backgroundColor: '#fbfbfb',
     color: '#222',
   },
-  checkboxContainer: {
+  textareaDisabled: {
+    backgroundColor: '#f2f2f2',
+  },
+  labelBox: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 4,
+    marginRight: 30,
+    marginLeft: 0,
   },
   checkbox: {
     width: 21,
     height: 21,
     borderWidth: 1,
     borderColor: '#e0e1e2',
-    borderRadius: 4,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -817,45 +868,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  checkboxLabel: {
+  labelBoxText: {
+    marginLeft: 0,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
     color: '#666',
   },
-  modalConfirmText: {
+  buyTxt: {
     marginTop: 24,
     color: '#393f44',
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 20,
     fontWeight: '600',
     textAlign: 'center',
   },
-  modalButtons: {
+  btnBox: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
     marginTop: 24,
-    gap: 12,
+    gap: 8,
   },
-  modalButton: {
+  btnStyle: {
     flex: 1,
     height: 48,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalButtonCancel: {
+  btnStyleCancel: {
     borderWidth: 1,
     borderColor: '#e0e1e2',
     backgroundColor: '#fff',
   },
-  modalButtonConfirm: {
+  btnStyleConfirm: {
     backgroundColor: '#2c3db8',
+    borderWidth: 1,
+    borderColor: '#2c3db8',
   },
-  modalButtonText: {
+  btnStyleTextCancel: {
     fontSize: 20,
-    fontWeight: '500',
-    color: '#666',
+    lineHeight: 26,
+    fontWeight: '400',
+    color: '#a3a7ab',
   },
-  modalButtonTextConfirm: {
+  btnStyleTextConfirm: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '500',
     color: '#fff',
   },
 });

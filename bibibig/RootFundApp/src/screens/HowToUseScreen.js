@@ -10,7 +10,6 @@ import {
   Dimensions,
   Linking,
 } from 'react-native';
-import Header from '../components/Header';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -34,18 +33,6 @@ const HowToUseScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="이용방법" />
-      
-      {/* Back 버튼 */}
-      <View style={styles.backButtonContainer}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.content}>
         {/* 비주얼 헤더 */}
         <View style={styles.subVisual}>
@@ -272,20 +259,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  backButtonContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-  },
-  backButton: {
-    width: 20,
-    height: 20,
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#333',
-    fontWeight: '300',
   },
   // 비주얼 헤더
   subVisual: {

@@ -641,9 +641,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e1e2',
   },
   modalTitle: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     fontSize: 18,
-    fontWeight: '600',
+    lineHeight: 24,
+    fontWeight: '700',
     color: '#222',
+    textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
   },
   modalCloseButton: {
     width: 32,

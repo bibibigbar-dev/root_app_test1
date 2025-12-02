@@ -9,7 +9,6 @@ import {
   ImageBackground,
   Dimensions,
 } from 'react-native';
-import Header from '../components/Header';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -27,8 +26,6 @@ const LoanScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="대출" />
-      
       <ScrollView style={styles.content}>
         {/* 비주얼 섹션 */}
         <View style={styles.subVisual}>

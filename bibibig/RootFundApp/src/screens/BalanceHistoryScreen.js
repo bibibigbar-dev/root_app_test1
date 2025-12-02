@@ -9,7 +9,6 @@ import {
   Alert,
 } from 'react-native';
 import ApiService from '../services/api';
-import Header from '../components/Header';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -184,8 +183,7 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Header navigation={navigation} user={currentUser} />
-        <View style={styles.loadingContainer}>
+      <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -199,8 +197,6 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={currentUser} />
-      
       <ScrollView style={styles.scrollView}>
         {/* 제목 */}
         <View style={styles.titleBox}>

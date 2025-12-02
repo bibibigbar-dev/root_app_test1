@@ -8,7 +8,6 @@ import {
   Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import Header from '../components/Header';
 import ApiService from '../services/api';
 import MyPageContent from './MyPageContent';
 import RepaymentScheduleContent from './RepaymentScheduleContent';
@@ -21,6 +20,7 @@ const MyPageTabContainer = ({ navigation, route }) => {
   const { user, member_id, initialTab } = route.params || {};
   const [activeTab, setActiveTab] = useState(initialTab || 'info'); // 'info' 또는 'schedule'
   const [memberData, setMemberData] = useState(null);
+  const [repayCount, setRepayCount] = useState(0);
   const tabScrollViewRef = React.useRef(null);
 
   // route.params.initialTab이 변경될 때 activeTab 업데이트 및 스크롤
@@ -98,6 +98,11 @@ const MyPageTabContainer = ({ navigation, route }) => {
       if (response.data && response.data.member) {
         setMemberData(response.data.member);
       }
+      
+      // repay_count 설정
+      if (response.data && response.data.repay_count !== undefined) {
+        setRepayCount(response.data.repay_count || 0);
+      }
     } catch (error) {
       console.error('회원정보 조회 실패:', error);
       // API 실패해도 user 세션 정보는 유지
@@ -116,17 +121,17 @@ const MyPageTabContainer = ({ navigation, route }) => {
   const renderContent = () => {
     switch (activeTab) {
       case 'assets':
-        return <AssetsContent navigation={navigation} route={route} user={user} member_id={member_id} />;
+        return <AssetsContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
       case 'loan':
-        return <LoanListContent navigation={navigation} route={route} user={user} member_id={member_id} />;
+        return <LoanListContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
       case 'invest':
-        return <InvestStatusContent navigation={navigation} route={route} user={user} member_id={member_id} />;
+        return <InvestStatusContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
       case 'review':
-        return <InvestReviewContent navigation={navigation} route={route} user={user} member_id={member_id} />;
+        return <InvestReviewContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
       case 'info':
-        return <MyPageContent navigation={navigation} route={route} user={user} member_id={member_id} memberData={memberData} />;
+        return <MyPageContent navigation={navigation} route={route} user={user} member_id={member_id} memberData={memberData} repay_count={repayCount} />;
       case 'schedule':
-        return <RepaymentScheduleContent navigation={navigation} route={route} user={user} member_id={member_id} />;
+        return <RepaymentScheduleContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
       default:
         return (
           <View style={styles.emptyContainer}>
@@ -138,8 +143,6 @@ const MyPageTabContainer = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={user} />
-      
       <ScrollView style={styles.content}>
         {/* Back 버튼 */}
         <TouchableOpacity 
@@ -190,12 +193,22 @@ const MyPageTabContainer = ({ navigation, route }) => {
               ]}
               onPress={() => setActiveTab(tab.key)}
             >
-              <Text style={[
-                styles.tabText,
-                activeTab === tab.key && styles.tabTextActive
-              ]}>
-                {tab.label}
-              </Text>
+              <View style={styles.tabItemContent}>
+                <Text style={[
+                  styles.tabText,
+                  activeTab === tab.key && styles.tabTextActive
+                ]}>
+                  {tab.label}
+                </Text>
+                {tab.key === 'schedule' && repayCount > 0 && (
+                  <View style={styles.tabCount}>
+                    <Text style={styles.tabCountText}>{repayCount}</Text>
+                  </View>
+                )}
+              </View>
+              {activeTab === tab.key && (
+                <View style={styles.tabActiveBar} />
+              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -276,26 +289,62 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tabMenu: {
+    height: 30,
+    marginTop: 8,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e1e2',
-    paddingHorizontal: 20,
   },
   tabItem: {
-    paddingVertical: 12,
+    paddingTop: 3,
+    paddingBottom: 7,
     paddingHorizontal: 12,
-    marginRight: 4,
+    marginRight: 0,
+    position: 'relative',
+  },
+  tabItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
   },
   tabItemActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#2c3db8',
+    // active 상태의 하단 바는 View로 추가
+  },
+  tabActiveBar: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    left: 0,
+    height: 3,
+    borderRadius: 3,
+    backgroundColor: '#2c3db8',
   },
   tabText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#999',
+    lineHeight: 20,
+    fontWeight: '700',
+    color: '#bfc3c7',
   },
   tabTextActive: {
     color: '#2c3db8',
+  },
+  tabCount: {
+    minWidth: 13,
+    height: 13,
+    paddingHorizontal: 2,
+    marginLeft: 1,
+    marginBottom: 6,
+    borderRadius: 6,
+    backgroundColor: '#2c3db8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabCountText: {
+    color: '#fff',
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   emptyContainer: {
     padding: 40,

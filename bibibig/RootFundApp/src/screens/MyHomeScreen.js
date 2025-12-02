@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
-import Header from '../components/Header';
 
 const MyHomeScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -76,8 +75,6 @@ const MyHomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={user} />
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.userInfo}>
           <Text style={styles.welcomeText}>

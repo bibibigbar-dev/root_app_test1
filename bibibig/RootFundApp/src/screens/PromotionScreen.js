@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import Header from '../components/Header';
 import ApiService from '../services/api';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -59,8 +58,6 @@ const PromotionScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="프로모션" />
-      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 헤더 */}
         <View style={styles.subHead}>
@@ -77,30 +74,26 @@ const PromotionScreen = ({ navigation, route }) => {
         <View style={styles.tabSwiper}>
           <View style={styles.tabSwiperWrapper}>
             <TouchableOpacity 
-              style={styles.tabSlide}
+              style={[styles.tabItem, activeTab === 0 && styles.tabItemActive]}
               onPress={() => {
                 setActiveTab(0);
                 setCurrentPage(1);
               }}
             >
-              <Text style={[styles.tabLink, activeTab === 0 && styles.tabLinkActive]}>
-                진행중 프로모션
-              </Text>
-              {activeTab === 0 && <View style={styles.tabActiveBar} />}
+              <Text style={[styles.tabText, activeTab === 0 && styles.tabTextActive]}>진행중 프로모션</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.tabSlide}
+              style={[styles.tabItem, activeTab === 1 && styles.tabItemActive]}
               onPress={() => {
                 setActiveTab(1);
                 setCurrentPage(1);
               }}
             >
-              <Text style={[styles.tabLink, activeTab === 1 && styles.tabLinkActive]}>
-                종료된 프로모션
-              </Text>
-              {activeTab === 1 && <View style={styles.tabActiveBar} />}
+              <Text style={[styles.tabText, activeTab === 1 && styles.tabTextActive]}>종료된 프로모션</Text>
             </TouchableOpacity>
           </View>
+          {activeTab === 0 && <View style={styles.tabActiveBar} />}
+          {activeTab === 1 && <View style={[styles.tabActiveBar, { left: '50%' }]} />}
         </View>
 
         {/* 로딩 또는 목록 */}
@@ -178,7 +171,6 @@ const styles = StyleSheet.create({
   },
   subHead: {
     position: 'relative',
-    marginTop: 0, // -4.8rem
     marginBottom: 16, // 1.6rem
     height: 130, // 더 아래까지 내려오도록 높이 증가
     overflow: 'hidden',
@@ -199,37 +191,36 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tabSwiper: {
-    height: 30,
-    marginTop: 8,
-    paddingHorizontal: 20,
+    position: 'relative',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e1e2',
   },
   tabSwiperWrapper: {
     flexDirection: 'row',
   },
-  tabSlide: {
-    marginRight: 24,
-    position: 'relative',
+  tabItem: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
-  tabLink: {
-    paddingTop: 3,
-    paddingBottom: 7,
-    fontSize: 17,
-    lineHeight: 20,
+  tabItemActive: {
+    borderBottomWidth: 0,
+  },
+  tabText: {
+    fontSize: 16,
+    lineHeight: 22,
     fontWeight: '600',
-    color: '#bfc3c7',
+    color: '#999',
   },
-  tabLinkActive: {
+  tabTextActive: {
     color: '#2c3db8',
   },
   tabActiveBar: {
     position: 'absolute',
-    right: 0,
-    bottom: 0,
+    bottom: -1,
     left: 0,
-    height: 3,
-    borderRadius: 3,
+    width: '50%',
+    height: 2,
     backgroundColor: '#2c3db8',
   },
   loadingContainer: {

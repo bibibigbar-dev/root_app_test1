@@ -12,11 +12,12 @@ import {
   Clipboard,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
-const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hideBorder = false, hideGnb = false }) => {
+const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hideBorder = false, hideGnb = false, noPaddingTop = false }) => {
+  const insets = useSafeAreaInsets();
   const [menuVisible, setMenuVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -105,8 +106,10 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
   };
 
   return (
-    <SafeAreaView style={styles.headerContainer} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
+    <>
+      <View style={[styles.headerSafeArea, { paddingTop: insets.top }]}>
+        <View style={[styles.headerContainer, noPaddingTop && styles.noPaddingTop]}>
+          <View style={styles.header}>
         {showBack ? (
           <TouchableOpacity 
             style={styles.backButton}
@@ -228,12 +231,15 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
       ) : (
         <View style={[styles.gnbBox, styles.gnbBoxEmpty]} />
       )}
+        </View>
+      </View>
 
-      {/* 메뉴 모달 */}
+      {/* 메뉴 모달 - Header View 밖에 위치 */}
       <Modal
         visible={menuVisible}
         transparent={true}
         animationType="none"
+        statusBarTranslucent={true}
         onRequestClose={toggleMenu}
       >
         <View style={styles.menuWrap}>
@@ -399,7 +405,13 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
 
               {/* 메뉴 리스트 */}
               <View style={styles.menuList}>
-                <TouchableOpacity style={styles.menuListItem}>
+                <TouchableOpacity 
+                  style={styles.menuListItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate('ProductList', { user });
+                  }}
+                >
                   <Image 
                     source={require('../assets/images/ico_menu_list01.png')} 
                     style={styles.menuListIcon} 
@@ -568,13 +580,25 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
           </Animated.View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
+  headerSafeArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#FFFFFF',
+    // paddingTop은 동적으로 insets.top 사용
+  },
   headerContainer: {
     backgroundColor: '#FFFFFF',
+  },
+  noPaddingTop: {
+    paddingTop: 0,
   },
   noBorder: {
     borderBottomWidth: 0,
@@ -582,7 +606,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 38,
+    height: 43,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
   },
@@ -636,12 +660,12 @@ const styles = StyleSheet.create({
   },
   gnbItem: {
     flex: 1,
-    paddingTop: 10,
-    paddingBottom: 8,
+    paddingTop: 12,
+    paddingBottom: 9,
     alignItems: 'center',
   },
   gnbText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#333333',
   },
@@ -889,6 +913,9 @@ const styles = StyleSheet.create({
     right: 4,
   },
 });
+
+// Header 높이 상수 export (50 Header + 19 GNB)
+export const HEADER_HEIGHT = 69;
 
 export default Header;
 

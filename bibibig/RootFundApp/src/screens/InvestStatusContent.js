@@ -506,15 +506,15 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
             {/* 더보기 버튼 */}
             {currentPage < totalPages && (
               <View style={styles.listMore}>
-                <TouchableOpacity
+              <TouchableOpacity
                   style={styles.listMoreBtn}
-                  onPress={handleLoadMore}
-                >
+                onPress={handleLoadMore}
+              >
                   <Text style={styles.listMoreTxt}>더보기</Text>
                   <Text style={styles.listMoreTxt}>
-                    {currentPage}/{totalPages}
-                  </Text>
-                </TouchableOpacity>
+                  {currentPage}/{totalPages}
+                </Text>
+              </TouchableOpacity>
               </View>
             )}
           </>
@@ -1216,11 +1216,15 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
   },
   modalTitle: {
-    fontSize: 20,
-    lineHeight: 28,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
+    color: '#222',
     textAlign: 'center',
-    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
   },
   modalBody: {
     paddingHorizontal: 16,

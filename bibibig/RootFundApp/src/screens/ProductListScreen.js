@@ -11,7 +11,6 @@ import {
   TextInput,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import Header from '../components/Header';
 import ApiService from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -199,8 +198,6 @@ const ProductListScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={user} hideGnb={true} />
-      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Back 버튼 */}
         <View style={styles.backButtonContainer}>

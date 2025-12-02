@@ -11,7 +11,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import RenderHTML from 'react-native-render-html';
-import Header from '../components/Header';
 import ApiService from '../services/api';
 
 const PromotionDetailScreen = ({ navigation, route }) => {
@@ -42,8 +41,7 @@ const PromotionDetailScreen = ({ navigation, route }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Header navigation={navigation} title="프로모션" />
-        <View style={styles.loadingContainer}>
+      <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -53,8 +51,7 @@ const PromotionDetailScreen = ({ navigation, route }) => {
   if (!promotionData) {
     return (
       <View style={styles.container}>
-        <Header navigation={navigation} title="프로모션" />
-        <View style={styles.loadingContainer}>
+      <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>프로모션 정보를 불러올 수 없습니다.</Text>
         </View>
       </View>
@@ -63,8 +60,6 @@ const PromotionDetailScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="프로모션" />
-      
       <ScrollView style={styles.content}>
         {/* 헤더 */}
         <View style={styles.subHead}>

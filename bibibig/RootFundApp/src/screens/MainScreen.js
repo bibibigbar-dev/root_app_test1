@@ -14,7 +14,6 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
-import Header from '../components/Header';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -170,7 +169,7 @@ const MainScreen = ({ navigation }) => {
                       )}
                       {product.orderType === 'ESS' && (
                         <Image
-                          source={require('../assets/images/img_product01_s.png')}
+                          source={require('../assets/images/img_product03_s.png')}
                           style={styles.productTypeImage}
                           resizeMode="contain"
                         />
@@ -340,8 +339,6 @@ const MainScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={user} hideBorder={true} />
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {mainData.topBanner && (
           <View style={styles.bannerWrapper}>
@@ -908,35 +905,62 @@ const MainScreen = ({ navigation }) => {
 
           <View style={styles.footCon}>
             <View style={styles.footMenu}>
-              <TouchableOpacity style={styles.footMenuItem}>
+              <TouchableOpacity 
+                style={styles.footMenuItem}
+                onPress={() => navigation.navigate('CustomerService', { user, initialTab: 0 })}
+              >
                 <Text style={styles.footMenuText}>공지사항</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.footMenuItem}>
+              <TouchableOpacity 
+                style={styles.footMenuItem}
+                onPress={() => navigation.navigate('CustomerService', { user, initialTab: 1 })}
+              >
                 <Text style={styles.footMenuText}>자주하는 질문</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.footMenuItem}>
+              <TouchableOpacity 
+                style={styles.footMenuItem}
+                onPress={() => navigation.navigate('Recruit', { user })}
+              >
                 <Text style={styles.footMenuText}>채용</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.footLinkBox}>
               <View style={styles.footLink}>
-                <TouchableOpacity style={styles.footLinkItem}>
+                <TouchableOpacity 
+                  style={styles.footLinkItem}
+                  onPress={() => navigation.navigate('Terms', { user, service: 'service' })}
+                >
                   <Text style={styles.footLinkText}>서비스 이용약관</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footLinkItem}>
+                <TouchableOpacity 
+                  style={styles.footLinkItem}
+                  onPress={() => navigation.navigate('Terms', { user, service: 'deals' })}
+                >
                   <Text style={styles.footLinkText}>전자금융거래약관</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footLinkItem}>
+                <TouchableOpacity 
+                  style={styles.footLinkItem}
+                  onPress={() => navigation.navigate('Terms', { user, service: 'private' })}
+                >
                   <Text style={styles.footLinkText}>개인정보처리방침</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footLinkItem}>
+                <TouchableOpacity 
+                  style={styles.footLinkItem}
+                  onPress={() => navigation.navigate('Terms', { user, service: 'credit' })}
+                >
                   <Text style={styles.footLinkText}>신용정보 활용체계</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footLinkItem}>
+                <TouchableOpacity 
+                  style={styles.footLinkItem}
+                  onPress={() => navigation.navigate('Terms', { user, service: 'invest' })}
+                >
                   <Text style={styles.footLinkText}>연계투자계약 약관</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footLinkItem}>
+                <TouchableOpacity 
+                  style={styles.footLinkItem}
+                  onPress={() => navigation.navigate('Terms', { user, service: 'loan' })}
+                >
                   <Text style={styles.footLinkText}>연계대출계약 약관</Text>
                 </TouchableOpacity>
               </View>
@@ -990,7 +1014,7 @@ const styles = StyleSheet.create({
   },
   bannerWrapper: {
     paddingHorizontal: 15,
-    paddingTop: 15,
+    paddingTop: 20,
     paddingBottom: 8,
     backgroundColor: '#F1F2FF',
   },

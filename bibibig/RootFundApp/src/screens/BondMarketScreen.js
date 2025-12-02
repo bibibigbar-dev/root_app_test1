@@ -9,8 +9,10 @@ import {
   TextInput,
   ActivityIndicator,
   Dimensions,
+  Modal,
+  Alert,
 } from 'react-native';
-import Header from '../components/Header';
+import { Picker } from '@react-native-picker/picker';
 import ApiService from '../services/api';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -20,10 +22,14 @@ const BondMarketScreen = ({ navigation, route }) => {
   const [activeTab, setActiveTab] = useState(0); // 0: 거래중, 1: 거래완료
   const [loading, setLoading] = useState(true);
   const [bondList, setBondList] = useState([]);
+  const [areaList, setAreaList] = useState([]); // classType 목록
   const [selectedArea, setSelectedArea] = useState('');
   const [searchText, setSearchText] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [selectedBond, setSelectedBond] = useState(null);
+  const [showAreaPicker, setShowAreaPicker] = useState(false);
 
   useEffect(() => {
     loadBondData();
@@ -35,25 +41,23 @@ const BondMarketScreen = ({ navigation, route }) => {
       const memberId = user?.session?.member_id || user?.id;
       
       const params = {
-        member_id: memberId || '-1',
+        orderName: searchText || '',
+        area: selectedArea || '',
       };
-      
-      // 거래중/거래완료에 따라 다른 엔드포인트 사용
-      let endpoint = '/app/market';
+
+      // 거래완료 탭일 때만 status 추가
       if (activeTab === 1) {
-        // 거래완료 탭
-        endpoint = '/market/comlist';
-      } else {
-        // 거래중 탭 - status, area, orderName 추가
-        if (selectedArea) {
-          params.area = selectedArea;
-        }
-        if (searchText) {
-          params.orderName = searchText;
-        }
+        params.status = 'complete';
+      }
+
+      // 로그인 상태일 때만 member_id 추가
+      if (memberId) {
+        params.member_id = memberId;
       }
       
-      const response = await ApiService.api.get(endpoint, {
+      console.log('채권거래소 요청 파라미터:', params);
+      
+      const response = await ApiService.api.get('/app/market', {
         params: params
       });
       
@@ -61,14 +65,19 @@ const BondMarketScreen = ({ navigation, route }) => {
       
       // 백엔드 응답 처리
       if (response.data) {
-        // list가 있으면 사용
+        // list: 채권 목록
         if (response.data.list && Array.isArray(response.data.list)) {
-        setBondList(response.data.list);
-        } else if (response.data.classType && Array.isArray(response.data.classType)) {
-          // classType이 배열이면 채권 목록으로 사용 (거래중 탭의 경우)
-          setBondList(response.data.classType);
+          setBondList(response.data.list);
         } else {
           setBondList([]);
+        }
+
+        // classType: 지역 선택 목록
+        if (response.data.classType && Array.isArray(response.data.classType)) {
+          console.log('classType 데이터:', response.data.classType);
+          setAreaList(response.data.classType);
+        } else {
+          console.log('classType 데이터 없음 또는 배열이 아님:', response.data.classType);
         }
       } else {
         setBondList([]);
@@ -117,13 +126,102 @@ const BondMarketScreen = ({ navigation, route }) => {
     return parseInt(value || 0).toLocaleString();
   };
 
+  const handleBuyRequest = async () => {
+    if (!user) {
+      setShowBuyModal(false);
+      setSelectedBond(null);
+      navigation.navigate('Login');
+      return;
+    }
+    
+    if (!selectedBond) return;
+
+    try {
+      const memberId = user?.session?.member_id || user?.id;
+      
+      const response = await ApiService.api.post('/app/market/process/buy', {
+        member_id: memberId,
+        _mknum: selectedBond.seq.toString()
+      });
+
+      console.log('구매 신청 응답:', response.data);
+
+      setShowBuyModal(false);
+      setSelectedBond(null);
+
+      if (response.data === '0' || response.data === 0) {
+        // 성공
+        Alert.alert(
+          '원리금수취권 구매신청',
+          '정상적으로 구매신청이 완료되었습니다.',
+          [
+            {
+              text: '확인',
+              onPress: () => {
+                loadBondData(); // 데이터 새로고침
+              },
+            },
+          ]
+        );
+      } else if (response.data === '1' || response.data === 1) {
+        // 로그인 필요
+        navigation.navigate('Login');
+      } else if (response.data === '2' || response.data === 2) {
+        // 새로고침
+        loadBondData();
+      } else if (response.data === '4' || response.data === 4) {
+        // 본인 판매 채권
+        Alert.alert(
+          '원리금수취권 구매신청',
+          '본인 판매 채권입니다.',
+          [{ text: '확인' }]
+        );
+      } else if (response.data === '5' || response.data === 5) {
+        // 이미 구매신청한 채권
+        Alert.alert(
+          '원리금수취권 구매신청',
+          '이미 구매신청한 채권입니다.',
+          [{ text: '확인' }]
+        );
+      } else {
+        // 기타 오류
+        Alert.alert(
+          '오류',
+          '처리도중 오류가 발생하였습니다.',
+          [
+            {
+              text: '확인',
+              onPress: () => {
+                loadBondData();
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('구매 신청 오류:', error);
+      setShowBuyModal(false);
+      setSelectedBond(null);
+      Alert.alert(
+        '오류',
+        '처리도중 오류가 발생하였습니다.',
+        [
+          {
+            text: '확인',
+            onPress: () => {
+              loadBondData();
+            },
+          },
+        ]
+      );
+    }
+  };
+
   const visibleItems = bondList.slice(0, currentPage * itemsPerPage);
   const totalPages = Math.ceil(bondList.length / itemsPerPage);
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="채권거래소" />
-      
       <ScrollView style={styles.content}>
         {/* 제목 */}
         <View style={styles.subTitleBox}>
@@ -137,8 +235,15 @@ const BondMarketScreen = ({ navigation, route }) => {
               navigation.navigate('BondMarketHowToUse', { user });
           }}
         >
-          <Text style={styles.linkTipDt}>이용방법</Text>
+          <View style={styles.linkTipDt}>
+            <Text style={styles.linkTipDtText}>이용방법</Text>
+          </View>
           <Text style={styles.linkTipDd}>내 지역 원리금수취권 거래하는 방법!</Text>
+          <Image 
+            source={require('../assets/images/arrow_right_white.png')} 
+            style={styles.linkTipArrow}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
 
         {/* 탭 메뉴 */}
@@ -169,16 +274,39 @@ const BondMarketScreen = ({ navigation, route }) => {
 
         {/* 검색 필터 */}
         <View style={styles.choiceChips}>
-          {/* TODO: 지역 선택 드롭다운 구현 */}
-          <View style={styles.searchBox}>
+          {/* 지역 선택 */}
+          <TouchableOpacity 
+            style={styles.selectArea}
+            onPress={() => setShowAreaPicker(true)}
+          >
+            <Image 
+              source={require('../assets/images/ico_local.png')} 
+              style={styles.areaIconLeft}
+              resizeMode="contain"
+            />
+            <Text style={styles.areaSelectText}>
+              {selectedArea || '전체'}
+            </Text>
+            <Image 
+              source={require('../assets/images/ico_select.png')} 
+              style={styles.areaIconRight}
+              resizeMode="contain"
+            />
+            {/* 구분선 */}
+            <View style={styles.areaDivider} />
+          </TouchableOpacity>
+
+          {/* 검색 박스 */}
+          <View style={styles.rightBtn}>
             <TextInput
               style={styles.searchInput}
               placeholder="예) 고성군 솔라발전소"
+              placeholderTextColor="#999"
               value={searchText}
               onChangeText={setSearchText}
               onSubmitEditing={handleSearch}
             />
-            <TouchableOpacity onPress={handleSearch}>
+            <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
               <Image 
                 source={require('../assets/images/ico_search.png')} 
                 style={styles.searchIcon}
@@ -194,14 +322,14 @@ const BondMarketScreen = ({ navigation, route }) => {
             <ActivityIndicator size="large" color="#2c3db8" />
           </View>
         ) : bondList.length === 0 ? (
-          <View style={styles.loadingWrapperProduct}>
+          <View style={styles.emptyContainer}>
             <Image 
               source={require('../assets/images/loading1.png')} 
-              style={styles.loadingImage}
+              style={styles.emptyImage}
               resizeMode="contain"
             />
-            <Text style={styles.loadingMsg}>상품 준비중입니다.</Text>
-            <Text style={styles.loadingDesc}>
+            <Text style={styles.emptyMsg}>상품 준비중입니다.</Text>
+            <Text style={styles.emptyDesc}>
               곧 상품이 등록 될 예정입니다.{'\n'}조금만 기다려주세요!
             </Text>
           </View>
@@ -210,7 +338,8 @@ const BondMarketScreen = ({ navigation, route }) => {
             <View style={styles.bondList}>
               {visibleItems.map((item, index) => (
                 <View key={index} style={styles.invItem}>
-                  <View style={styles.inHead}>
+                  {/* 헤더: 거래중은 파란색, 거래완료는 회색 */}
+                  <View style={[styles.inHead, activeTab === 0 ? styles.bgBlue : styles.bgGray]}>
                     <Text style={styles.inHeadTitle}>
                       채권번호 <Text style={styles.inHeadEm}>{item.seq}</Text>
                     </Text>
@@ -220,7 +349,7 @@ const BondMarketScreen = ({ navigation, route }) => {
                   <View style={styles.inCont}>
                     <View style={styles.prdInfobox}>
                       <View style={styles.prdInfo}>
-                        <View style={styles.prdImgbox}>
+                        <View style={styles.imgbox}>
                           <Image 
                             source={getOrderTypeImage(item.orderType)} 
                             style={styles.prdImg}
@@ -228,67 +357,88 @@ const BondMarketScreen = ({ navigation, route }) => {
                           />
                         </View>
                         <TouchableOpacity 
-                          style={styles.prdTxtbox}
+                          style={styles.txtbox}
                           onPress={() => {
                             navigation.navigate('ProductDetail', { orderKey: item.orderNumber });
                           }}
                         >
-                          <Text style={styles.prdTit}>{item.orderName}</Text>
-                          <Text style={styles.prdTxt}>{item.orderType} {item.orderNum}호</Text>
+                          <Text style={styles.tit} numberOfLines={1} ellipsizeMode="tail">
+                            {item.orderName}
+                          </Text>
+                          <Text style={styles.txt}>{item.orderType} {item.orderNum}호</Text>
                         </TouchableOpacity>
                       </View>
-                      <View style={styles.prdPrice}>
-                        <Text style={styles.prdPriceDt}>채권금액 / 판매금액</Text>
-                        <Text style={styles.prdPriceDd}>
-                          <Text style={styles.colorBlue}>{formatNumber(item.price)}원</Text> / {formatNumber(item.trade_price)}원
-                        </Text>
-                      </View>
+                      
+                      {/* 가격 표시: 거래중과 거래완료 다른 레이아웃 */}
+                      {activeTab === 0 ? (
+                        // 거래중: 한 줄로 표시
+                        <View style={styles.prdPrice}>
+                          <Text style={styles.prdPriceDt}>채권금액 / 판매금액</Text>
+                          <Text style={styles.prdPriceDd}>
+                            <Text style={styles.colorBlue}>{formatNumber(item.price)}원</Text> / {formatNumber(item.trade_price)}원
+                          </Text>
+                        </View>
+                      ) : (
+                        // 거래완료: 두 줄로 표시
+                        <View style={styles.prdPrice2}>
+                          <View style={styles.prdPrice2Item}>
+                            <Text style={styles.prdPrice2Dt}>채권금액</Text>
+                            <Text style={styles.prdPrice2Dd}>{formatNumber(item.price)}원</Text>
+                          </View>
+                          <View style={styles.prdPrice2Item}>
+                            <Text style={styles.prdPrice2Dt}>판매금액</Text>
+                            <Text style={styles.prdPrice2Dd}>{formatNumber(item.trade_price)}원</Text>
+                          </View>
+                        </View>
+                      )}
                     </View>
 
                     <View style={styles.prdDatabox}>
-                      <View style={styles.prdDataItem}>
+                      <View style={[styles.prdDataDl, styles.prdDataDlFirst]}>
                         <Text style={styles.prdDataDt}>연 수익률</Text>
                         <Text style={styles.prdDataDd}>{item.rate}%</Text>
                       </View>
-                      <View style={styles.prdDataItem}>
+                      <View style={styles.prdDataDl}>
                         <Text style={styles.prdDataDt}>상환회차</Text>
                         <Text style={styles.prdDataDd}>{item.instalment}/{item.period}</Text>
                       </View>
-                      <View style={styles.prdDataItem}>
+                      <View style={styles.prdDataDl}>
                         <Text style={styles.prdDataDt}>상환일</Text>
                         <Text style={styles.prdDataDd}>{item.repay_date}</Text>
                       </View>
-                      <View style={styles.prdDataItem}>
+                      <View style={styles.prdDataDl}>
                         <Text style={styles.prdDataDt}>상태</Text>
-                        <Text style={styles.prdDataDd}>{getStatusText(item)}</Text>
+                        <Text style={styles.prdDataDd}>
+                          {activeTab === 1 ? '거래완료' : getStatusText(item)}
+                        </Text>
                       </View>
                     </View>
                   </View>
 
-                  <View style={styles.inBtnbox}>
-                    <TouchableOpacity 
-                      style={styles.btn}
-                      onPress={() => {
-                        // TODO: 수익금 지급 예정표 모달
-                        console.log('수익금 지급 예정표', item.orderNumber);
-                      }}
-                    >
-                      <Text style={styles.btnText}>수익금 지급 예정표</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.btn, styles.btnBlue]}
-                      onPress={() => {
-                        if (!user) {
-                          navigation.navigate('Login');
-                          return;
-                        }
-                        // TODO: 원리금수취권 구매 팝업
-                        console.log('원리금수취권 구매', item.seq, item.orderName);
-                      }}
-                    >
-                      <Text style={[styles.btnText, styles.btnTextBlue]}>원리금수취권 구매</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {/* 버튼: 거래중일 때만 표시 */}
+                  {activeTab === 0 && (
+                    <View style={styles.inBtnbox}>
+                      <TouchableOpacity 
+                        style={styles.btn}
+                        onPress={() => {
+                          // TODO: 수익금 지급 예정표 모달
+                          console.log('수익금 지급 예정표', item.orderNumber);
+                        }}
+                      >
+                        <Text style={styles.btnText}>수익금 지급 예정표</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.btn, styles.btnColorBlue]}
+                        onPress={() => {
+                          // 모달을 먼저 열고, 신청하기 버튼에서 로그인 체크
+                          setSelectedBond(item);
+                          setShowBuyModal(true);
+                        }}
+                      >
+                        <Text style={[styles.btnText, styles.btnTextBlue]}>원리금수취권 구매</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -305,6 +455,149 @@ const BondMarketScreen = ({ navigation, route }) => {
           </>
         )}
       </ScrollView>
+
+      {/* 원리금수취권 구매 모달 */}
+      <Modal
+        visible={showBuyModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowBuyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>원리금수취권 구매신청</Text>
+              
+              <View style={styles.modalContent}>
+                <Text style={styles.modalSubTitle}>투자위험 안내고지</Text>
+                <Text style={styles.modalWarningText}>
+                  이 투자상품은 '온라인투자연계금융업법'에 따라{'\n'}
+                  원금과투자수익을 보장할 수 없습니다.{'\n'}
+                  또한 차입자가 원금의 전부{'\n'}
+                  또는 일부를 상환하지 못할 경우{'\n'}
+                  원금손실의 위험성이 있으며,{'\n'}
+                  결국 그 손실은 투자자가 부담하게 됩니다.
+                </Text>
+              </View>
+
+              <View style={styles.hrLine} />
+
+              <View style={styles.modalNotice}>
+                <Image 
+                  source={require('../assets/images/ico_exc.png')} 
+                  style={styles.modalNoticeIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.modalNoticeText}>
+                  해당 신청은 구매 확정이 아니며,{'\n'}
+                  신청 후 관리자 승인에 의하여 구매{'\n'}
+                  또는 취소될 수 있습니다.{'\n'}
+                  구매대상자 선정시 고객센터를 통하여 유선상으로{'\n'}
+                  자세한 안내를 전달드립니다.
+                </Text>
+              </View>
+
+              <View style={styles.modalGrayBox}>
+                <Text style={styles.modalProductName}>{selectedBond?.orderName}</Text>
+              </View>
+
+              <Text style={styles.modalConfirmText}>
+                상품에 대한 원리금수취권 구매{'\n'}신청하겠습니까?
+              </Text>
+
+              <View style={styles.modalButtonBox}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalButtonGray]}
+                  onPress={() => {
+                    setShowBuyModal(false);
+                    setSelectedBond(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonTextGray}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalButtonBlue]}
+                  onPress={handleBuyRequest}
+                >
+                  <Text style={styles.modalButtonTextWhite}>신청하기</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 지역 선택 모달 */}
+      <Modal
+        visible={showAreaPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAreaPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.areaModalContainer}>
+            <View style={styles.areaModalBox}>
+              <Text style={styles.areaModalTitle}>지역 선택</Text>
+              
+              <ScrollView style={styles.areaModalList}>
+                <TouchableOpacity
+                  style={styles.areaModalItem}
+                  onPress={() => {
+                    setSelectedArea('');
+                    setShowAreaPicker(false);
+                  }}
+                >
+                  <Text style={[styles.areaModalItemText, selectedArea === '' && styles.areaModalItemTextActive]}>
+                    전체
+                  </Text>
+                  {selectedArea === '' && (
+                    <Image
+                      source={require('../assets/images/icon_check.png')}
+                      style={styles.areaModalCheckIcon}
+                      resizeMode="contain"
+                    />
+                  )}
+                </TouchableOpacity>
+                
+                {areaList && areaList.map((area, index) => {
+                  const areaName = area.name || area.type;
+                  const areaValue = area.type || area.name;
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.areaModalItem}
+                      onPress={() => {
+                        setSelectedArea(areaValue);
+                        setShowAreaPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.areaModalItemText, selectedArea === areaValue && styles.areaModalItemTextActive]}>
+                        {areaName}
+                      </Text>
+                      {selectedArea === areaValue && (
+                        <Image
+                          source={require('../assets/images/icon_check.png')}
+                          style={styles.areaModalCheckIcon}
+                          resizeMode="contain"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <View style={styles.areaModalButtonBox}>
+                <TouchableOpacity
+                  style={[styles.areaModalButton, styles.areaModalButtonGray]}
+                  onPress={() => setShowAreaPicker(false)}
+                >
+                  <Text style={styles.areaModalButtonTextGray}>닫기</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -318,10 +611,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   subTitleBox: {
-    paddingVertical: 24,
+    paddingTop: 40,
+    paddingBottom: 5,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
   },
   title: {
     fontSize: 24,
@@ -330,30 +622,47 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   linkTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingLeft: 16,
+    paddingRight: 40,
     borderRadius: 10,
-    backgroundColor: '#f8faff',
-    borderWidth: 1,
-    borderColor: '#e0e1e2',
+    backgroundColor: '#393f44',
+    position: 'relative',
   },
   linkTipDt: {
-    fontSize: 15,
-    lineHeight: 20,
+    paddingHorizontal: 4,
+    paddingVertical: 0,
+    marginRight: 8,
+    borderRadius: 8,
+    backgroundColor: '#77abf8',
+  },
+  linkTipDtText: {
+    fontSize: 10,
+    lineHeight: 16,
     fontWeight: '600',
-    color: '#2c3db8',
+    color: '#fff',
   },
   linkTipDd: {
-    marginTop: 4,
-    fontSize: 13,
-    lineHeight: 18,
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: '400',
-    color: '#666',
+    color: '#fff',
+  },
+  linkTipArrow: {
+    position: 'absolute',
+    right: 16,
+    width: 12,
+    height: 12,
+    tintColor: '#fff',
   },
   tabSwiper: {
     position: 'relative',
-    marginTop: 24,
+    marginTop: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e1e2',
   },
@@ -386,52 +695,113 @@ const styles = StyleSheet.create({
     backgroundColor: '#2c3db8',
   },
   choiceChips: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 24,
     paddingHorizontal: 16,
   },
-  searchBox: {
+  selectArea: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    height: 32,
+    paddingLeft: 28,
+    paddingRight: 30,
     borderWidth: 1,
-    borderColor: '#e0e1e2',
-    borderRadius: 8,
+    borderColor: 'rgba(191, 195, 199, 0.5)',
+    borderRadius: 16,
     backgroundColor: '#fff',
+    minWidth: 130,
+    marginRight: 8,
+  },
+  areaIconLeft: {
+    position: 'absolute',
+    left: 10,
+    width: 16,
+    height: 16,
+  },
+  areaPicker: {
+    flex: 1,
+    height: 32,
+    fontSize: 13,
+    color: '#393f44',
+  },
+  areaPickerItem: {
+    fontSize: 13,
+  },
+  areaIconRight: {
+    position: 'absolute',
+    right: 10,
+    width: 12,
+    height: 12,
+    pointerEvents: 'none',
+  },
+  areaDivider: {
+    position: 'absolute',
+    top: '50%',
+    right: -9,
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(224, 225, 226, 0.5)',
+    transform: [{ translateY: -14 }],
+  },
+  rightBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
   },
   searchInput: {
     flex: 1,
+    height: 32,
+    paddingHorizontal: 15,
+    paddingVertical: 0,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
     fontSize: 14,
-    lineHeight: 20,
+    fontWeight: '600',
+    backgroundColor: '#fbfbfb',
     color: '#222',
+    marginLeft: 10,
+    textAlignVertical: 'center',
+  },
+  searchButton: {
+    marginLeft: 2,
+    padding: 4,
   },
   searchIcon: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
   },
   loadingContainer: {
+    flex: 1,
     marginTop: 60,
     marginBottom: 40,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
   },
-  loadingWrapperProduct: {
+  emptyContainer: {
+    flex: 1,
     marginTop: 60,
     marginBottom: 40,
     alignItems: 'center',
     paddingHorizontal: 20,
+    backgroundColor: '#fff',
   },
-  loadingImage: {
+  emptyImage: {
     width: 120,
     height: 120,
   },
-  loadingMsg: {
+  emptyMsg: {
     marginTop: 20,
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '600',
     color: '#222',
   },
-  loadingDesc: {
+  emptyDesc: {
     marginTop: 8,
     fontSize: 14,
     lineHeight: 20,
@@ -445,143 +815,191 @@ const styles = StyleSheet.create({
   },
   invItem: {
     marginTop: 20,
+    flexDirection: 'column',
+    position: 'relative',
     borderRadius: 10,
     backgroundColor: '#fff',
-    shadowColor: '#516c89',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    overflow: 'hidden',
+    shadowColor: 'rgba(104, 111, 115, 0.15)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 3,
   },
   inHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 40,
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    backgroundColor: '#222',
+  },
+  bgBlue: {
     backgroundColor: '#2c3db8',
   },
+  bgMint: {
+    backgroundColor: '#2ebab4',
+  },
+  bgGray: {
+    backgroundColor: '#666',
+  },
   inHeadTitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
     color: '#fff',
   },
   inHeadEm: {
-    fontWeight: '700',
+    fontWeight: '600',
   },
   txtRight: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 14,
     fontWeight: '400',
     color: '#fff',
   },
   inCont: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(224, 225, 226, 0.5)',
   },
   prdInfobox: {
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f6f6f6',
+    paddingVertical: 16,
   },
   prdInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  prdImgbox: {
-    width: 60,
-    height: 60,
+  imgbox: {
     marginRight: 12,
+    flexShrink: 0,
   },
   prdImg: {
-    width: '100%',
-    height: '100%',
+    width: 28,
+    height: 31,
+    objectFit: 'contain',
   },
-  prdTxtbox: {
+  txtbox: {
     flex: 1,
+    overflow: 'hidden',
   },
-  prdTit: {
+  tit: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 23.4, // 1.3 * 18
     fontWeight: '600',
     color: '#222',
   },
-  prdTxt: {
-    marginTop: 4,
-    fontSize: 13,
-    lineHeight: 18,
+  txt: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 15.6, // 1.3 * 12
     fontWeight: '400',
-    color: '#666',
+    color: '#a3a7ab',
   },
   prdPrice: {
-    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 16,
   },
   prdPriceDt: {
-    fontSize: 13,
-    lineHeight: 18,
+    marginRight: 8,
+    fontSize: 12,
+    lineHeight: 14,
     fontWeight: '400',
     color: '#666',
   },
   prdPriceDd: {
-    marginTop: 4,
     fontSize: 15,
-    lineHeight: 20,
+    lineHeight: 21,
     fontWeight: '600',
     color: '#222',
   },
   colorBlue: {
     color: '#2c3db8',
   },
-  prdDatabox: {
-    marginTop: 16,
+  prdPrice2: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 16,
   },
-  prdDataItem: {
-    width: '50%',
-    marginBottom: 12,
+  prdPrice2Item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 16,
   },
-  prdDataDt: {
-    fontSize: 13,
-    lineHeight: 18,
+  prdPrice2Dt: {
+    marginRight: 8,
+    fontSize: 12,
+    lineHeight: 14,
     fontWeight: '400',
     color: '#666',
   },
-  prdDataDd: {
-    marginTop: 4,
+  prdPrice2Dd: {
     fontSize: 15,
-    lineHeight: 20,
+    lineHeight: 21,
     fontWeight: '600',
     color: '#222',
+  },
+  prdDatabox: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(246, 246, 246, 0.5)',
+  },
+  prdDataDl: {
+    flex: 1,
+    paddingHorizontal: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: '#f2f2f2',
+  },
+  prdDataDlFirst: {
+    borderLeftWidth: 0,
+  },
+  prdDataDt: {
+    fontSize: 12,
+    lineHeight: 15.6, // 1.3 * 12
+    fontWeight: '400',
+    color: '#a3a7ab',
+  },
+  prdDataDd: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#393f44',
+    textAlign: 'right',
   },
   inBtnbox: {
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f6f6f6',
   },
   btn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e1e2',
-    backgroundColor: '#fff',
+    paddingVertical: 0,
+    height: 40,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
-  btnBlue: {
-    borderColor: '#2c3db8',
-    backgroundColor: '#2c3db8',
+  btnColorBlue: {
+    backgroundColor: 'transparent',
   },
   btnText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: '#222',
+    fontSize: 13,
+    lineHeight: 40,
+    fontWeight: '500',
+    color: '#666',
+    textAlign: 'center',
   },
   btnTextBlue: {
-    color: '#fff',
+    color: '#2c3db8',
   },
   listMore: {
     paddingHorizontal: 16,
@@ -609,6 +1027,215 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '400',
     color: '#666',
+  },
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: SCREEN_WIDTH - 32,
+    maxWidth: 400,
+  },
+  modalBox: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  modalTitle: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '700',
+    color: '#222',
+    textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
+  },
+  modalContent: {
+    paddingHorizontal: 40,
+    paddingTop: 20,
+  },
+  modalSubTitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: '#222',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalWarningText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '400',
+    color: '#666',
+    textAlign: 'center',
+  },
+  hrLine: {
+    height: 1,
+    backgroundColor: '#f6f6f6',
+    marginTop: 16,
+  },
+  modalNotice: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    alignItems: 'flex-start',
+  },
+  modalNoticeIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 8,
+    marginTop: 2,
+  },
+  modalNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+    color: '#666',
+  },
+  modalGrayBox: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#f6f6f6',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalProductName: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#2c3db8',
+    textAlign: 'center',
+  },
+  modalConfirmText: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+    color: '#222',
+    textAlign: 'center',
+  },
+  modalButtonBox: {
+    flexDirection: 'row',
+    marginTop: 24,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    gap: 8,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  modalButtonGray: {
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    backgroundColor: '#fff',
+  },
+  modalButtonBlue: {
+    backgroundColor: '#2c3db8',
+  },
+  modalButtonTextGray: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#666',
+  },
+  modalButtonTextWhite: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  // 지역 선택 모달 스타일
+  areaModalContainer: {
+    width: SCREEN_WIDTH - 64,
+    maxWidth: 320,
+    maxHeight: '70%',
+  },
+  areaModalBox: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  areaModalTitle: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '700',
+    color: '#222',
+    textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
+  },
+  areaModalList: {
+    maxHeight: 400,
+  },
+  areaModalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
+  },
+  areaModalItemText: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '400',
+    color: '#666',
+  },
+  areaModalItemTextActive: {
+    fontWeight: '600',
+    color: '#2c3db8',
+  },
+  areaModalCheckIcon: {
+    width: 20,
+    height: 20,
+    tintColor: '#2c3db8',
+  },
+  areaModalButtonBox: {
+    marginTop: 0,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  areaModalButton: {
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  areaModalButtonGray: {
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    backgroundColor: '#fff',
+  },
+  areaModalButtonTextGray: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#666',
+  },
+  // 지역 선택 버튼 텍스트 스타일
+  areaSelectText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '400',
+    color: '#393f44',
+    paddingHorizontal: 8,
   },
 });
 

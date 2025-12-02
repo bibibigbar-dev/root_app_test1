@@ -1165,13 +1165,15 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   modalTitle: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
     color: '#222',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
     textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
   },
   modalBody: {
     padding: 20,

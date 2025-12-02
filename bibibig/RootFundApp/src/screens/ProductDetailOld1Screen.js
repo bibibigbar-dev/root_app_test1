@@ -10,7 +10,6 @@ import {
   Clipboard,
   Alert,
 } from 'react-native';
-import Header from '../components/Header';
 import ApiService from '../services/api';
 
 const ProductDetailOld1Screen = ({ navigation, route }) => {
@@ -51,9 +50,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Header navigation={navigation} title="상품 상세" />
-        <View style={styles.loadingContainer}>
+      <View style={styles.container}>        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -62,9 +59,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
   if (!productData) {
     return (
-      <View style={styles.container}>
-        <Header navigation={navigation} title="상품 상세" />
-        <View style={styles.loadingContainer}>
+      <View style={styles.container}>        <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>상품 정보를 불러올 수 없습니다.</Text>
         </View>
       </View>
@@ -74,10 +69,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
   const { prod } = productData;
 
   return (
-    <View style={styles.container}>
-      <Header navigation={navigation} title="상품 상세" />
-      
-      {/* Back 버튼과 공유 버튼 */}
+    <View style={styles.container}>      {/* Back 버튼과 공유 버튼 */}
       <View style={styles.topButtonContainer}>
         <TouchableOpacity 
           style={styles.backButton}

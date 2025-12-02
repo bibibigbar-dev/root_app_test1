@@ -14,13 +14,12 @@ import {
   FlatList,
 } from 'react-native';
 import RenderHTML from 'react-native-render-html';
-import Header from '../components/Header';
 import ApiService from '../services/api';
 
 const CustomerServiceScreen = ({ navigation, route }) => {
-  const { user } = route.params || {};
+  const { user, initialTab } = route.params || {};
   const { width } = useWindowDimensions();
-  const [activeTab, setActiveTab] = useState(0); // 0: 공지사항, 1: 자주하는질문, 2: 언론보도, 3: 공시안내
+  const [activeTab, setActiveTab] = useState(initialTab || 0); // 0: 공지사항, 1: 자주하는질문, 2: 언론보도, 3: 공시안내
   const [loading, setLoading] = useState(true);
   const [topList, setTopList] = useState([]); // 중요 공지
   const [noticeList, setNoticeList] = useState([]);
@@ -292,8 +291,6 @@ const CustomerServiceScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="고객센터" />
-      
       <ScrollView 
         style={styles.content}
         showsVerticalScrollIndicator={false}
@@ -306,7 +303,7 @@ const CustomerServiceScreen = ({ navigation, route }) => {
             style={styles.bgbox}
             resizeMode="cover"
           >
-            <Text style={styles.headTitle}>고객센터</Text>
+          <Text style={styles.headTitle}>고객센터</Text>
           </ImageBackground>
         </View>
 
@@ -534,10 +531,10 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                           <View style={styles.dlBetween}>
                             <Text style={styles.dlDt}>-</Text>
                             <Text style={styles.dlDd}></Text>
-                          </View>
-                        </View>
-                      )}
                     </View>
+                      </View>
+                    )}
+                        </View>
 
                     {/* 청산업무처리절차 */}
                     <View style={[styles.subWhitebox, styles.mt8, styles.pb36]}>
@@ -550,12 +547,12 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                           style={styles.stepImage}
                           resizeMode="contain"
                         />
-                        <Text style={styles.disclosureText}>
-                          루트인프라금융㈜가 온투법 제27조에 따라 등록취소, 해산결의 파산선고 등으로 영업을 지속할 수 없는 경우, 법무법인 에너지에 원리금 상환·배분업무, 연계대출채권 관리계획, 투자금 및 상환금 관리계획, 연계투자 및 대출계약 관리계획 업무 등을 위탁합니다.
-                        </Text>
-                        <Text style={styles.starNotif}>
-                          * 당사와 법무법인 에너지는 2020.8.25 {'<청산업무위임계약>'}을 체결하여 이용자 보호에 만전을 기하고 있습니다.
-                        </Text>
+                      <Text style={styles.disclosureText}>
+                        루트인프라금융㈜가 온투법 제27조에 따라 등록취소, 해산결의 파산선고 등으로 영업을 지속할 수 없는 경우, 법무법인 에너지에 원리금 상환·배분업무, 연계대출채권 관리계획, 투자금 및 상환금 관리계획, 연계투자 및 대출계약 관리계획 업무 등을 위탁합니다.
+                      </Text>
+                      <Text style={styles.starNotif}>
+                        * 당사와 법무법인 에너지는 2020.8.25 {'<청산업무위임계약>'}을 체결하여 이용자 보호에 만전을 기하고 있습니다.
+                      </Text>
                       </View>
                     </View>
 
@@ -565,14 +562,14 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                         <Text style={styles.subSTitle}>이해상충 방지체계</Text>
                       </View>
                       <View style={[styles.pr20, styles.pl20]}>
-                        <Text style={[styles.disclosureText, styles.disclosureSubTitle]}>하나</Text>
-                        <Text style={styles.disclosureText}>
-                          루트인프라금융㈜는 이용자의 이익을 최우선으로 하여 이용자의 자산에 대해 신의 성실의무를 지니며, 이용자 이익보호 책임을 이행함에 있어 주요 이해관계자간 이해상충이 될 가능성을 인지하고 있습니다.
-                        </Text>
-                        <Text style={[styles.disclosureText, styles.disclosureSubTitle]}>둘</Text>
-                        <Text style={styles.disclosureText}>
-                          온투법 제5조 제18조에 의거, 당사는 {'<이해상충방지체계에 관한 기준>'}을 제정 운영하고 있으며 효과적인 내부통제체계 및 시스템을 구축하여 이해상충 문제를 엄격하게 관리하고 있습니다.
-                        </Text>
+                      <Text style={[styles.disclosureText, styles.disclosureSubTitle]}>하나</Text>
+                      <Text style={styles.disclosureText}>
+                        루트인프라금융㈜는 이용자의 이익을 최우선으로 하여 이용자의 자산에 대해 신의 성실의무를 지니며, 이용자 이익보호 책임을 이행함에 있어 주요 이해관계자간 이해상충이 될 가능성을 인지하고 있습니다.
+                      </Text>
+                      <Text style={[styles.disclosureText, styles.disclosureSubTitle]}>둘</Text>
+                      <Text style={styles.disclosureText}>
+                        온투법 제5조 제18조에 의거, 당사는 {'<이해상충방지체계에 관한 기준>'}을 제정 운영하고 있으며 효과적인 내부통제체계 및 시스템을 구축하여 이해상충 문제를 엄격하게 관리하고 있습니다.
+                      </Text>
                       </View>
                     </View>
                   </ScrollView>
@@ -958,36 +955,36 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                 </View>
               ) : (
                 <>
-                  <View style={styles.galleryList}>
-                    {visibleItems.map((item, index) => (
-                      <TouchableOpacity
-                        key={item.idx}
-                        style={styles.galleryItem}
-                        onPress={() => {
-                          if (item.link_url) {
-                            Linking.openURL(item.link_url);
-                          }
-                        }}
-                      >
-                        <View style={styles.galleryImgbox}>
-                          {item.thumbnail ? (
-                            <Image 
-                              source={{ uri: item.thumbnail }} 
-                              style={styles.galleryImg}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <View style={styles.galleryImgPlaceholder} />
-                          )}
-                        </View>
-                        <View style={styles.galleryTxtbox}>
-                          <Text style={styles.gallerySource}>{item.etc_text_1}</Text>
-                          <Text style={styles.galleryTit} numberOfLines={2}>{item.subject}</Text>
-                          <Text style={styles.galleryDate}>{item.recordtime?.substring(0, 10)}</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                <View style={styles.galleryList}>
+                  {visibleItems.map((item, index) => (
+                    <TouchableOpacity
+                      key={item.idx}
+                      style={styles.galleryItem}
+                      onPress={() => {
+                        if (item.link_url) {
+                          Linking.openURL(item.link_url);
+                        }
+                      }}
+                    >
+                      <View style={styles.galleryImgbox}>
+                        {item.thumbnail ? (
+                          <Image 
+                            source={{ uri: item.thumbnail }} 
+                            style={styles.galleryImg}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.galleryImgPlaceholder} />
+                        )}
+                      </View>
+                      <View style={styles.galleryTxtbox}>
+                        <Text style={styles.gallerySource}>{item.etc_text_1}</Text>
+                        <Text style={styles.galleryTit} numberOfLines={2}>{item.subject}</Text>
+                        <Text style={styles.galleryDate}>{item.recordtime?.substring(0, 10)}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
                   {/* 언론보도 더보기 버튼 */}
                   {activeTab === 2 && hasMore && (() => {
                     const { currentPage, totalPages } = getPageInfo();
@@ -1007,18 +1004,18 @@ const CustomerServiceScreen = ({ navigation, route }) => {
             ) : activeTab === 0 ? (
               /* 공지사항 목록 */
               <>
-                <View style={styles.subNotice}>
+              <View style={styles.subNotice}>
                   {/* 중요 공지 */}
                   {topList.map((item, index) => (
                     <View key={`top-${item.idx}`} style={[styles.noticeItem, index > 0 && styles.noticeItemMargin]}>
-                      <TouchableOpacity 
+                    <TouchableOpacity 
                         style={[styles.inHead, styles.inHeadImportant, expandedItems[`top-${item.idx}`] && styles.inHeadOn]}
-                        onPress={() => toggleItem(`top-${item.idx}`)}
+                      onPress={() => toggleItem(`top-${item.idx}`)}
                         activeOpacity={0.7}
-                      >
-                        <Text style={styles.typeBlue}>중요</Text>
-                        <Text style={styles.titIm}>{item.subject}</Text>
-                        <Text style={styles.date}>{item.recordtime?.substring(0, 10)}</Text>
+                    >
+                      <Text style={styles.typeBlue}>중요</Text>
+                      <Text style={styles.titIm}>{item.subject}</Text>
+                      <Text style={styles.date}>{item.recordtime?.substring(0, 10)}</Text>
                         <Image 
                           source={require('../assets/images/ico_toggle.png')}
                           style={[
@@ -1027,31 +1024,31 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                           ]}
                           resizeMode="contain"
                         />
-                      </TouchableOpacity>
-                      {expandedItems[`top-${item.idx}`] && (
-                        <View style={styles.inCont}>
+                    </TouchableOpacity>
+                    {expandedItems[`top-${item.idx}`] && (
+                      <View style={styles.inCont}>
                           <RenderHTML
                             contentWidth={width - 40}
                             source={{ html: item.contents || '' }}
                             baseStyle={styles.contText}
                           />
-                        </View>
-                      )}
-                    </View>
-                  ))}
+                      </View>
+                    )}
+                  </View>
+                ))}
 
-                  {/* 일반 공지 */}
-                  {visibleItems.map((item, index) => (
+                {/* 일반 공지 */}
+                {visibleItems.map((item, index) => (
                     <View key={item.idx} style={[
                       styles.noticeItem,
                       (index > 0 || topList.length > 0) && styles.noticeItemMargin
                     ]}>
-                      <TouchableOpacity 
+                    <TouchableOpacity 
                         style={[
                           styles.inHead,
                           expandedItems[item.idx] && styles.inHeadOn
                         ]}
-                        onPress={() => toggleItem(item.idx)}
+                      onPress={() => toggleItem(item.idx)}
                         activeOpacity={0.7}
                       >
                         <Text style={styles.tit}>{item.subject}</Text>
@@ -1179,10 +1176,10 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                         ]}
                         onPress={() => toggleItem(item.idx)}
                         activeOpacity={0.7}
-                      >
-                        <Text style={styles.type}></Text>
-                        <Text style={styles.tit}>{item.subject}</Text>
-                        <Text style={styles.date}>{item.recordtime?.substring(0, 10)}</Text>
+                    >
+                      <Text style={styles.type}></Text>
+                      <Text style={styles.tit}>{item.subject}</Text>
+                      <Text style={styles.date}>{item.recordtime?.substring(0, 10)}</Text>
                         <Image 
                           source={require('../assets/images/ico_toggle.png')}
                           style={[
@@ -1191,36 +1188,36 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                           ]}
                           resizeMode="contain"
                         />
-                      </TouchableOpacity>
-                      {expandedItems[item.idx] && (
-                        <View style={styles.inCont}>
+                    </TouchableOpacity>
+                    {expandedItems[item.idx] && (
+                      <View style={styles.inCont}>
                           <RenderHTML
                             contentWidth={width - 40}
                             source={{ html: item.contents || '' }}
                             baseStyle={styles.contText}
                           />
-                          {item.files && item.files.length > 0 && (
-                            <View style={styles.fileBox}>
-                              <Text style={styles.fileTitle}>첨부자료</Text>
-                              {item.files.map((file, fileIndex) => (
-                                <TouchableOpacity 
-                                  key={fileIndex}
-                                  onPress={() => {
-                                    if (file.filePath) {
-                                      Linking.openURL(file.filePath);
-                                    }
-                                  }}
-                                >
-                                  <Text style={styles.fileLink}>{file.fileName}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
+                        {item.files && item.files.length > 0 && (
+                          <View style={styles.fileBox}>
+                            <Text style={styles.fileTitle}>첨부자료</Text>
+                            {item.files.map((file, fileIndex) => (
+                              <TouchableOpacity 
+                                key={fileIndex}
+                                onPress={() => {
+                                  if (file.filePath) {
+                                    Linking.openURL(file.filePath);
+                                  }
+                                }}
+                              >
+                                <Text style={styles.fileLink}>{file.fileName}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
                 {/* 공시안내 더보기 버튼 */}
                 {hasMore && (() => {
                   const { currentPage, totalPages } = getPageInfo();
@@ -1846,9 +1843,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e1e2',
   },
   modalTitle: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
     color: '#222',
+    textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
   },
   modalClose: {
     fontSize: 24,

@@ -12,7 +12,6 @@ import {
   Image,
 } from 'react-native';
 import ApiService from '../services/api';
-import Header from '../components/Header';
 
 const RepaymentHistoryScreen = ({ navigation, route }) => {
   const { user, member_id } = route.params || {};
@@ -123,8 +122,7 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
   if (loading && repaymentData.length === 0) {
     return (
       <View style={styles.container}>
-        <Header navigation={navigation} user={currentUser} />
-        <View style={styles.loadingContainer}>
+      <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -133,8 +131,6 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={currentUser} />
-      
       <ScrollView style={styles.scrollView}>
         {/* Back 버튼 */}
         <View style={styles.headCon}>
@@ -524,13 +520,15 @@ const styles = StyleSheet.create({
     maxHeight: '60%',
   },
   modalTitle: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
     color: '#222',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
     textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f6f6',
   },
   yearList: {
     maxHeight: 300,

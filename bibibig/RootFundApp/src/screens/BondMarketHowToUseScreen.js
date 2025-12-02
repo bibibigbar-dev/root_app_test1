@@ -7,15 +7,12 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import Header from '../components/Header';
 
 const BondMarketHowToUseScreen = ({ navigation, route }) => {
   const { user } = route.params || {};
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} user={user} showBack={true} />
-      
       <View style={styles.headCon}>
         <TouchableOpacity 
           style={styles.btnBack}
@@ -42,7 +39,7 @@ const BondMarketHowToUseScreen = ({ navigation, route }) => {
           </Text>
         </View>
 
-        <View style={styles.infoUseBox}>
+        <View style={[styles.infoUseBox, styles.infoUseBoxMt24]}>
           <Text style={styles.infoUseTit}>판매자</Text>
           <View style={styles.infoUseCon}>
             <Image
@@ -64,22 +61,22 @@ const BondMarketHowToUseScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        <View style={[styles.subTitleBox, styles.subTitleBoxMt36]}>
+        <View style={[styles.subTitleBox, styles.subTitleBoxMt36, styles.subTitleBoxMb50]}>
           <Text style={styles.title}>이용한도 안내</Text>
           <Text style={styles.stitle}>개인 투자자</Text>
-          <Text style={styles.titleP}>
+          <Text style={[styles.titleP, styles.titlePAfterStitle]}>
             동일 차입자 5백만원 (온투법권 전체 3천만원 한도 포함)
           </Text>
           <Text style={styles.stitle}>전문 투자자</Text>
-          <Text style={styles.titleP}>
+          <Text style={[styles.titleP, styles.titlePAfterStitle]}>
             제한없음 (상품별 모집금액의 40%)
           </Text>
           <Text style={styles.stitle}>소득적격 투자자</Text>
-          <Text style={styles.titleP}>
+          <Text style={[styles.titleP, styles.titlePAfterStitle]}>
             동일 차입자 2천만원 (온투법권 전체 1억원 한도 포함)
           </Text>
           <Text style={styles.stitle}>법인 투자자</Text>
-          <Text style={[styles.titleP, styles.titlePMb40]}>
+          <Text style={[styles.titleP, styles.titlePAfterStitle]}>
             제한없음 (상품별 모집금액의 40%)
           </Text>
         </View>
@@ -122,7 +119,13 @@ const styles = StyleSheet.create({
   },
   subTitleBox: {
     marginTop: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+  },
+  subTitleBoxMt36: {
+    marginTop: 36,
+  },
+  subTitleBoxMb50: {
+    marginBottom: 50,
   },
   title: {
     fontSize: 25,
@@ -135,17 +138,17 @@ const styles = StyleSheet.create({
     marginTop: 18,
     color: '#666',
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 22.5,
     fontWeight: '400',
+  },
+  titlePAfterStitle: {
+    marginTop: 5,
   },
   titlePMt10: {
     marginTop: 10,
   },
-  titlePMb40: {
-    marginBottom: 40,
-  },
   titlePEm: {
-    color: '#393f44',
+    color: '#2c3db8',
     fontWeight: '600',
   },
   stitle: {
@@ -153,41 +156,40 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#393f44',
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 22.5,
     fontWeight: '600',
-  },
-  subTitleBoxMt36: {
-    marginTop: 36,
   },
   infoUseBox: {
     marginTop: 12,
     marginHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 12,
     paddingHorizontal: 8,
-    paddingBottom: 20,
+    paddingBottom: 12,
     borderWidth: 0.5,
     borderColor: '#e0e1e2',
     borderRadius: 10,
-    shadowColor: '#516c89',
+    shadowColor: 'rgba(81, 108, 137, 0.05)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 2,
+  },
+  infoUseBoxMt24: {
+    marginTop: 24,
   },
   infoUseTit: {
     paddingHorizontal: 8,
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 15.6,
     fontWeight: '600',
     color: '#222',
   },
   infoUseCon: {
-    marginTop: 12,
+    marginTop: 8,
   },
   infoUseImg: {
     width: '100%',
-    height: undefined,
-    aspectRatio: 1,
+    height: 60,
   },
 });
 

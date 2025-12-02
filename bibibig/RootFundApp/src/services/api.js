@@ -121,10 +121,21 @@ class ApiService {
     try {
       console.log('🚪 로그아웃 시작');
       
+      // member_id 가져오기
+      const currentUser = await this.getCurrentUser();
+      const memberId = currentUser?.session?.member_id || currentUser?.member_id || currentUser?.id;
+      
       // 백엔드 로그아웃 API 호출 (선택적)
       try {
-        await this.api.post('/app/logout');
-        console.log('✅ 백엔드 로그아웃 완료');
+        if (memberId) {
+          console.log('📤 로그아웃 API 호출 - member_id:', memberId);
+          const response = await this.api.post('/app/logoutProcess', {
+            member_id: memberId,
+          });
+          console.log('✅ 백엔드 로그아웃 완료:', response.data);
+        } else {
+          console.warn('⚠️ member_id가 없어 백엔드 로그아웃 API를 호출하지 않습니다.');
+        }
       } catch (error) {
         console.warn('⚠️ 백엔드 로그아웃 실패 (로컬 데이터는 삭제):', error.message);
       }
