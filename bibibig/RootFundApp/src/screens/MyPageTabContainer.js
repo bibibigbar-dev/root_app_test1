@@ -157,11 +157,14 @@ const MyPageTabContainer = ({ navigation, route }) => {
 
         {/* 헤더 */}
         <View style={styles.mypageHead}>
-          <Text style={styles.txtWelcome}>
-            <Text style={styles.txtWelcomeEm}>
-              {memberData?.r_name || user?.session?.r_name || user?.name || '사용자'}님
-            </Text>, 부자되세요!
-          </Text>
+          <View style={styles.txtWelcomeContainer}>
+            <Text style={styles.txtWelcome}>
+              <Text style={styles.txtWelcomeEm}>
+                {memberData?.r_name || user?.session?.r_name || user?.name || '사용자'}님,
+              </Text>
+              {'\n부자되세요!'}
+            </Text>
+          </View>
           <View style={styles.userType}>
             <TouchableOpacity
               style={styles.tip}
@@ -239,15 +242,21 @@ const styles = StyleSheet.create({
   mypageHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     minHeight: 106,
     padding: 20,
+    position: 'relative',
+  },
+  txtWelcomeContainer: {
+    flex: 1,
+    paddingRight: 60,
   },
   txtWelcome: {
     fontSize: 25,
     lineHeight: 35,
     fontWeight: '500',
     color: '#222',
+    flexWrap: 'wrap',
   },
   txtWelcomeEm: {
     fontWeight: '700',
@@ -256,7 +265,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
+    position: 'absolute',
+    top: 20,
+    right: 20,
     width: 47,
     height: 47,
     padding: 4,
@@ -320,7 +331,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2c3db8',
   },
   tabText: {
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 20,
     fontWeight: '700',
     color: '#bfc3c7',

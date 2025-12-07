@@ -94,6 +94,86 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    // 시간 정보 제거 (공백이나 T로 구분된 시간 부분 제거)
+    let dateOnly = dateString.split(' ')[0].split('T')[0];
+    
+    // YYYY-MM-DD 형식인 경우
+    if (dateOnly.includes('-')) {
+      const parts = dateOnly.split('-');
+      if (parts.length === 3) {
+        const year = parts[0].slice(-2); // 마지막 2자리
+        const month = parts[1];
+        const day = parts[2];
+        return `${year}.${month}.${day}`;
+      }
+    }
+    
+    // YYYYMMDD 형식인 경우
+    if (dateOnly.length === 8 && /^\d+$/.test(dateOnly)) {
+      const year = dateOnly.slice(2, 4);
+      const month = dateOnly.slice(4, 6);
+      const day = dateOnly.slice(6, 8);
+      return `${year}.${month}.${day}`;
+    }
+    
+    // 기타 형식은 그대로 반환
+    return dateOnly;
+  };
+
+  const formatDateFull = (dateString) => {
+    if (!dateString) return '';
+    
+    let dateOnly = dateString.split(' ')[0].split('T')[0];
+    
+    if (dateOnly.includes('-')) {
+      const parts = dateOnly.split('-');
+      if (parts.length === 3) {
+        const year = parts[0];
+        const month = parts[1];
+        const day = parts[2];
+        return `${year}년 ${month}월 ${day}일`;
+      }
+    }
+    
+    if (dateOnly.length === 8 && /^\d+$/.test(dateOnly)) {
+      const year = dateOnly.slice(0, 4);
+      const month = dateOnly.slice(4, 6);
+      const day = dateOnly.slice(6, 8);
+      return `${year}년 ${month}월 ${day}일`;
+    }
+    
+    return dateOnly;
+  };
+
+  const getRepayTypeText = (repayType) => {
+    switch (repayType) {
+      case '1':
+        return '원금균등상환';
+      case '2':
+        return '만기일시상환';
+      case '3':
+        return '원리금균등상환';
+      case '4':
+        return '기간상환';
+      default:
+        return repayType || '-';
+    }
+  };
+
+  const getInterestPayDate = (sort) => {
+    switch (sort) {
+      case 'bridge':
+        return '매 1개월마다 말일';
+      case 'pf':
+        return '매 3개월마다 말일';
+      default:
+        return '매 3개월마다';
+    }
+  };
+
   const getStatusText = (status) => {
     switch (status) {
       case 'FUNDING':
@@ -127,18 +207,16 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
   };
 
   const getProductImage = (orderType) => {
-    switch (orderType) {
-      case '태양광':
-        return require('../assets/images/ico_status01.png');
-      case 'ESS':
-        return require('../assets/images/ico_status01.png'); // ESS 이미지가 없으므로 기본 이미지 사용
-      case '풍력':
-        return require('../assets/images/ico_status03.png');
-      case '전기차충전소':
-        return require('../assets/images/ico_status02.png');
-      default:
-        return require('../assets/images/ico_status01.png');
+    if (orderType === '태양광') {
+      return require('../assets/images/img_product01_s.png');
+    } else if (orderType === 'ESS') {
+      return require('../assets/images/img_product02_s.png');
+    } else if (orderType === '풍력') {
+      return require('../assets/images/img_product03_s.png');
+    } else if (orderType === '전기차충전소') {
+      return require('../assets/images/img_product02_s.png');
     }
+    return null;
   };
 
   const handleInvestCancel = async (orderNumber) => {
@@ -183,10 +261,22 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
 
   const handleShowInvestReceipt = async (idx) => {
     try {
-      // 원리금수취권 증서는 새 창으로 열리므로 웹뷰나 외부 브라우저로 처리
-      Alert.alert('알림', '원리금수취권 증서는 웹에서 확인하실 수 있습니다.');
+      const memberId = member_id || user?.session?.member_id || user?.id;
+      
+      if (!memberId) {
+        Alert.alert('오류', '회원 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 원리금수취권 증서 페이지로 이동
+      navigation.navigate('InvestReceipt', {
+        user: user,
+        member_id: memberId,
+        idx: idx,
+      });
     } catch (error) {
-      console.error('원리금수취권 증서 조회 실패:', error);
+      console.error('원리금수취권 증서 페이지 이동 실패:', error);
+      Alert.alert('오류', '원리금수취권 증서 페이지로 이동하는 중 오류가 발생했습니다.');
     }
   };
 
@@ -278,14 +368,63 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
 
   const handleOpenScheduleModal = async (orderNumber) => {
     try {
+      const memberId = member_id || user?.session?.member_id || user?.id;
+      
+      if (!memberId) {
+        Alert.alert('오류', '회원 정보를 찾을 수 없습니다.');
+        return;
+      }
+
       const response = await ApiService.api.post('/app/market/getRepayList', {
         orderNumber,
+        member_id: memberId,
       });
 
-      if (response.data && response.data.repay && response.data.repay.list) {
-        setScheduleData(response.data.repay.list);
-        setSelectedItem({ orderNumber });
-        setShowScheduleModal(true);
+      console.log('상환 스케줄 응답:', response.data);
+
+      if (response.data) {
+        const rtnvalue = response.data.rtnvalue || response.data.rtnvalue;
+        
+        if (rtnvalue === '0' || rtnvalue === 0) {
+          // 성공
+          const repayData = response.data.repay;
+          
+          // repay.list 또는 repay 자체가 배열인지 확인
+          let repayList = [];
+          if (repayData) {
+            if (Array.isArray(repayData.list)) {
+              repayList = repayData.list;
+            } else if (Array.isArray(repayData)) {
+              repayList = repayData;
+            } else if (repayData.list && typeof repayData.list === 'object') {
+              // 객체인 경우 배열로 변환
+              repayList = Object.values(repayData.list);
+            }
+          }
+          
+          if (repayList.length > 0) {
+            setScheduleData(repayList);
+            setSelectedItem({ orderNumber });
+            setShowScheduleModal(true);
+          } else {
+            Alert.alert('알림', '상환 스케줄 정보가 없습니다.');
+          }
+        } else {
+          // 에러 처리
+          let errorMessage = '상환 스케줄을 불러올 수 없습니다.';
+          switch (rtnvalue) {
+            case '1':
+              errorMessage = '회원 정보가 없습니다.';
+              break;
+            case '2':
+              errorMessage = '상품 정보가 없습니다.';
+              break;
+            case '3':
+              errorMessage = '상환 스케줄 조회에 실패했습니다.';
+              break;
+          }
+          Alert.alert('오류', errorMessage);
+        }
       }
     } catch (error) {
       console.error('상환 스케줄 조회 실패:', error);
@@ -346,17 +485,18 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
         )}
 
         {/* 검색 영역 */}
-        <View style={styles.searchBox}>
-          <View style={styles.searchInputContainer}>
-            <TextInput
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="예) 고성군 솔라발전소"
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
-              placeholderTextColor="#a3a7ab"
-            />
+        {investList.length > 0 && (
+          <View style={styles.searchBox}>
+            <View style={styles.searchInputWrapper}>
+              <TextInput
+                style={styles.searchInput}
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="예) 고성군 솔라발전소"
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
+              />
+            </View>
             <TouchableOpacity
               style={styles.searchButton}
               onPress={handleSearch}
@@ -368,7 +508,7 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
               />
             </TouchableOpacity>
           </View>
-        </View>
+        )}
 
         {/* 목록 영역 */}
         {investList.length === 0 ? (
@@ -450,7 +590,7 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
                         </View>
                         <View style={styles.prdDataItem}>
                           <Text style={styles.prdDataLabel}>상환일</Text>
-                          <Text style={styles.prdDataValue}>{item.repay_date}</Text>
+                          <Text style={styles.prdDataValue}>{formatDate(item.repay_date)}</Text>
                         </View>
                         <View style={styles.prdDataItem}>
                           <Text style={styles.prdDataLabel}>상태</Text>
@@ -505,16 +645,13 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
 
             {/* 더보기 버튼 */}
             {currentPage < totalPages && (
-              <View style={styles.listMore}>
-              <TouchableOpacity
-                  style={styles.listMoreBtn}
-                onPress={handleLoadMore}
-              >
-                  <Text style={styles.listMoreTxt}>더보기</Text>
-                  <Text style={styles.listMoreTxt}>
-                  {currentPage}/{totalPages}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.loadMoreContainer}>
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={handleLoadMore}
+                >
+                  <Text style={styles.loadMoreText}>더보기 ({currentPage}/{totalPages})</Text>
+                </TouchableOpacity>
               </View>
             )}
           </>
@@ -638,89 +775,114 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, styles.scheduleModalContent]}>
-            <Text style={styles.modalTitle}>상환 스케줄</Text>
+            <View style={styles.modalBody}>
+              <View style={styles.boxCalc}>
+                <View style={styles.boxCalcTotal}>
+                  <Text style={styles.boxCalcTotalDt}>
+                    상환 스케줄
+                  </Text>
+                </View>
+              </View>
+            </View>
             <ScrollView style={styles.scheduleScroll}>
-              {scheduleData.map((repay, index) => {
-                const isExpanded = expandedScheduleIndex === index;
-                const repayDate = repay.REAL_REPAY_DATE || repay.EX_RETURN_DATE || '';
+              {scheduleData.length === 0 ? (
+                <View style={styles.emptyScheduleContainer}>
+                  <Text style={styles.emptyScheduleText}>상환 스케줄 정보가 없습니다.</Text>
+                </View>
+              ) : (
+                <View style={styles.repayList}>
+                  {scheduleData.map((repay, index) => {
+                    const isExpanded = expandedScheduleIndex === index;
+                    const repayDate = repay.REAL_REPAY_DATE || repay.EX_RETURN_DATE || repay.repay_date || '';
 
-                return (
-                  <View key={index} style={styles.scheduleItem}>
-                    <TouchableOpacity
-                      style={styles.scheduleHead}
-                      onPress={() => toggleScheduleItem(index)}
-                    >
-                      <Text style={styles.scheduleHeadLabel}>
-                        {index + 1}회차
-                      </Text>
-                      <View style={styles.scheduleHeadRight}>
-                        <Text style={styles.scheduleHeadValue}>
-                          세후 {formatCurrency(repay.R_RETURN_PRICE || 0)} 원
-                        </Text>
-                        <Text style={styles.scheduleArrow}>
-                          {isExpanded ? '▲' : '▼'}
-                        </Text>
+                    return (
+                      <View key={index} style={styles.repayListItem}>
+                        <TouchableOpacity
+                          style={styles.repayListHead}
+                          onPress={() => toggleScheduleItem(index)}
+                        >
+                          <Text style={styles.repayListHeadDt}>
+                            {index}회차
+                          </Text>
+                          <View style={styles.repayListHeadDd}>
+                            <Text style={styles.repayListHeadDdText}>
+                              세후 <Text style={styles.repayListHeadDdCnt}>
+                                {formatCurrency(repay.R_RETURN_PRICE || repay.r_return_price || repay.repay_price || 0)}
+                              </Text> 원
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                        {isExpanded && (
+                          <View style={styles.repayListCont}>
+                            <View style={styles.boxCalc}>
+                              <View style={styles.boxCalcDl}>
+                                <Text style={styles.boxCalcDt}>지급일</Text>
+                                <Text style={styles.boxCalcDd}>
+                                  <Text style={styles.boxCalcDdCnt}>{formatDate(repayDate) || repayDate}</Text>
+                                </Text>
+                              </View>
+                              <View style={styles.boxCalcDl}>
+                                <Text style={styles.boxCalcDt}>원금</Text>
+                                <Text style={styles.boxCalcDd}>
+                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.PRINCIPAL || repay.principal || 0)}</Text> 원
+                                </Text>
+                              </View>
+                              <View style={styles.boxCalcDl}>
+                                <Text style={styles.boxCalcDt}>이자</Text>
+                                <Text style={styles.boxCalcDd}>
+                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.INTEREST || repay.interest || 0)}</Text> 원
+                                </Text>
+                              </View>
+                              <View style={styles.boxCalcDl}>
+                                <Text style={styles.boxCalcDt}>이자소득세</Text>
+                                <Text style={styles.boxCalcDd}>
+                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.I_TAX || repay.i_tax || 0)}</Text> 원
+                                </Text>
+                              </View>
+                              <View style={styles.boxCalcDl}>
+                                <Text style={styles.boxCalcDt}>주민세</Text>
+                                <Text style={styles.boxCalcDd}>
+                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.R_TAX || repay.r_tax || 0)}</Text> 원
+                                </Text>
+                              </View>
+                              <View style={styles.boxCalcDl}>
+                                <Text style={styles.boxCalcDt}>플랫폼수수료</Text>
+                                <Text style={styles.boxCalcDd}>
+                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.I_COMMISSION || repay.i_commission || repay.commission || 0)}</Text> 원
+                                </Text>
+                              </View>
+                              <View style={styles.boxCalcDl}>
+                                <Text style={styles.boxCalcDt}>실지급액</Text>
+                                <Text style={styles.boxCalcDd}>
+                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.R_RETURN_PRICE || repay.r_return_price || repay.repay_price || 0)}</Text> 원
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        )}
                       </View>
-                    </TouchableOpacity>
-                    {isExpanded && (
-                      <View style={styles.scheduleCont}>
-                        <View style={styles.scheduleRow}>
-                          <Text style={styles.scheduleLabel}>지급일</Text>
-                          <Text style={styles.scheduleValue}>{repayDate}</Text>
-                        </View>
-                        <View style={styles.scheduleRow}>
-                          <Text style={styles.scheduleLabel}>원금</Text>
-                          <Text style={styles.scheduleValue}>
-                            {formatCurrency(repay.PRINCIPAL || 0)} 원
-                          </Text>
-                        </View>
-                        <View style={styles.scheduleRow}>
-                          <Text style={styles.scheduleLabel}>이자</Text>
-                          <Text style={styles.scheduleValue}>
-                            {formatCurrency(repay.INTEREST || 0)} 원
-                          </Text>
-                        </View>
-                        <View style={styles.scheduleRow}>
-                          <Text style={styles.scheduleLabel}>이자소득세</Text>
-                          <Text style={styles.scheduleValue}>
-                            {formatCurrency(repay.I_TAX || 0)} 원
-                          </Text>
-                        </View>
-                        <View style={styles.scheduleRow}>
-                          <Text style={styles.scheduleLabel}>주민세</Text>
-                          <Text style={styles.scheduleValue}>
-                            {formatCurrency(repay.R_TAX || 0)} 원
-                          </Text>
-                        </View>
-                        <View style={styles.scheduleRow}>
-                          <Text style={styles.scheduleLabel}>플랫폼수수료</Text>
-                          <Text style={styles.scheduleValue}>
-                            {formatCurrency(repay.I_COMMISSION || 0)} 원
-                          </Text>
-                        </View>
-                        <View style={styles.scheduleRow}>
-                          <Text style={styles.scheduleLabel}>실지급액</Text>
-                          <Text style={styles.scheduleValue}>
-                            {formatCurrency(repay.R_RETURN_PRICE || 0)} 원
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
+                    );
+                  })}
+                </View>
+              )}
             </ScrollView>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonConfirm]}
-              onPress={() => setShowScheduleModal(false)}
-            >
-              <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
-                확인
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={() => {
+                  setShowScheduleModal(false);
+                  setExpandedScheduleIndex(null);
+                }}
+              >
+                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                  확인
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
+
     </View>
   );
 };
@@ -870,16 +1032,16 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
   searchBox: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-  },
-  searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 'auto',
-    width: 200,
-    height: 32,
-    paddingHorizontal: 15,
+    marginTop: 20,
+    marginLeft: 160,
+    marginRight: 16,
+    gap: 5,
+  },
+  searchInputWrapper: {
+    flex: 1,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#f2f2f2',
     borderRadius: 10,
@@ -888,17 +1050,17 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 32,
+    paddingVertical: 0,
     fontSize: 14,
-    lineHeight: 21,
-    fontWeight: '600',
     color: '#222',
+    fontWeight: '600',
+    textAlignVertical: 'center',
   },
   searchButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
   },
   searchIcon: {
     width: 24,
@@ -925,7 +1087,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '700',
-    color: '#222',
     textAlign: 'center',
   },
   emptyWrapper: {
@@ -948,15 +1109,14 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 40,
-    marginTop: 0,
+    paddingTop: 5,
+    marginTop: 15,
   },
   invItem: {
     display: 'flex',
     flexDirection: 'column',
     position: 'relative',
-    marginTop: 20,
+    marginBottom: 20,
     borderRadius: 10,
     backgroundColor: '#fff',
     shadowColor: 'rgba(104, 111, 115, 0.15)',
@@ -1128,7 +1288,7 @@ const styles = StyleSheet.create({
   },
   prdDataItem: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
   prdDataLabel: {
     color: '#a3a7ab',
@@ -1161,41 +1321,29 @@ const styles = StyleSheet.create({
     lineHeight: 40,
     fontWeight: '500',
   },
-  listMore: {
+  loadMoreContainer: {
     display: 'flex',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
     marginBottom: 40,
   },
-  listMoreBtn: {
-    display: 'flex',
+  loadMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 40,
+    borderRadius: 20,
     borderWidth: 0.5,
     borderColor: '#e0e1e2',
-    borderRadius: 20,
     backgroundColor: '#fff',
-  },
-  listMoreTxt: {
-    marginRight: 8,
-    color: '#666',
-    fontSize: 13,
-    lineHeight: 19.5,
-    fontWeight: '400',
   },
   loadMoreText: {
     marginRight: 8,
-    color: '#666',
     fontSize: 13,
     lineHeight: 19.5,
     fontWeight: '400',
-  },
-  loadMorePage: {
     color: '#666',
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: '400',
   },
   modalOverlay: {
     flex: 1,
@@ -1218,8 +1366,8 @@ const styles = StyleSheet.create({
   modalTitle: {
     paddingVertical: 20,
     paddingHorizontal: 16,
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 20,
+    lineHeight: 28,
     fontWeight: '700',
     color: '#222',
     textAlign: 'center',
@@ -1375,6 +1523,120 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '400',
     color: '#222',
+  },
+  modalBody: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  boxCalcTotal: {
+    marginBottom: 0,
+    alignItems: 'center',
+  },
+  boxCalcTotalDt: {
+    color: '#393f44',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  boxCalcTotalDtSpan: {
+    fontWeight: '600',
+  },
+  repayList: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
+  },
+  repayListItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f2f2f2',
+  },
+  repayListHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    position: 'relative',
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    paddingRight: 16,
+  },
+  repayListHeadDt: {
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 16.9,
+    fontWeight: '400',
+  },
+  repayListHeadDd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  repayListHeadDdText: {
+    fontSize: 13,
+    lineHeight: 16.9,
+    fontWeight: '400',
+    color: '#222',
+  },
+  repayListHeadDdCnt: {
+    fontWeight: '600',
+  },
+  repayListCont: {
+    paddingHorizontal: 28,
+    paddingVertical: 8,
+    paddingBottom: 16,
+  },
+  repayListContRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  repayListContDt: {
+    color: '#666',
+    fontSize: 12,
+    lineHeight: 15.6,
+    fontWeight: '400',
+  },
+  repayListContDd: {
+    fontSize: 12,
+    lineHeight: 15.6,
+    fontWeight: '400',
+    color: '#222',
+  },
+  emptyScheduleContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyScheduleText: {
+    color: '#666',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  boxCalc: {
+    paddingHorizontal: 4,
+  },
+  boxCalcDl: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    lineHeight: 15,
+  },
+  boxCalcDt: {
+    color: '#666',
+    fontSize: 16,
+    lineHeight: 19,
+    fontWeight: '400',
+  },
+  boxCalcDd: {
+    fontSize: 16,
+    lineHeight: 17,
+    fontWeight: '400',
+    color: '#222',
+  },
+  boxCalcDdCnt: {
+    fontWeight: '600',
   },
 });
 

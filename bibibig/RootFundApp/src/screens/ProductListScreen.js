@@ -384,7 +384,11 @@ const ProductListScreen = ({ navigation, route }) => {
                     setCompletePage(1);
                   }}
                 >
-                  <Text style={styles.searchIconText}>🔍</Text>
+                  <Image
+                    source={require('../assets/images/ico_search.png')}
+                    style={styles.searchIcon}
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
               </View>
             </View>
@@ -454,14 +458,16 @@ const ProductListScreen = ({ navigation, route }) => {
 
                 {/* 더보기 버튼 */}
                 {getCompleteList().length > completePage * completeItemsPerPage && (
+                  <View style={styles.loadMoreContainer}>
                   <TouchableOpacity 
-                    style={styles.moreButton}
+                      style={styles.loadMoreButton}
                     onPress={() => setCompletePage(completePage + 1)}
                   >
-                    <Text style={styles.moreButtonText}>
+                      <Text style={styles.loadMoreText}>
                       더보기 ({completePage}/{Math.ceil(getCompleteList().length / completeItemsPerPage)})
                     </Text>
                   </TouchableOpacity>
+                  </View>
                 )}
               </>
             )}
@@ -572,14 +578,16 @@ const ProductListScreen = ({ navigation, route }) => {
             
             {/* 더보기 버튼 */}
             {listMiddle.length > middlePage * itemsPerPage && (
+              <View style={styles.loadMoreContainer}>
               <TouchableOpacity 
-                style={styles.moreButton}
+                  style={styles.loadMoreButton}
                 onPress={() => setMiddlePage(middlePage + 1)}
               >
-                <Text style={styles.moreButtonText}>
+                  <Text style={styles.loadMoreText}>
                   더보기 ({middlePage}/{Math.ceil(listMiddle.length / itemsPerPage)})
                 </Text>
               </TouchableOpacity>
+              </View>
             )}
           </>
         )}
@@ -662,14 +670,16 @@ const ProductListScreen = ({ navigation, route }) => {
             
             {/* 더보기 버튼 */}
             {listShort.length > shortPage * itemsPerPage && (
+              <View style={styles.loadMoreContainer}>
               <TouchableOpacity 
-                style={styles.moreButton}
+                  style={styles.loadMoreButton}
                 onPress={() => setShortPage(shortPage + 1)}
               >
-                <Text style={styles.moreButtonText}>
+                  <Text style={styles.loadMoreText}>
                   더보기 ({shortPage}/{Math.ceil(listShort.length / itemsPerPage)})
                 </Text>
               </TouchableOpacity>
+              </View>
             )}
           </>
         )}
@@ -756,14 +766,16 @@ const ProductListScreen = ({ navigation, route }) => {
 
             {/* 더보기 버튼 */}
             {listLong.length > longPage * itemsPerPage && (
+              <View style={styles.loadMoreContainer}>
               <TouchableOpacity 
-                style={styles.moreButton}
+                  style={styles.loadMoreButton}
                 onPress={() => setLongPage(longPage + 1)}
               >
-                <Text style={styles.moreButtonText}>
+                  <Text style={styles.loadMoreText}>
                   더보기 ({longPage}/{Math.ceil(listLong.length / itemsPerPage)})
                 </Text>
               </TouchableOpacity>
+              </View>
             )}
           </>
         )}
@@ -1355,20 +1367,28 @@ const styles = StyleSheet.create({
     lineHeight: 22.5,
     textAlign: 'center',
   },
-  moreButton: {
-    marginHorizontal: 20,
-    marginBottom: 60,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e1e2',
-    alignItems: 'center',
+  loadMoreContainer: {
+    display: 'flex',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 40,
   },
-  moreButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: '#e0e1e2',
+    backgroundColor: '#fff',
+  },
+  loadMoreText: {
+    marginRight: 8,
+    fontSize: 13,
+    lineHeight: 19.5,
+    fontWeight: '400',
     color: '#666',
   },
   // 상환완료 탭 스타일
@@ -1500,6 +1520,10 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
     marginVertical: 8,
     overflow: 'hidden',
+  },
+  searchIcon: {
+    width: 24,
+    height: 24,
   },
 });
 

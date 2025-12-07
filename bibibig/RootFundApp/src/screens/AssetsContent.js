@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
   Clipboard,
+  Image,
 } from 'react-native';
 import ApiService from '../services/api';
 
@@ -20,8 +21,8 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
   const [activeTab, setActiveTab] = useState('deposit'); // 'deposit' or 'withdraw'
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [showAccountModal, setShowAccountModal] = useState(false);
-  const [showLimitModal, setShowLimitModal] = useState(false);
-  const [showInvestModal, setShowInvestModal] = useState(false);
+  const [showLimitTooltip, setShowLimitTooltip] = useState(false);
+  const [showInvestTooltip, setShowInvestTooltip] = useState(false);
   const [selectedBank, setSelectedBank] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [banks, setBanks] = useState([]);
@@ -95,9 +96,14 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
     }
   };
 
-  const handleSetAllAmount = () => {
-    const refundBal = assetData?.refund_bal || balance;
-    setWithdrawAmount(formatCurrency(refundBal));
+  const handleAddAmount = (amount) => {
+    const currentAmount = withdrawAmount.replace(/[^0-9]/g, '') || '0';
+    const currentNumeric = parseInt(currentAmount, 10);
+    const addAmount = amount === 'all' ? (assetData?.refund_bal || parseInt(balance.replace(/[^0-9]/g, ''), 10)) : amount;
+    const newAmount = currentNumeric + addAmount;
+    const refundBal = assetData?.refund_bal || parseInt(balance.replace(/[^0-9]/g, ''), 10);
+    const finalAmount = Math.min(newAmount, refundBal); // 출금 가능 금액을 초과하지 않도록
+    setWithdrawAmount(formatCurrency(finalAmount));
   };
 
   const handleWithdraw = async () => {
@@ -111,34 +117,57 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
       const reqModes = await ApiService.setReqModes({ reqdata: amount });
       
       Alert.alert(
-        `${formatCurrency(amount)} 출금신청`,
-        '출금을 신청하시겠습니까?',
+        '출금신청',
+        `(${formatCurrency(amount)}원)을 출금 신청하시겠습니까?`,
         [
           { text: '취소', style: 'cancel' },
           {
             text: '실행',
             onPress: async () => {
               try {
-                const response = await ApiService.api.post('/app/member/process/refund', {
-                  refund_price: amount,
+                const memberId = member_id || user?.session?.member_id || user?.id;
+                if (!memberId) {
+                  Alert.alert('오류', '사용자 ID를 확인할 수 없습니다.');
+                  return;
+                }
+
+                const refundRequestData = {
+                  member_id: String(memberId),
+                  refund_price: String(amount),
                   _bcsrmd1: reqModes.data1,
                   _bcsrmd2: reqModes.data2,
+                };
+                
+                const formData = ApiService.convertToFormData(refundRequestData);
+                console.log('📤 출금 신청 Form-data:', formData);
+                
+                const response = await ApiService.api.post('/app/member/process/refund', formData, {
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                  },
                 });
 
-                if (response.data === '0') {
+                const responseData = String(response.data);
+
+                if (responseData === '0') {
                   Alert.alert('출금신청하기', '출금신청이 완료되었습니다.', [
                     { text: '확인', onPress: () => loadAssetData() }
                   ]);
-                } else if (response.data === '1') {
+                } else if (responseData === '1') {
                   navigation.navigate('Login');
-                } else if (response.data === '2' || response.data === '3') {
+                } else if (responseData === '2' || responseData === '3') {
                   Alert.alert('예치금 출금', '출금금액을 확인하여 주세요.');
-                } else if (response.data === '4' || response.data === '5') {
+                } else if (responseData === '4' || responseData === '5') {
                   Alert.alert('예치금 출금', '출금금액이 예치금보다 많습니다.');
+                } else if (responseData === '10') {
+                  Alert.alert('예치금 출금', '직전 출금신청에 대한 내용을 처리중입니다. 잠시후에 다시 요청하세요.');
+                } else if (responseData === '99') {
+                  Alert.alert('예치금 출금', '은행사와 통신이 원활하지 않습니다.\n잠시 후 다시 요청하세요.');
                 } else {
-                  Alert.alert('예치금 출금', `[${response.data}] 처리도중 오류가 발생하였습니다.`);
+                  Alert.alert('예치금 출금', `[${responseData}] 처리도중 오류가 발생하였습니다.`);
                 }
               } catch (error) {
+                console.error('❌ 출금 신청 오류:', error);
                 Alert.alert('예치금 출금', '처리도중 오류가 발생하였습니다.');
               }
             }
@@ -241,7 +270,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             <View style={[styles.assetItem, styles.assetItemFirst]}>
               <View style={styles.assetInbox}>
                 <View style={styles.assetImgbox}>
-                  <Text style={styles.assetIcon}>💰</Text>
+                  <Image
+                    source={require('../assets/images/ico_my_assets01.png')}
+                    style={styles.assetIcon}
+                    resizeMode="contain"
+                  />
                 </View>
                 <View style={styles.assetTxtbox}>
                   <View style={styles.assetTitleRow}>
@@ -250,7 +283,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                       style={styles.refreshButton}
                       onPress={handleRefreshBalance}
                     >
-                      <Text style={styles.refreshIcon}>🔄</Text>
+                      <Image
+                        source={require('../assets/images/ico_refresh.png')}
+                        style={styles.refreshIcon}
+                        resizeMode="contain"
+                      />
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.assetValue}>
@@ -265,17 +302,33 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             <View style={styles.assetItem}>
               <View style={styles.assetInbox}>
                 <View style={styles.assetImgbox}>
-                  <Text style={styles.assetIcon}>📊</Text>
+                  <Image
+                    source={require('../assets/images/ico_my_assets02.png')}
+                    style={styles.assetIcon}
+                    resizeMode="contain"
+                  />
                 </View>
                 <View style={styles.assetTxtbox}>
                   <View style={styles.assetTitleRow}>
                     <Text style={styles.assetTitle}>총 누적 투자금액</Text>
-                    <TouchableOpacity 
-                      style={styles.tipButton}
-                      onPress={() => setShowInvestModal(true)}
-                    >
-                      <Text style={styles.tipIcon}>ℹ️</Text>
-                    </TouchableOpacity>
+                    <View style={styles.tipButtonContainer}>
+                      <TouchableOpacity 
+                        style={styles.tipButton}
+                        onPress={() => setShowInvestTooltip(!showInvestTooltip)}
+                      >
+                        <Image
+                          source={require('../assets/images/ico_tip.png')}
+                          style={styles.tipIcon}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                      {showInvestTooltip && (
+                        <View style={styles.tooltip}>
+                          <Text style={styles.tooltipText}>루트펀드에 투자한 총 투자 원금</Text>
+                          <View style={styles.tooltipArrow} />
+                        </View>
+                      )}
+                    </View>
                   </View>
                   <Text style={styles.assetValue}>
                     {formatCurrency(totalInvestPrice)}
@@ -289,17 +342,33 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             <View style={styles.assetItem}>
               <View style={styles.assetInbox}>
                 <View style={styles.assetImgbox}>
-                  <Text style={styles.assetIcon}>💳</Text>
+                  <Image
+                    source={require('../assets/images/ico_my_assets03.png')}
+                    style={styles.assetIcon}
+                    resizeMode="contain"
+                  />
                 </View>
                 <View style={styles.assetTxtbox}>
                   <View style={styles.assetTitleRow}>
                     <Text style={styles.assetTitle}>이용가능한도</Text>
-                    <TouchableOpacity 
-                      style={styles.tipButton}
-                      onPress={() => setShowLimitModal(true)}
-                    >
-                      <Text style={styles.tipIcon}>ℹ️</Text>
-                    </TouchableOpacity>
+                    <View style={styles.tipButtonContainer}>
+                      <TouchableOpacity 
+                        style={styles.tipButton}
+                        onPress={() => setShowLimitTooltip(!showLimitTooltip)}
+                      >
+                        <Image
+                          source={require('../assets/images/ico_tip.png')}
+                          style={styles.tipIcon}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                      {showLimitTooltip && (
+                        <View style={styles.tooltip}>
+                          <Text style={styles.tooltipText}>온투업권 전체 한도 중 투자 가능한 잔여 한도</Text>
+                          <View style={styles.tooltipArrow} />
+                        </View>
+                      )}
+                    </View>
                   </View>
                   <Text style={styles.assetValue}>
                     {limitPrice > 0 ? (
@@ -313,8 +382,8 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                     )}
                   </Text>
                 </View>
-                </View>
               </View>
+            </View>
             </View>
           </View>
         </View>
@@ -328,7 +397,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             <View style={styles.methodItem}>
               <View style={styles.methodInbox}>
                 <View style={styles.methodImgbox}>
-                  <Text style={styles.methodIcon}>1️⃣</Text>
+                  <Image
+                    source={require('../assets/images/img_my_inv_method01.png')}
+                    style={styles.methodImage}
+                    resizeMode="cover"
+                  />
                 </View>
                 <View style={styles.methodTxtbox}>
                   <Text style={styles.methodTit}>개인전용{'\n'}가상계좌번호 확인</Text>
@@ -339,7 +412,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             <View style={styles.methodItem}>
               <View style={styles.methodInbox}>
                 <View style={styles.methodImgbox}>
-                  <Text style={styles.methodIcon}>2️⃣</Text>
+                  <Image
+                    source={require('../assets/images/img_my_inv_method02.png')}
+                    style={styles.methodImage}
+                    resizeMode="cover"
+                  />
                 </View>
                 <View style={styles.methodTxtbox}>
                   <Text style={styles.methodTit}>예치금 입금</Text>
@@ -350,7 +427,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             <View style={styles.methodItem}>
               <View style={styles.methodInbox}>
                 <View style={styles.methodImgbox}>
-                  <Text style={styles.methodIcon}>3️⃣</Text>
+                  <Image
+                    source={require('../assets/images/img_my_inv_method03.png')}
+                    style={styles.methodImage}
+                    resizeMode="cover"
+                  />
                 </View>
                 <View style={styles.methodTxtbox}>
                   <Text style={styles.methodTit}>투자 준비 완료</Text>
@@ -398,13 +479,21 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             <View style={styles.myMgmt}>
               <View style={styles.myBank}>
               <View style={styles.bankImgbox}>
-                <Text style={styles.bankLogo}>🏦</Text>
+                <Image
+                  source={require('../assets/images/img_my_rootenergy.png')}
+                  style={styles.bankImage}
+                  resizeMode="contain"
+                />
               </View>
               <View style={styles.bankTxtbox}>
                   <View style={[styles.bankRow, styles.bankRowFirst]}>
                   <Text style={styles.bankLabel}>은행명</Text>
                     <View style={styles.bankValueContainer}>
-                  <Text style={styles.bankValue}>농협은행</Text>
+                      <Image
+                        source={require('../assets/images/logo_bank_nh.png')}
+                        style={styles.bankIcon}
+                        resizeMode="contain"
+                      />
                     </View>
                 </View>
                 <View style={styles.bankRow}>
@@ -423,7 +512,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                         style={styles.copyButton}
                         onPress={() => handleCopyAccount(vAccount)}
                       >
-                        <Text style={styles.copyIcon}>📋</Text>
+                        <Image
+                          source={require('../assets/images/ico_copy.png')}
+                          style={styles.copyIcon}
+                          resizeMode="contain"
+                        />
                       </TouchableOpacity>
                     )}
                       </View>
@@ -432,35 +525,42 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
               </View>
             </View>
 
-              <View style={styles.flexText}>
-                <Text style={styles.flexTextNone}>*</Text>
-                <Text style={styles.flexTextContent}>
-                  <Text style={styles.flexTextStrong}>본인명의 타행계좌 : </Text>
+            <View style={styles.flexText}>
+              <Image
+                source={require('../assets/images/bg_method.png')}
+                style={styles.flexTextImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.flexText}>
+              <Text style={styles.flexTextNone}>*</Text>
+              <Text style={styles.flexTextContent}>
+                <Text style={styles.flexTextStrong}>본인명의 타행계좌 : </Text>
                 본인명의 타행계좌로는 입금할 수 없습니다.{'\n'}
                 루트펀드에 등록된 출금계좌가 주거래 은행이 아닌 경우 출금계좌를 변경하여 이용할 수 있습니다.
               </Text>
             </View>
-              <View style={styles.flexText}>
-                <Text style={styles.flexTextNone}>*</Text>
-                <Text style={styles.flexTextContent}>
-                  <Text style={styles.flexTextStrong}>간편송금 : </Text>
+            <View style={styles.flexText}>
+              <Text style={styles.flexTextNone}>*</Text>
+              <Text style={styles.flexTextContent}>
+                <Text style={styles.flexTextStrong}>간편송금 : </Text>
                 토스, 카카오페이 등 간편송금을 통한 입금이 불가능 합니다.
               </Text>
             </View>
-              <View style={styles.flexText}>
-                <Text style={styles.flexTextNone}>*</Text>
-                <Text style={styles.flexTextContent}>
-                  <Text style={styles.flexTextStrong}>오픈뱅킹 : </Text>
+            <View style={styles.flexText}>
+              <Text style={styles.flexTextNone}>*</Text>
+              <Text style={styles.flexTextContent}>
+                <Text style={styles.flexTextStrong}>오픈뱅킹 : </Text>
                 타행 은행 인터넷 뱅킹 혹은 모바일 뱅킹에서 오픈뱅킹을 통한 입금이 불가능 합니다.
               </Text>
             </View>
-              <View style={styles.flexText}>
-                <Text style={styles.flexTextNone}>*</Text>
-                <Text style={styles.flexTextContent}>
-                  <Text style={styles.flexTextStrong}>은행 방문 이용 : </Text>
+            <View style={styles.flexText}>
+              <Text style={styles.flexTextNone}>*</Text>
+              <Text style={styles.flexTextContent}>
+                <Text style={styles.flexTextStrong}>은행 방문 이용 : </Text>
                 등록된 투자금 출금 계좌가 농협이 아닌 경우 창구, ATM에서 입금이 불가능합니다.
               </Text>
-              </View>
+            </View>
             </View>
           </View>
         )}
@@ -471,22 +571,26 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             <View style={styles.myMgmt}>
               <View style={styles.myBank}>
               <View style={styles.bankImgbox}>
-                <Text style={styles.bankLogo}>🏦</Text>
+                <Image
+                  source={require('../assets/images/img_my_rootenergy.png')}
+                  style={styles.bankImage}
+                  resizeMode="contain"
+                />
               </View>
               <View style={styles.bankTxtbox}>
                   <View style={[styles.bankRow, styles.bankRowFirst]}>
                   <Text style={styles.bankLabel}>은행명</Text>
                     <View style={styles.bankValueContainer}>
-                  <View style={styles.bankValueRow}>
-                    <Text style={styles.bankValue}>{bankNm || '-'}</Text>
-                    <TouchableOpacity
-                      style={styles.changeButton}
-                      onPress={() => setShowAccountModal(true)}
-                    >
-                      <Text style={styles.changeButtonText}>계좌변경</Text>
-                    </TouchableOpacity>
-                      </View>
-                  </View>
+                      <Text style={styles.bankValue}>{bankNm || '-'}</Text>
+                    </View>
+                    <View style={styles.widFull}>
+                      <TouchableOpacity
+                        style={styles.changeButton}
+                        onPress={() => navigation.navigate('AccountChange')}
+                      >
+                        <Text style={styles.changeButtonText}>계좌변경</Text>
+                      </TouchableOpacity>
+                    </View>
                 </View>
                 <View style={styles.bankRow}>
                   <Text style={styles.bankLabel}>예금주</Text>
@@ -522,11 +626,38 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                 keyboardType="numeric"
               />
               <Text style={styles.unitText}>원</Text>
+            </View>
+            
+            <View style={styles.amountButtonContainer}>
               <TouchableOpacity
-                style={styles.allButton}
-                onPress={handleSetAllAmount}
+                style={styles.amountButton}
+                onPress={() => handleAddAmount(10000)}
               >
-                <Text style={styles.allButtonText}>전액입력</Text>
+                <Text style={styles.amountButtonText}>+1만</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.amountButton}
+                onPress={() => handleAddAmount(50000)}
+              >
+                <Text style={styles.amountButtonText}>+5만</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.amountButton}
+                onPress={() => handleAddAmount(100000)}
+              >
+                <Text style={styles.amountButtonText}>+10만</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.amountButton}
+                onPress={() => handleAddAmount(1000000)}
+              >
+                <Text style={styles.amountButtonText}>+100만</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.amountButton}
+                onPress={() => handleAddAmount('all')}
+              >
+                <Text style={styles.amountButtonText}>전액</Text>
               </TouchableOpacity>
             </View>
 
@@ -632,78 +763,16 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         </View>
       </Modal>
 
-      {/* 이용가능한도 안내 모달 */}
-      <Modal
-        visible={showLimitModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowLimitModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>잔여 투자 한도 안내</Text>
-            <ScrollView style={styles.modalScroll}>
-              <Text style={styles.modalText}>
-                혁신상품 출시에 따라 추가된 투자한도에 대한 안내입니다.{'\n'}
-                일반개인투자자와 소득적격개인투자자에게 적용됩니다.{'\n\n'}
-                혁신상품[미인증]{'\n\n'}
-                1. 혁신상품에 투자할 때만 적용되는 투자한도입니다.{'\n'}
-                2. 혁신상품의 사업지역 1km이내 시·군·구 거주 주민으로 인증받지 못한 경우 적용됩니다.{'\n'}
-                3. 투자한도가 5천만원이지만 일반상품에는 1천만원까지만 투자가 가능합니다.(동일차입자 한도 5백만원){'\n'}
-                4. 혁신상품[미인증]만으로 5천만원까지 투자가 가능합니다.(동일차입자 한도 2천만원){'\n'}
-                5. 일반상품과 혁신상품[미인증]의 투자금액 합계가 5천만원을 초과할 수 없습니다.{'\n'}
-                6. 일반상품에 투자한 금액만큼 혁신상품[미인증]의 잔여한도도 감소합니다.{'\n'}
-                7. 혁신상품[미인증]에 투자한 금액이 4천만원을 초과할 경우 일반상품의 잔여한도도 감소합니다.{'\n\n'}
-                혁신상품[인증]{'\n\n'}
-                1. 혁신상품에 투자할 때만 적용되는 투자한도입니다.{'\n'}
-                2. 혁신상품의 사업지역 1km이내 시·군·구 거주 주민으로 1회 이상 인증을 받은 경우에 적용됩니다.{'\n'}
-                3. 투자한도가 1억원이지만 일반상품에는 1천만원까지만 투자가 가능합니다.(동일차입자 한도 5백만원){'\n'}
-                4. 혁신상품[인증]만으로 1억원까지 투자가 가능합니다.(동일차입자 한도 4천만원){'\n'}
-                5. 일반상품과 혁신상품[미인증]의 투자금액 합계가 5천만원을 초과할 수 없습니다.{'\n'}
-                6. 모든 상품의 투자금액 합계는 1억원을 초과할 수 없습니다.{'\n'}
-                7. 동일차입자 한도인 4천만원까지 투자를 하기 위해서는 상품마다 사업지역 1km 이내 시·군·구 거주 주민 여부를 인증받아야 합니다.{'\n'}
-                8. 인증을 받지 않고 혁신상품에 투자한 경우 혁신상품[미인증]의 한도를 적용합니다.{'\n'}
-                9. 일반상품에 투자한 금액만큼 혁신상품[인증]의 잔여한도도 감소합니다.{'\n'}
-                10. 혁신상품[미인증]에 투자한 금액만큼 혁신상품[인증]의 잔여한도도 감소합니다.{'\n'}
-                11. 혁신상품[인증]에 투자한 금액이 5천만원을 초과할 경우 혁신상품[미인증]의 잔여한도도 감소합니다.{'\n'}
-                12. 혁신상품[인증]에 투자한 금액이 9천만원을 초과할 경우 일반상품의 잔여한도도 감소합니다.{'\n\n'}
-                - 상기 내용은 법인과 개인전문투자자는 해당 사항이 없고 상품 모집금액의 40%의 투자한도만 적용
-              </Text>
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalButtonConfirm}
-              onPress={() => setShowLimitModal(false)}
-            >
-              <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>확인</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* 총 누적 투자금액 안내 모달 */}
-      <Modal
-        visible={showInvestModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowInvestModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>총 누적 투자금액 안내</Text>
-            <ScrollView style={styles.modalScroll}>
-              <Text style={styles.modalText}>
-                총 누적 투자금액에 대한 설명!?
-              </Text>
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalButtonConfirm}
-              onPress={() => setShowInvestModal(false)}
-            >
-              <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>확인</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {(showInvestTooltip || showLimitTooltip) && (
+        <TouchableOpacity
+          style={styles.tooltipOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setShowInvestTooltip(false);
+            setShowLimitTooltip(false);
+          }}
+        />
+      )}
     </View>
   );
 };
@@ -783,7 +852,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   assetsList: {
-    paddingHorizontal: 24,
+    paddingRight: 20,
     paddingLeft: 24,
     borderWidth: 1,
     borderColor: '#2c3db8',
@@ -810,7 +879,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   assetIcon: {
-    fontSize: 32,
+    width: 46,
+    height: 46,
   },
   assetTxtbox: {
     flex: 1,
@@ -823,27 +893,78 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     fontWeight: '400',
-    lineHeight: 13,
+    lineHeight: 17,
   },
   refreshButton: {
     width: 20,
     height: 20,
     marginLeft: 4,
+    marginTop: -4,
+    marginBottom: -2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   refreshIcon: {
-    fontSize: 16,
+    width: 14,
+    height: 14,
+  },
+  tipButtonContainer: {
+    position: 'relative',
+    marginLeft: 4,
   },
   tipButton: {
     width: 16,
     height: 16,
-    marginLeft: 4,
+    marginTop: -2,
+    marginBottom: -1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   tipIcon: {
-    fontSize: 14,
+    width: 13,
+    height: 13,
+  },
+  tooltip: {
+    position: 'absolute',
+    bottom: 22,
+    left: -90,
+    backgroundColor: '#393f44',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    minWidth: 200,
+    maxWidth: 280,
+    zIndex: 1000,
+    elevation: 10,
+  },
+  tooltipText: {
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+    textAlign: 'center',
+  },
+  tooltipArrow: {
+    position: 'absolute',
+    bottom: -6,
+    left: 90,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#393f44',
+  },
+  tooltipOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+    elevation: 999,
   },
   assetValue: {
     marginTop: 4,
@@ -855,6 +976,7 @@ const styles = StyleSheet.create({
   assetUnit: {
     fontSize: 20,
     fontWeight: '600',
+    color: '#222',
   },
   assetTotal: {
     color: '#a3a7ab',
@@ -879,7 +1001,9 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   methodList: {
+    paddingTop: 2,
     paddingHorizontal: 16,
+    paddingBottom: 0,
   },
   methodItem: {
     marginTop: 8,
@@ -888,47 +1012,54 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderRadius: 10,
     backgroundColor: '#fff',
-    shadowColor: '#68738f',
+    shadowColor: 'rgba(104, 111, 115, 0.15)',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 1,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 5,
     overflow: 'hidden',
+    minHeight: 165,
   },
   methodImgbox: {
-    padding: 24,
-    alignItems: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 0,
   },
-  methodIcon: {
-    fontSize: 48,
+  methodImage: {
+    width: '100%',
+    height: '100%',
   },
   methodTxtbox: {
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 24,
-    justifyContent: 'center',
+    width: '100%',
+    height: '100%',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    justifyContent: 'flex-start',
+    zIndex: 1,
   },
   methodTit: {
     fontSize: 20,
     lineHeight: 26,
     fontWeight: '700',
     color: '#222',
-    marginBottom: 8,
   },
   methodTxt: {
-    fontSize: 15,
-    lineHeight: 23,
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: '600',
-    color: '#666',
+    color: '#222',
   },
   subTab: {
     flexDirection: 'row',
     height: 30,
     marginTop: 10,
-    marginHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e1e2',
   },
@@ -955,7 +1086,7 @@ const styles = StyleSheet.create({
     // 탭 콘텐츠는 별도 스타일 없음
   },
   myMgmt: {
-    paddingVertical: 20,
+    paddingTop: 20,
     paddingHorizontal: 16,
     paddingBottom: 40,
   },
@@ -968,13 +1099,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8faff',
   },
   bankImgbox: {
+    flex: 0,
     width: 95,
     marginRight: 30,
     marginTop: 34,
     alignItems: 'center',
   },
-  bankLogo: {
-    fontSize: 48,
+  bankImage: {
+    width: 95,
+    height: undefined,
+    aspectRatio: 1,
   },
   bankTxtbox: {
     flex: 1,
@@ -987,19 +1121,27 @@ const styles = StyleSheet.create({
   },
   bankLabel: {
     fontSize: 13,
-    lineHeight: 13,
+    lineHeight: 17,
     color: '#666',
     fontWeight: '400',
-    marginBottom: 2,
   },
   bankValueContainer: {
     marginTop: 2,
+  },
+  bankIcon: {
+    height: 20,
+    width: 85,
   },
   bankValue: {
     fontSize: 18,
     lineHeight: 23,
     fontWeight: '600',
     color: '#222',
+  },
+  widFull: {
+    width: 'auto',
+    marginTop: 6,
+    marginBottom: 2,
   },
   bankValueRow: {
     flexDirection: 'row',
@@ -1020,14 +1162,17 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     marginLeft: 8,
+    marginTop: -5,
+    marginBottom: -3,
     justifyContent: 'center',
     alignItems: 'center',
   },
   copyIcon: {
-    fontSize: 16,
+    width: 13,
+    height: 13,
   },
   changeButton: {
-    paddingHorizontal: 7,
+    paddingHorizontal: 10,
     paddingVertical: 3,
     height: 24,
     borderWidth: 1,
@@ -1036,6 +1181,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   changeButtonText: {
     fontSize: 13,
@@ -1048,6 +1194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 56,
     marginTop: 20,
+    marginBottom: 0,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderWidth: 1,
@@ -1055,8 +1202,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   amountLabel: {
-    fontSize: 13,
-    lineHeight: 13,
+    fontSize: 14,
+    lineHeight: 17,
     color: '#666',
     fontWeight: '400',
   },
@@ -1087,29 +1234,36 @@ const styles = StyleSheet.create({
   },
   unitText: {
     fontSize: 17,
-    lineHeight: 13,
+    lineHeight: 20,
     fontWeight: '500',
     marginLeft: 4,
   },
-  allButton: {
-    marginLeft: 20,
-    paddingHorizontal: 7,
-    paddingVertical: 10,
-    height: 44,
+  amountButtonContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+    gap: 8,
+  },
+  amountButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    height: 36,
     borderWidth: 1,
     borderColor: '#e0e1e2',
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 60,
   },
-  allButtonText: {
+  amountButtonText: {
     fontSize: 13,
     color: '#666',
-    fontWeight: '400',
+    fontWeight: '500',
   },
   btnBox: {
     marginTop: 30,
+    marginBottom: 20,
   },
   withdrawButton: {
     height: 48,
@@ -1128,22 +1282,26 @@ const styles = StyleSheet.create({
   },
   flexText: {
     flexDirection: 'row',
-    marginTop: 16,
     alignItems: 'flex-start',
+  },
+  flexTextImage: {
+    width: '100%',
+    height: undefined,
+    aspectRatio: 3,
   },
   flexTextNone: {
     flex: 0,
     marginRight: 2,
     color: '#a3a7ab',
     fontSize: 13,
-    lineHeight: 13,
+    lineHeight: 20,
     fontWeight: '400',
   },
   flexTextContent: {
     flex: 1,
     color: '#a3a7ab',
     fontSize: 13,
-    lineHeight: 13,
+    lineHeight: 20,
     fontWeight: '400',
   },
   flexTextStrong: {
@@ -1268,4 +1426,3 @@ const styles = StyleSheet.create({
 });
 
 export default AssetsContent;
-

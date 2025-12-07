@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Image,
   Alert,
   Modal,
   ActivityIndicator,
@@ -87,6 +88,35 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    // 시간 정보 제거 (공백이나 T로 구분된 시간 부분 제거)
+    let dateOnly = dateString.split(' ')[0].split('T')[0];
+    
+    // YYYY-MM-DD 형식인 경우
+    if (dateOnly.includes('-')) {
+      const parts = dateOnly.split('-');
+      if (parts.length === 3) {
+        const year = parts[0].slice(-2); // 마지막 2자리
+        const month = parts[1];
+        const day = parts[2];
+        return `${year}.${month}.${day}`;
+      }
+    }
+    
+    // YYYYMMDD 형식인 경우
+    if (dateOnly.length === 8 && /^\d+$/.test(dateOnly)) {
+      const year = dateOnly.slice(2, 4);
+      const month = dateOnly.slice(4, 6);
+      const day = dateOnly.slice(6, 8);
+      return `${year}.${month}.${day}`;
+    }
+    
+    // 기타 형식은 그대로 반환
+    return dateOnly;
+  };
+
   const getStatusText = (status) => {
     switch (status) {
       case 'FUNDING':
@@ -119,25 +149,25 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
     return '#666';
   };
 
-  const getProductIcon = (orderType) => {
-    switch (orderType) {
-      case '태양광':
-        return '☀️';
-      case 'ESS':
-        return '🔋';
-      case '풍력':
-        return '💨';
-      case '전기차충전소':
-        return '⚡';
-      default:
-        return '📦';
+  const getProductImage = (orderType) => {
+    if (orderType === '태양광') {
+      return require('../assets/images/img_product01_s.png');
+    } else if (orderType === 'ESS') {
+      return require('../assets/images/img_product02_s.png');
+    } else if (orderType === '풍력') {
+      return require('../assets/images/img_product03_s.png');
+    } else if (orderType === '전기차충전소') {
+      return require('../assets/images/img_product02_s.png');
     }
+    return null;
   };
 
   const handleOpenReview = async (item, mode) => {
     try {
+      const memberId = member_id || user?.session?.member_id || user?.id;
       const response = await ApiService.api.post('/app/my/invest/review/get', {
         orderNumber: item.orderNumber,
+        member_id: memberId,
       });
 
       const data = typeof response.data === 'string' 
@@ -167,14 +197,16 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
     if (!selectedItem) return;
 
     try {
+      const memberId = member_id || user?.session?.member_id || user?.id;
       const response = await ApiService.api.post('/app/my/invest/review/save', {
+        member_id: memberId,
         orderNumber: selectedItem.orderNumber,
         review: reviewText,
         instalment: selectedItem.instalment,
         open_yn: openYn ? 'Y' : 'N',
       });
 
-      if (response.data === '0') {
+      if (response.data === '0' || response.data === 0) {
         Alert.alert('투자 이용후기', '정상적으로 등록되었습니다.', [
           {
             text: '확인',
@@ -184,9 +216,10 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
             },
           },
         ]);
-      } else if (response.data === '1') {
+      } else if (response.data === '1' || response.data === 1) {
         navigation.navigate('Login');
       } else {
+        console.warn('Unexpected review save response:', response.data);
         Alert.alert('투자 이용후기', '처리도중 오류가 발생하였습니다.');
       }
     } catch (error) {
@@ -208,12 +241,14 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
           style: 'destructive',
           onPress: async () => {
             try {
+              const memberId = member_id || user?.session?.member_id || user?.id;
               const response = await ApiService.api.post('/app/my/invest/review/delete', {
+                member_id: memberId,
                 orderNumber: selectedItem.orderNumber,
                 idx: reviewIdx,
               });
 
-              if (response.data === '0') {
+              if (response.data === '0' || response.data === 0) {
                 Alert.alert('투자 이용후기', '정상적으로 삭제되었습니다.', [
                   {
                     text: '확인',
@@ -223,9 +258,10 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
                     },
                   },
                 ]);
-              } else if (response.data === '1') {
+              } else if (response.data === '1' || response.data === 1) {
                 navigation.navigate('Login');
               } else {
+                console.warn('Unexpected review delete response:', response.data);
                 Alert.alert('투자 이용후기', '처리도중 오류가 발생하였습니다.');
               }
             } catch (error) {
@@ -252,30 +288,44 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         {/* 검색 영역 */}
-        <View style={styles.searchBox}>
-          <TextInput
-            style={styles.searchInput}
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="예) 고성군 솔라발전소"
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={handleSearch}
-          >
-            <Text style={styles.searchIcon}>🔍</Text>
-          </TouchableOpacity>
-        </View>
+        {reviewList.length > 0 && (
+          <View style={styles.searchBox}>
+            <View style={styles.searchInputWrapper}>
+              <TextInput
+                style={styles.searchInput}
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="예) 고성군 솔라발전소"
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.searchButton}
+              onPress={handleSearch}
+            >
+              <Image
+                source={require('../assets/images/ico_search.png')}
+                style={styles.searchIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* 목록 영역 */}
         {reviewList.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📝</Text>
-            <Text style={styles.emptyMsg}>
-              투자 후 참여 하실 수 있습니다.
-            </Text>
+            <View style={styles.loadingWrapperReview}>
+              <Image 
+                source={require('../assets/images/loading3.png')} 
+                style={styles.loadingIco}
+                resizeMode="contain"
+              />
+              <Text style={styles.loadingMsg}>
+                투자 후 참여 하실 수 있습니다.
+              </Text>
+            </View>
           </View>
         ) : (
           <>
@@ -283,7 +333,7 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
               {visibleItems.map((item, index) => {
                 const statusInfo = getStatusText(item.status);
                 const bgColor = getStatusBgColor(item.status);
-                const productIcon = getProductIcon(item.orderType);
+                const productImage = getProductImage(item.orderType);
 
                 return (
                   <View key={item.idx || index} style={styles.invItem}>
@@ -299,7 +349,11 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
                       <View style={styles.prdInfoBox}>
                         <View style={styles.prdInfo}>
                           <View style={styles.prdImgBox}>
-                            <Text style={styles.prdIcon}>{productIcon}</Text>
+                            {productImage ? (
+                              <Image source={productImage} style={styles.prdIcon} resizeMode="contain" />
+                            ) : (
+                              <Text style={styles.prdIcon}>📦</Text>
+                            )}
                           </View>
                           <View style={styles.prdTxtBox}>
                             <Text style={styles.prdTit} numberOfLines={1}>
@@ -331,7 +385,7 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
                         </View>
                         <View style={styles.prdDataItem}>
                           <Text style={styles.prdDataLabel}>상환일</Text>
-                          <Text style={styles.prdDataValue}>{item.repay_date}</Text>
+                          <Text style={styles.prdDataValue}>{formatDate(item.repay_date)}</Text>
                         </View>
                         <View style={styles.prdDataItem}>
                           <Text style={styles.prdDataLabel}>상태</Text>
@@ -375,15 +429,14 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
 
             {/* 더보기 버튼 */}
             {currentPage < totalPages && (
-              <TouchableOpacity
-                style={styles.loadMoreButton}
-                onPress={handleLoadMore}
-              >
-                <Text style={styles.loadMoreText}>더보기</Text>
-                <Text style={styles.loadMorePage}>
-                  {currentPage}/{totalPages}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.loadMoreContainer}>
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={handleLoadMore}
+                >
+                  <Text style={styles.loadMoreText}>더보기 ({currentPage}/{totalPages})</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </>
         )}
@@ -439,7 +492,7 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
               <View style={styles.flexInput}>
                 <TouchableOpacity
                   style={styles.labelBox}
-                  onPress={() => setOpenYn(!openYn)}
+                  onPress={() => setOpenYn((prev) => !prev)}
                 >
                   <View style={[styles.checkbox, openYn && styles.checkboxChecked]}>
                     {openYn && <Text style={styles.checkboxCheck}>✓</Text>}
@@ -569,7 +622,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 16,
-    marginHorizontal: 16,
+    marginLeft: 160,
+    marginRight: 16,
+    gap: 5,
+  },
+  searchInputWrapper: {
+    flex: 1,
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#f2f2f2',
@@ -582,34 +640,52 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     fontSize: 14,
     color: '#222',
+    fontWeight: '600',
+    textAlignVertical: 'center',
   },
   searchButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
   },
   searchIcon: {
-    fontSize: 16,
+    width: 24,
+    height: 24,
   },
   emptyContainer: {
-    padding: 60,
+    flex: 1,
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  loadingWrapperReview: {
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
+    textAlign: 'center',
   },
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: 16,
+  loadingIco: {
+    width: 40,
+    height: 40,
   },
-  emptyMsg: {
+  loadingMsg: {
+    marginTop: 16,
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  loadingDesc: {
+    marginTop: 16,
     color: '#666',
+    fontSize: 15,
+    lineHeight: 22.5,
+    textAlign: 'center',
   },
   listContainer: {
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 40,
   },
   invItem: {
     flexDirection: 'column',
@@ -664,7 +740,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   prdIcon: {
-    fontSize: 24,
+    width: 28,
+    height: 31,
   },
   prdTxtBox: {
     flex: 1,
@@ -743,30 +820,29 @@ const styles = StyleSheet.create({
     lineHeight: 40,
     fontWeight: '500',
   },
-  loadMoreButton: {
-    flexDirection: 'row',
+  loadMoreContainer: {
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 20,
     marginBottom: 40,
+  },
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 40,
+    borderRadius: 20,
     borderWidth: 0.5,
     borderColor: '#e0e1e2',
-    borderRadius: 20,
     backgroundColor: '#fff',
   },
   loadMoreText: {
     marginRight: 8,
-    color: '#666',
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 19.5,
     fontWeight: '400',
-  },
-  loadMorePage: {
     color: '#666',
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: '400',
   },
   modalOverlay: {
     flex: 1,
@@ -921,4 +997,3 @@ const styles = StyleSheet.create({
 });
 
 export default InvestReviewContent;
-

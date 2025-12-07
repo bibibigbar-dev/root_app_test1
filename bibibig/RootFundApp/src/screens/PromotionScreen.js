@@ -147,10 +147,9 @@ const PromotionScreen = ({ navigation, route }) => {
 
             {/* 더보기 버튼 */}
             {currentPage < totalPages && (
-              <View style={styles.listMore}>
-                <TouchableOpacity style={styles.moreButton} onPress={handleLoadMore}>
-                  <Text style={styles.moreButtonText}>더보기</Text>
-                  <Text style={styles.moreButtonCurrent}>{currentPage}/{totalPages}</Text>
+              <View style={styles.loadMoreContainer}>
+                <TouchableOpacity style={styles.loadMoreButton} onPress={handleLoadMore}>
+                  <Text style={styles.loadMoreText}>더보기 ({currentPage}/{totalPages})</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -306,30 +305,27 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#bfc3c7',
   },
-  listMore: {
-    paddingHorizontal: 16,
-    marginBottom: 40,
-  },
-  moreButton: {
-    flexDirection: 'row',
+  loadMoreContainer: {
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 20,
+    borderWidth: 0.5,
     borderColor: '#e0e1e2',
     backgroundColor: '#fff',
   },
-  moreButtonText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: '#222',
+  loadMoreText: {
     marginRight: 8,
-  },
-  moreButtonCurrent: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19.5,
     fontWeight: '400',
     color: '#666',
   },

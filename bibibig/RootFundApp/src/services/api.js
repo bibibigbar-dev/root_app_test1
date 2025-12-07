@@ -256,13 +256,17 @@ class ApiService {
   }
 
   convertToFormData(data) {
-    const formData = new URLSearchParams();
+    // React Native에서 URLSearchParams가 제대로 작동하지 않을 수 있으므로
+    // 직접 문자열을 생성합니다.
+    const params = [];
     Object.keys(data).forEach(key => {
       if (data[key] !== null && data[key] !== undefined) {
-        formData.append(key, data[key]);
+        const value = String(data[key]);
+        // URL 인코딩 처리
+        params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
       }
     });
-    return formData.toString();
+    return params.join('&');
   }
 
   // 공개키 가져오기 (웹에서는 서버에서 렌더링되지만 앱에서는 API로 가져와야 함)
@@ -653,10 +657,57 @@ DwIDAQAB
             user: userData
           };
         } else {
-          console.log('❌ 로그인 실패:', response.data.memo);
+          // rtnvalue에 따른 상세한 에러 메시지 처리
+          const rtnvalue = String(response.data.rtnvalue || '');
+          let errorMessage = response.data.memo || response.data.action || '로그인에 실패했습니다.';
+          
+          // rtnvalue에 따라 상세한 메시지 설정
+          switch (rtnvalue) {
+            case '1':
+              errorMessage = '아이디를 입력해주세요.';
+              break;
+            case '2':
+              errorMessage = '비밀번호를 입력해주세요.';
+              break;
+            case '3':
+              errorMessage = '일치하는 아이디가 없습니다. 아이디를 확인해주세요.';
+              break;
+            case '4':
+              errorMessage = '비밀번호가 일치하지 않습니다. 비밀번호를 확인해주세요.';
+              break;
+            case '5':
+              errorMessage = '사용 정지된 회원입니다. 고객센터로 문의해주세요.';
+              break;
+            case '6':
+              errorMessage = '탈퇴한 회원입니다.';
+              break;
+            case '7':
+              errorMessage = '휴면 회원입니다. 고객센터로 문의해주세요.';
+              break;
+            case '15':
+              errorMessage = response.data.memo || '비밀번호를 5회 이상 잘못 입력하여 계정이 일시 정지되었습니다. 고객센터로 문의해주세요.';
+              break;
+            default:
+              // memo나 action이 있으면 우선 사용, 없으면 기본 메시지
+              if (response.data.memo) {
+                errorMessage = response.data.memo;
+              } else if (response.data.action) {
+                errorMessage = response.data.action;
+              }
+              break;
+          }
+          
+          console.log('❌ 로그인 실패:', {
+            rtnvalue: rtnvalue,
+            memo: response.data.memo,
+            action: response.data.action,
+            errorMessage: errorMessage
+          });
+          
           return { 
             success: false, 
-            message: response.data.memo || '로그인에 실패했습니다.' 
+            message: errorMessage,
+            rtnvalue: rtnvalue
           };
         }
       }
@@ -671,7 +722,10 @@ DwIDAQAB
       // 오류 유형별 처리
       let errorMessage = '로그인 중 오류가 발생했습니다.';
       
-      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      if (error.response?.status === 404) {
+        console.warn('🔍 로그인 API 엔드포인트를 찾을 수 없습니다 (404)');
+        errorMessage = '로그인 서비스를 사용할 수 없습니다. 서버 설정을 확인해주세요.';
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
         console.warn('⏰ 로그인 타임아웃 - 서버 응답이 느립니다');
         errorMessage = '서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요.';
       } else if (error.message.includes('Network Error') || error.code === 'ECONNREFUSED') {
@@ -1123,7 +1177,22 @@ DwIDAQAB
       return response.data;
     } catch (error) {
       console.error('Get main data error:', error);
-      throw error;
+      // 404 에러나 다른 에러 발생 시 빈 데이터 반환하여 앱이 계속 작동하도록 함
+      if (error.response?.status === 404) {
+        console.warn('메인 데이터 API 엔드포인트를 찾을 수 없습니다. 빈 데이터를 반환합니다.');
+      }
+      return {
+        result: {
+          product: [],
+          site: null,
+          case_list: [],
+          news: [],
+          faq: [],
+          notice: [],
+          top_banner_m_filepath: null,
+          top_promotion_banner: [],
+        }
+      };
     }
   }
 

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import ApiService from '../services/api';
 
@@ -99,6 +100,12 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
       setAllDeals([]);
       setDepositDeals([]);
       setWithdrawDeals([]);
+      setAllTotalPages(1);
+      setDepositTotalPages(1);
+      setWithdrawTotalPages(1);
+      setAllCurrentPage(1);
+      setDepositCurrentPage(1);
+      setWithdrawCurrentPage(1);
     } finally {
       setLoading(false);
     }
@@ -162,18 +169,22 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
       <View key={index} style={styles.dealItem}>
         <View style={styles.dealInbox}>
           <View style={styles.dateTitleRow}>
-            <Text style={styles.dateText}>{formatDateTime(item.recordtime)}</Text>
-            <Text style={styles.typeText}>{item.type_kr || '-'}</Text>
+            <View style={styles.dateTitle}>
+              <Text style={styles.dateText}>{formatDateTime(item.recordtime)}</Text>
+              <Text style={styles.typeText}>{item.type_kr || '-'}</Text>
+            </View>
           </View>
           
           <View style={[styles.txVolume, isDeposit ? null : styles.txVolumeMinus]}>
             <Text style={styles.txType}>{isDeposit ? '입금' : '출금'}</Text>
-            <Text style={[styles.txAmount, isDeposit ? styles.txAmountPlus : styles.txAmountMinus]}>
-              {isDeposit ? '+' : '-'}{formatCurrency(amount)}원
-            </Text>
-            <Text style={styles.balanceText}>
-              잔액 {formatCurrency(item.balance)}원
-            </Text>
+            <View style={styles.txVolumeRight}>
+              <Text style={[styles.txAmount, isDeposit ? styles.txAmountPlus : styles.txAmountMinus]}>
+                {isDeposit ? '+' : '-'}{formatCurrency(amount)}원
+              </Text>
+              <Text style={styles.balanceText}>
+                잔액 {formatCurrency(item.balance)}원
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -183,7 +194,7 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-      <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -198,52 +209,69 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
+        {/* 헤더 */}
+        <View style={styles.headCon}>
+          <TouchableOpacity 
+            style={styles.btnBack}
+            onPress={() => navigation.goBack()}
+          >
+            <Image 
+              source={require('../assets/images/ico_back.png')} 
+              style={styles.backIcon} 
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+          <Text style={styles.headTitle}></Text>
+        </View>
+
         {/* 제목 */}
-        <View style={styles.titleBox}>
+        <View style={styles.subTitleBox}>
           <Text style={styles.title}>입출금내역</Text>
         </View>
 
         {/* 탭 메뉴 */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'all' && styles.tabItemActive]}
-            onPress={() => {
-              setActiveTab('all');
-              setAllCurrentPage(1);
-            }}
-          >
-            <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
-              전체
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'deposit' && styles.tabItemActive]}
-            onPress={() => {
-              setActiveTab('deposit');
-              setDepositCurrentPage(1);
-            }}
-          >
-            <Text style={[styles.tabText, activeTab === 'deposit' && styles.tabTextActive]}>
-              입금
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'withdraw' && styles.tabItemActive]}
-            onPress={() => {
-              setActiveTab('withdraw');
-              setWithdrawCurrentPage(1);
-            }}
-          >
-            <Text style={[styles.tabText, activeTab === 'withdraw' && styles.tabTextActive]}>
-              출금
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.pl16}>
+          <View style={styles.choiceChips}>
+            <TouchableOpacity
+              style={[styles.choiceChipItem, activeTab === 'all' && styles.choiceChipActive]}
+              onPress={() => {
+                setActiveTab('all');
+                setAllCurrentPage(1);
+              }}
+            >
+              <Text style={[styles.choiceChipText, activeTab === 'all' && styles.choiceChipTextActive]}>
+                전체
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.choiceChipItem, activeTab === 'deposit' && styles.choiceChipActive]}
+              onPress={() => {
+                setActiveTab('deposit');
+                setDepositCurrentPage(1);
+              }}
+            >
+              <Text style={[styles.choiceChipText, activeTab === 'deposit' && styles.choiceChipTextActive]}>
+                입금
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.choiceChipItem, activeTab === 'withdraw' && styles.choiceChipActive]}
+              onPress={() => {
+                setActiveTab('withdraw');
+                setWithdrawCurrentPage(1);
+              }}
+            >
+              <Text style={[styles.choiceChipText, activeTab === 'withdraw' && styles.choiceChipTextActive]}>
+                출금
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* 거래내역 리스트 */}
-        <View style={styles.listContainer}>
+        <View style={styles.mytxList}>
           {currentDeals.length === 0 ? (
-            <View style={styles.emptyContainer}>
+            <View style={styles.emptyItem}>
               <Text style={styles.emptyText}>거래내역이 없습니다.</Text>
             </View>
           ) : (
@@ -252,15 +280,14 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
               
               {/* 더보기 버튼 */}
               {hasMore && (
-                <TouchableOpacity
-                  style={styles.loadMoreButton}
-                  onPress={handleLoadMore}
-                >
-                  <Text style={styles.loadMoreText}>더보기</Text>
-                  <Text style={styles.pageInfo}>
-                    {currentPage}/{totalPages}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.loadMoreContainer}>
+                  <TouchableOpacity
+                    style={styles.loadMoreButton}
+                    onPress={handleLoadMore}
+                  >
+                    <Text style={styles.loadMoreText}>더보기 ({currentPage}/{totalPages})</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </>
           )}
@@ -273,7 +300,29 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#fff',
+  },
+  headCon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    height: 48,
+    paddingHorizontal: 16,
+  },
+  btnBack: {
+    width: 24,
+    height: 24,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
+  headTitle: {
+    marginLeft: 12,
+    paddingTop: 1,
+    fontSize: 15,
+    lineHeight: 19.5,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
@@ -284,132 +333,146 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
-  titleBox: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
+  subTitleBox: {
+    marginTop: 24,
+    paddingHorizontal: 20,
   },
   title: {
-    fontSize: 18,
+    fontSize: 25,
+    lineHeight: 35,
     fontWeight: '700',
-    color: '#222',
   },
-  tabContainer: {
+  pl16: {
+    paddingLeft: 16,
+    paddingRight: 16,
+  },
+  choiceChips: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
-  },
-  tabItem: {
-    flex: 1,
-    paddingVertical: 10,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    marginTop: 12,
   },
-  tabItemActive: {
-    borderBottomColor: '#2c3db8',
+  choiceChipItem: {
+    marginRight: 4,
+    marginTop: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 10,
+    minHeight: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(191, 195, 199, 0.5)',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#999',
+  choiceChipActive: {
+    borderColor: '#2c3db8',
   },
-  tabTextActive: {
+  choiceChipText: {
+    fontSize: 13,
+    lineHeight: 13,
+    color: '#393f44',
+  },
+  choiceChipTextActive: {
     color: '#2c3db8',
   },
-  listContainer: {
-    padding: 16,
-  },
-  emptyContainer: {
-    padding: 40,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#999',
+  mytxList: {
+    marginTop: 20,
+    marginHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f2f2f2',
+    marginBottom: 40,
   },
   dealItem: {
-    marginBottom: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    overflow: 'hidden',
-    shadowColor: '#516c89',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f2f2f2',
   },
   dealInbox: {
-    padding: 16,
-  },
-  dateTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+  },
+  dateTitleRow: {
+    flex: 1,
+  },
+  dateTitle: {
+    flexDirection: 'column',
   },
   dateText: {
-    fontSize: 14,
-    color: '#666',
+    color: '#bfc3c7',
+    fontSize: 12,
+    lineHeight: 15.6,
     fontWeight: '400',
   },
   typeText: {
-    fontSize: 14,
-    color: '#222',
+    marginTop: 6,
+    color: '#393F44',
+    fontSize: 18,
+    lineHeight: 27,
     fontWeight: '600',
   },
   txVolume: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   txVolumeMinus: {
-    // 출금 스타일 (필요시 추가)
+    // 출금 스타일
   },
   txType: {
-    fontSize: 14,
-    color: '#666',
+    color: '#2c3db8',
+    fontSize: 13,
+    lineHeight: 16.9,
     fontWeight: '400',
   },
+  txVolumeRight: {
+    alignItems: 'flex-end',
+  },
   txAmount: {
+    marginTop: 6,
     fontSize: 18,
-    fontWeight: '700',
+    lineHeight: 27,
+    fontWeight: '600',
   },
   txAmountPlus: {
     color: '#2c3db8',
   },
   txAmountMinus: {
-    color: '#e74c3c',
+    color: '#ff5042',
   },
   balanceText: {
+    marginTop: 6,
+    color: '#393f44',
     fontSize: 13,
-    color: '#999',
+    lineHeight: 16.9,
     fontWeight: '400',
+  },
+  emptyItem: {
+    paddingVertical: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+  },
+  loadMoreContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 40,
   },
   loadMoreButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    marginTop: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 20,
+    borderWidth: 0.5,
     borderColor: '#e0e1e2',
+    backgroundColor: '#fff',
   },
   loadMoreText: {
-    fontSize: 15,
-    color: '#222',
-    fontWeight: '600',
-  },
-  pageInfo: {
-    fontSize: 14,
+    marginRight: 8,
+    fontSize: 13,
+    lineHeight: 19.5,
+    fontWeight: '400',
     color: '#666',
   },
 });

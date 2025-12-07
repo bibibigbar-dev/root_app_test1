@@ -10,7 +10,10 @@ import {
   Modal,
   Linking,
   Image,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
+import RNFS from 'react-native-fs';
 import ApiService from '../services/api';
 
 const RepaymentHistoryScreen = ({ navigation, route }) => {
@@ -99,23 +102,49 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
 
   const handleExcelDownload = async () => {
     try {
+      // Android 권한 확인
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('권한 필요', '파일 다운로드를 위해 저장 권한이 필요합니다.');
+          return;
+        }
+      }
+
+      Alert.alert('알림', '엑셀 파일을 다운로드 중입니다...');
+
       const baseURL = ApiService.baseURL;
-      // POST 요청으로 엑셀 다운로드 (JSP 코드와 동일하게)
-      const formData = ApiService.convertToFormData({ cur_yyyy: selectedYear });
-      
-      // 웹 브라우저로 엑셀 다운로드 링크 열기
-      // React Native에서는 파일 다운로드를 위해 웹 브라우저를 통해 처리
       const excelUrl = `${baseURL}/my/repayment/excel?cur_yyyy=${selectedYear}`;
-      const canOpen = await Linking.canOpenURL(excelUrl);
-      if (canOpen) {
-        await Linking.openURL(excelUrl);
-        Alert.alert('알림', '엑셀 다운로드를 시작합니다.');
+      
+      // 토큰 가져오기
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('userToken');
+      
+      // 파일 다운로드
+      const downloadDest = `${RNFS.DownloadDirectoryPath}/연도별_지급액_내역_${selectedYear}.xls`;
+      
+      const downloadResult = await RNFS.downloadFile({
+        fromUrl: excelUrl,
+        toFile: downloadDest,
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      }).promise;
+
+      if (downloadResult.statusCode === 200) {
+        Alert.alert(
+          '다운로드 완료',
+          `엑셀 파일이 다운로드되었습니다.\n\n파일 위치: ${downloadDest}`,
+          [{ text: '확인' }]
+        );
       } else {
-        Alert.alert('오류', '엑셀 다운로드를 시작할 수 없습니다.');
+        throw new Error(`다운로드 실패: ${downloadResult.statusCode}`);
       }
     } catch (error) {
       console.error('엑셀 다운로드 오류:', error);
-      Alert.alert('오류', '엑셀 다운로드 중 오류가 발생했습니다.');
+      Alert.alert('오류', `엑셀 다운로드 중 오류가 발생했습니다.\n${error.message}`);
     }
   };
 
@@ -324,7 +353,7 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#fff',
   },
   scrollView: {
     flex: 1,
@@ -354,13 +383,17 @@ const styles = StyleSheet.create({
     height: 24,
   },
   titleBox: {
-    padding: 20,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 24,
+    paddingHorizontal: 20,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
   },
   title: {
-    fontSize: 18,
+    fontSize: 25,
+    lineHeight: 35,
     fontWeight: '700',
     color: '#222',
   },
@@ -369,7 +402,9 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#fff',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     gap: 10,
+    marginTop: 15,
   },
   yearPicker: {
     flexDirection: 'row',
@@ -378,7 +413,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#e0e1e2',
-    borderRadius: 4,
+    borderRadius: 20,
     backgroundColor: '#fff',
     minWidth: 100,
   },
@@ -396,7 +431,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: '#2c3db8',
-    borderRadius: 4,
+    borderRadius: 20,
     height: 30,
     justifyContent: 'center',
   },
@@ -406,9 +441,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tableContainer: {
-    margin: 16,
+    marginTop: 10,
+    marginHorizontal: 5,
     backgroundColor: '#fff',
-    borderRadius: 8,
     overflow: 'hidden',
   },
   emptyContainer: {
@@ -420,19 +455,16 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   table: {
-    borderWidth: 1,
-    borderColor: '#e0e1e2',
+    //borderWidth: 1,
+    //borderColor: '#e0e1e2',
   },
   tableHeader: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'rgba(246, 246, 246, 0.5)',
   },
   headerCell: {
-    padding: 12,
-    borderRightWidth: 1,
-    borderRightColor: '#e0e1e2',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -453,21 +485,23 @@ const styles = StyleSheet.create({
     borderRightWidth: 0,
   },
   headerText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#222',
+    fontSize: 15,
+    lineHeight: 19.5,
+    fontWeight: '400',
+    color: '#393f44',
     textAlign: 'center',
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
+    borderBottomColor: '#f6f6f6',
   },
   tableCell: {
-    padding: 12,
-    borderRightWidth: 1,
-    borderRightColor: '#e0e1e2',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
     justifyContent: 'center',
+    borderBottomWidth: 0.1,
+    borderBottomColor: '#f6f6f6',
   },
   tableCell1: {
     width: '35%',
@@ -490,9 +524,10 @@ const styles = StyleSheet.create({
     borderRightWidth: 0,
   },
   cellText: {
-    fontSize: 13,
-    color: '#222',
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 19.5,
+    color: '#393f44',
+    textAlign: 'center',
   },
   dateText: {
     color: '#2c3db8',

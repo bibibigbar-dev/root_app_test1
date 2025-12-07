@@ -41,6 +41,7 @@ import WithdrawalSurveyScreen from '../screens/WithdrawalSurveyScreen';
 import WithdrawalDoneScreen from '../screens/WithdrawalDoneScreen';
 import RecruitScreen from '../screens/RecruitScreen';
 import TermsScreen from '../screens/TermsScreen';
+import InvestReceiptScreen from '../screens/InvestReceiptScreen';
 
 const Stack = createStackNavigator();
 
@@ -144,6 +145,10 @@ const AppNavigator = () => {
 
   const showHeader = currentRoute && !SCREENS_WITHOUT_HEADER.includes(currentRoute) && isNavigationReady;
   const isPromotionScreen = currentRoute === 'Promotion';
+  
+  // Back 버튼이 필요한 화면들
+  const screensWithBack = ['InvestReceipt', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms'];
+  const shouldShowBack = screensWithBack.includes(currentRoute);
 
   // Slightly increase offset so screens clear the fixed header/GNB
   const headerOffset = showHeader ? insets.top + HEADER_HEIGHT + 14 : 0;
@@ -154,7 +159,8 @@ const AppNavigator = () => {
         <SafeAreaView edges={['left', 'right']} style={styles.headerSafeArea}>
           <Header 
             navigation={navigationRef.current} 
-            showBack={false}
+            showBack={shouldShowBack}
+            onBackPress={shouldShowBack ? () => navigationRef.current?.goBack() : undefined}
             hideBorder={false}
             hideGnb={false}
           />
@@ -216,6 +222,7 @@ const AppNavigator = () => {
           <Stack.Screen name="WithdrawalDone" component={WithdrawalDoneScreen} />
           <Stack.Screen name="Recruit" component={RecruitScreen} />
           <Stack.Screen name="Terms" component={TermsScreen} />
+          <Stack.Screen name="InvestReceipt" component={InvestReceiptScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </View>

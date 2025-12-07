@@ -322,7 +322,11 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
       return (
         <View style={styles.emptyContainer}>
           <View style={styles.loadingWrapperRepay}>
-            <View style={styles.loadingIco} />
+            <Image
+              source={require('../assets/images/loading2.png')}
+              style={styles.loadingIco}
+              resizeMode="contain"
+            />
             <Text style={styles.emptyMsg}>상환 상품이 없습니다.</Text>
             <Text style={styles.emptyDesc}></Text>
           </View>
@@ -422,12 +426,14 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
           );
         })}
         {hasMore && !showAllRepayments && (
+          <View style={styles.loadMoreContainer}>
           <TouchableOpacity
-            style={styles.moreButton}
+              style={styles.loadMoreButton}
             onPress={() => setShowAllRepayments(true)}
           >
-            <Text style={styles.moreButtonText}>더보기 ({currentCount}/{totalCount})</Text>
+              <Text style={styles.loadMoreText}>더보기 ({currentCount}/{totalCount})</Text>
           </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -739,7 +745,6 @@ const styles = StyleSheet.create({
   listContainer: {
     marginHorizontal: 16,
     marginTop: 20,
-    marginBottom: 40,
   },
   subTitleBox: {
     marginBottom: 12,
@@ -761,7 +766,6 @@ const styles = StyleSheet.create({
   loadingIco: {
     width: 40,
     height: 40,
-    backgroundColor: '#e0e1e2',
     borderRadius: 20,
   },
   emptyMsg: {
@@ -910,20 +914,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  moreButton: {
-    marginTop: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
+  loadMoreContainer: {
+    display: 'flex',
     justifyContent: 'center',
-    borderWidth: 1,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 20,
+    borderWidth: 0.5,
     borderColor: '#e0e1e2',
-    borderRadius: 10,
     backgroundColor: '#fff',
   },
-  moreButtonText: {
+  loadMoreText: {
+    marginRight: 8,
+    fontSize: 13,
+    lineHeight: 19.5,
+    fontWeight: '400',
     color: '#666',
-    fontSize: 14,
-    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,

@@ -319,49 +319,92 @@ const WithdrawalScreen = ({ navigation, route }) => {
     setLoading(true);
 
     try {
-      const withdrawalData = {
-        member_id: user.session.member_id,
-        amount: numericAmount,
-        bankName,
-        bankAccount,
-        accountHolder,
+      const memberId = user?.session?.member_id || user?.id;
+      
+      if (!memberId) {
+        Alert.alert('오류', '사용자 정보를 확인할 수 없습니다.');
+        setLoading(false);
+        return;
+      }
+
+      // 1. setReqModes 호출하여 보안 데이터 획득
+      const reqModes = await ApiService.setReqModes({ reqdata: String(numericAmount) });
+      
+      console.log('💰 출금 신청 데이터:', {
+        member_id: memberId,
+        refund_price: numericAmount,
+        _bcsrmd1: reqModes.data1,
+        _bcsrmd2: reqModes.data2,
+      });
+
+      // 2. /app/member/process/refund API 호출
+      const refundRequestData = {
+        member_id: String(memberId),
+        refund_price: String(numericAmount),
+        _bcsrmd1: reqModes.data1,
+        _bcsrmd2: reqModes.data2,
       };
       
-      console.log('💰 출금 신청 데이터:', withdrawalData);
+      const formData = ApiService.convertToFormData(refundRequestData);
+      console.log('📤 출금 신청 Form-data:', formData);
+      
+      const response = await ApiService.api.post('/app/member/process/refund', formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
 
-      const response = await ApiService.requestWithdrawal(withdrawalData);
+      console.log('💰 출금 신청 응답:', response.data);
 
-      if (response.success) {
-        // 출금 성공 시 잔액 차감
-        const currentBalance = parseFloat(user.session?.balance || '0');
-        const newBalance = Math.max(0, currentBalance - numericAmount);
-        
-        // 세션 데이터 업데이트
-        await ApiService.updateSessionData('balance', newBalance.toString());
-        
-        // 사용자 정보 새로고침
-        const updatedUser = await ApiService.getCurrentUser();
-        if (updatedUser) {
-          setUser(updatedUser);
-        }
-        
+      const responseData = String(response.data);
+
+      if (responseData === '0') {
+        // 출금 성공
         Alert.alert(
-          '출금 신청 완료',
-          response.message || '출금 신청이 완료되었습니다.',
+          '출금신청하기',
+          '출금신청이 완료되었습니다.',
           [
             {
               text: '확인',
-              onPress: () => {
-                // 전액 출금이므로 초기화할 필요 없음
+              onPress: async () => {
+                // 사용자 정보 새로고침
+                const updatedUser = await ApiService.getCurrentUser();
+                if (updatedUser) {
+                  setUser(updatedUser);
+                }
               },
             },
           ]
         );
+      } else if (responseData === '1') {
+        // 로그인 필요
+        Alert.alert('오류', '로그인이 필요합니다.', [
+          {
+            text: '확인',
+            onPress: () => {
+              navigation.navigate('Login');
+            },
+          },
+        ]);
+      } else if (responseData === '2' || responseData === '3') {
+        // 출금금액 확인 필요
+        Alert.alert('예치금 출금', '출금금액을 확인하여 주세요.');
+      } else if (responseData === '4' || responseData === '5') {
+        // 출금금액이 예치금보다 많음
+        Alert.alert('예치금 출금', '출금금액이 예치금보다 많습니다.');
+      } else if (responseData === '10') {
+        // 직전 출금신청 처리중
+        Alert.alert('예치금 출금', '직전 출금신청에 대한 내용을 처리중입니다. 잠시후에 다시 요청하세요.');
+      } else if (responseData === '99') {
+        // 은행사 통신 오류
+        Alert.alert('예치금 출금', '은행사와 통신이 원활하지 않습니다.\n잠시 후 다시 요청하세요.');
       } else {
-        Alert.alert('출금 신청 실패', response.message || '출금 신청에 실패했습니다.');
+        // 기타 오류
+        Alert.alert('예치금 출금', `[${responseData}] 처리도중 오류가 발생하였습니다.`);
       }
     } catch (error) {
-      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+      console.error('출금 신청 오류:', error);
+      Alert.alert('예치금 출금', '처리도중 오류가 발생하였습니다.');
     } finally {
       setLoading(false);
     }
