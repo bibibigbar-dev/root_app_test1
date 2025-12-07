@@ -10,10 +10,10 @@ import {
   Modal,
   ActivityIndicator,
   Linking,
+  Image,
 } from 'react-native';
-// import { WebView } from 'react-native-webview';
-// import DocumentPicker from 'react-native-document-picker';
-// import { launchImageLibrary } from 'react-native-image-picker';
+import { WebView } from 'react-native-webview';
+import DocumentPicker from 'react-native-document-picker';
 import ApiService from '../services/api';
 
 const NeighborRequestScreen = ({ navigation, route }) => {
@@ -49,101 +49,101 @@ const NeighborRequestScreen = ({ navigation, route }) => {
   };
 
   const handleAddressSearch = () => {
-    // 주소 검색은 외부 브라우저로 열거나 직접 입력받기
-    Alert.alert(
-      '거주지 검색',
-      '주소를 직접 입력해주세요.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '확인',
-          onPress: () => {
-            // 주소 입력을 위한 간단한 방법
-            // 실제로는 주소 검색 API를 사용하거나 WebView를 사용해야 함
-            setShowAddressModal(true);
-          },
-        },
-      ]
-    );
+    setShowAddressModal(true);
   };
 
   const handleAddressSelect = (data) => {
-    if (data) {
-      setSido(data.sido || '');
-      setSigungu(data.sigungu || '');
-      setBname1(data.bname1 || '');
-      setBname(data.bname || '');
+    try {
+      let parsedData = data;
+      if (typeof data === 'string') {
+        parsedData = JSON.parse(data);
+      }
+      
+      console.log('주소 선택됨:', parsedData);
+      
+      // Daum Postcode API 응답에서 시/도, 시/군/구, 읍/면, 동/리 추출
+      // sido는 address 또는 roadAddress에서 추출
+      const roadAddress = parsedData.roadAddress || '';
+      const jibunAddress = parsedData.jibunAddress || '';
+      
+      // 시/도 추출 (예: "서울특별시", "경기도" 등)
+      const sidoMatch = roadAddress.match(/^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주특별자치도)/);
+      const extractedSido = sidoMatch ? sidoMatch[1] : '';
+      
+      // 시/군/구 추출
+      const sigunguMatch = roadAddress.replace(extractedSido, '').trim().match(/^([^\s]+)/);
+      const extractedSigungu = sigunguMatch ? sigunguMatch[1] : '';
+      
+      // 읍/면/동 추출
+      const addressParts = roadAddress.replace(extractedSido, '').replace(extractedSigungu, '').trim().split(' ');
+      const extractedBname1 = addressParts[0] || '';
+      const extractedBname = addressParts[1] || '';
+      
+      setSido(extractedSido);
+      setSigungu(extractedSigungu);
+      setBname1(extractedBname1);
+      setBname(extractedBname);
+      setShowAddressModal(false);
+    } catch (error) {
+      console.error('주소 파싱 오류:', error);
+      Alert.alert('오류', '주소 정보를 처리하는 중 오류가 발생했습니다.');
     }
-    setShowAddressModal(false);
   };
 
   const handleFilePicker = async () => {
-    // TODO: react-native-image-picker 또는 react-native-document-picker 설치 필요
-    // npm install react-native-image-picker
-    // 또는
-    // npm install react-native-document-picker
-    Alert.alert(
-      '알림',
-      '파일 선택 기능을 사용하려면 react-native-image-picker 패키지가 필요합니다.\n\n설치 명령어:\nnpm install react-native-image-picker\n\n그 후 코드의 주석을 해제해주세요.',
-      [{ text: '확인' }]
-    );
-    
-    // 아래 코드는 패키지 설치 후 주석 해제
-    /*
     try {
-      const result = await launchImageLibrary({
-        mediaType: 'photo',
-        selectionLimit: 5,
-        includeBase64: false,
+      const result = await DocumentPicker.pick({
+        type: [
+          DocumentPicker.types.images,
+          DocumentPicker.types.pdf,
+          DocumentPicker.types.allFiles,
+        ],
+        allowMultiSelection: true,
+        copyTo: 'cachesDirectory',
       });
 
-      if (result.didCancel) {
-        return;
-      }
+      const files = Array.isArray(result) ? result : [result];
 
-      if (result.assets && result.assets.length > 0) {
-        const validFiles = [];
-        const maxSize = 5 * 1024 * 1024; // 5MB
-
-        for (const asset of result.assets) {
-          const fileName = asset.fileName || asset.uri.split('/').pop() || 'image.jpg';
-          const ext = fileName.split('.').pop()?.toLowerCase();
-          const allowedExts = ['gif', 'jpg', 'jpeg', 'png', 'pdf'];
-          
-          if (ext && !allowedExts.includes(ext)) {
-            Alert.alert(
-              '서류 제출',
-              '업로드 불가 파일형식입니다.\n(gif, jpg, jpeg, png, pdf 파일만 가능합니다.)',
-              [{ text: '확인' }]
-            );
-            continue;
-          }
-
-          if (asset.fileSize && asset.fileSize > maxSize) {
-            Alert.alert(
-              '서류 제출',
-              '업로드 가능한 최대 용량은 파일당 5MB 입니다.',
-              [{ text: '확인' }]
-            );
-            continue;
-          }
-
-          validFiles.push({
-            id: Date.now() + Math.random(),
-            name: fileName,
-            uri: asset.uri,
-            type: asset.type || 'image/jpeg',
-            size: asset.fileSize || 0,
-          });
+      files.forEach((file) => {
+        const fileName = file.name || file.fileName || '';
+        const fileExt = fileName.split('.').pop().toLowerCase();
+        const allowedExts = ['gif', 'jpg', 'jpeg', 'png', 'pdf', 'hwp', 'xls', 'xlsx', 'csv'];
+        
+        if (!allowedExts.includes(fileExt)) {
+          Alert.alert(
+            '서류 제출',
+            '업로드 불가 파일형식입니다.\n(gif, jpg, jpeg, png, pdf, hwp, xls, xlsx 파일만 가능합니다.)',
+            [{ text: '확인' }]
+          );
+          return;
         }
 
-        setSelectedFiles([...selectedFiles, ...validFiles]);
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        const fileSize = file.size || 0;
+        if (fileSize > maxSize) {
+          Alert.alert(
+            '서류 제출',
+            '업로드 가능한 최대 용량은 파일당 5MB 입니다.',
+            [{ text: '확인' }]
+          );
+          return;
+        }
+
+        setSelectedFiles(prev => [...prev, {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: fileName,
+          uri: file.uri || file.fileCopyUri,
+          size: fileSize,
+          type: file.type || 'application/octet-stream',
+        }]);
+      });
+    } catch (error) {
+      if (DocumentPicker.isCancel(error)) {
+        return;
       }
-    } catch (err) {
-      console.error('파일 선택 오류:', err);
+      console.error('파일 선택 오류:', error);
       Alert.alert('오류', '파일 선택 중 오류가 발생했습니다.');
     }
-    */
   };
 
   const handleRemoveFile = (fileId) => {
@@ -216,7 +216,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        <View style={styles.titleBox}>
+        <View style={styles.subTitleBox}>
           <Text style={styles.title}>이웃신청</Text>
           <Text style={styles.titleP}>
             혁신상품의 투자를 이용하기 위해,{'\n'}
@@ -287,7 +287,11 @@ const NeighborRequestScreen = ({ navigation, route }) => {
             style={styles.fileUploadBox}
             onPress={handleFilePicker}
           >
-            <Text style={styles.fileUploadIcon}>📎</Text>
+             <Image 
+              source={require('../assets/images/ico_fileupload.png')}
+              style={styles.fileuploadIco}
+              resizeMode="contain"
+            />
             <Text style={styles.fileUploadText}>파일추가</Text>
           </TouchableOpacity>
 
@@ -341,7 +345,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* 주소 검색 모달 */}
+      {/* 주소 검색 모달 - Daum Postcode */}
       <Modal
         visible={showAddressModal}
         transparent={true}
@@ -349,7 +353,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         onRequestClose={() => setShowAddressModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, styles.addressModalLarge]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>거주지 검색</Text>
               <TouchableOpacity
@@ -359,41 +363,125 @@ const NeighborRequestScreen = ({ navigation, route }) => {
                 <Text style={styles.modalCloseText}>✕</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.addressInputModal}>
-              <Text style={styles.addressModalLabel}>시/도</Text>
-              <TextInput
-                style={styles.addressModalInput}
-                value={sido}
-                onChangeText={setSido}
-                placeholder="예: 서울특별시"
+
+            <View style={styles.webViewContainer}>
+              <WebView
+                source={{
+                  html: `
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                        <style>
+                          * { margin: 0; padding: 0; box-sizing: border-box; }
+                          body { overflow: hidden; background-color: white; }
+                          #layer { width: 100%; height: 460px; }
+                          #loading { 
+                            position: absolute; 
+                            top: 50%; 
+                            left: 50%; 
+                            transform: translate(-50%, -50%);
+                            font-size: 16px;
+                            color: #666;
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div id="loading">주소 검색 로딩중...</div>
+                        <div id="layer"></div>
+                        <script>
+                          var script = document.createElement('script');
+                          script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+                          script.onload = function() {
+                            document.getElementById('loading').style.display = 'none';
+                            var daunaddrlayer = document.getElementById('layer');
+
+                            function sendToReactNative(payload) {
+                              var msg = typeof payload === 'string' ? payload : JSON.stringify(payload);
+                              try {
+                                if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                                  window.ReactNativeWebView.postMessage(msg);
+                                }
+                              } catch (e) {
+                                console.error('postMessage 실패:', e.message);
+                              }
+                              try {
+                                window.location.href = 'postcode://' + encodeURIComponent(msg);
+                              } catch (err) {
+                                console.error('fallback 전송 실패: ' + err.message);
+                              }
+                            }
+                            
+                            function execDaumPostcode() {
+                              new daum.Postcode({
+                                oncomplete: function(data) {
+                                  var fullRoadAddr = data.roadAddress;
+                                  var extraRoadAddr = '';
+                                  
+                                  if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
+                                    extraRoadAddr += data.bname;
+                                  }
+                                  if (data.buildingName !== '' && data.apartment === 'Y') {
+                                    extraRoadAddr += (extraRoadAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+                                  }
+                                  if (extraRoadAddr !== '') {
+                                    extraRoadAddr = ' (' + extraRoadAddr + ')';
+                                  }
+                                  if (fullRoadAddr !== '') {
+                                    fullRoadAddr += extraRoadAddr;
+                                  }
+                                  
+                                  var payload = {
+                                    zonecode: data.zonecode,
+                                    roadAddress: fullRoadAddr,
+                                    jibunAddress: data.jibunAddress
+                                  };
+
+                                  sendToReactNative(payload);
+                                },
+                                width: '100%',
+                                height: '460px',
+                                maxSuggestItems: 5,
+                                shorthand: false
+                              }).embed(daunaddrlayer);
+                            }
+                            
+                            execDaumPostcode();
+                          };
+                          script.onerror = function() {
+                            document.getElementById('loading').innerHTML = '주소 검색 로드 실패<br>인터넷 연결을 확인해주세요';
+                          };
+                          document.head.appendChild(script);
+                        </script>
+                      </body>
+                    </html>
+                  `
+                }}
+                onMessage={(event) => {
+                  console.log('React Native 메시지 수신:', event.nativeEvent.data);
+                  handleAddressSelect(event.nativeEvent.data);
+                }}
+                onNavigationStateChange={(navState) => {
+                  if (navState.url && navState.url.startsWith('postcode://')) {
+                    const payload = decodeURIComponent(navState.url.replace('postcode://', ''));
+                    handleAddressSelect(payload);
+                  }
+                }}
+                onShouldStartLoadWithRequest={(request) => {
+                  if (request.url.startsWith('postcode://')) {
+                    const payload = decodeURIComponent(request.url.replace('postcode://', ''));
+                    handleAddressSelect(payload);
+                    return false;
+                  }
+                  return true;
+                }}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                mixedContentMode="always"
+                originWhitelist={['*']}
+                style={styles.webView}
               />
-              <Text style={styles.addressModalLabel}>시/군/구</Text>
-              <TextInput
-                style={styles.addressModalInput}
-                value={sigungu}
-                onChangeText={setSigungu}
-                placeholder="예: 강남구"
-              />
-              <Text style={styles.addressModalLabel}>읍/면</Text>
-              <TextInput
-                style={styles.addressModalInput}
-                value={bname1}
-                onChangeText={setBname1}
-                placeholder="예: 역삼동"
-              />
-              <Text style={styles.addressModalLabel}>동/리</Text>
-              <TextInput
-                style={styles.addressModalInput}
-                value={bname}
-                onChangeText={setBname}
-                placeholder="예: 테헤란로"
-              />
-              <TouchableOpacity
-                style={styles.addressModalButton}
-                onPress={() => handleAddressSelect({ sido, sigungu, bname1, bname })}
-              >
-                <Text style={styles.addressModalButtonText}>확인</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -410,27 +498,26 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  titleBox: {
-    marginTop: 24,
-    paddingHorizontal: 32,
-    alignItems: 'center',
+  subTitleBox: {
+    marginTop: 40,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 25,
     lineHeight: 35,
     fontWeight: '700',
     color: '#222',
-    marginBottom: 18,
   },
   titleP: {
+    marginTop: 18,
+    color: '#666',
     fontSize: 15,
     lineHeight: 22,
-    color: '#666',
-    textAlign: 'center',
+    fontWeight: '400',
   },
   formBox: {
-    margin: 24,
-    marginTop: 30,
+    marginVertical: 24,
+    marginHorizontal: 16,
     paddingBottom: 15,
     borderWidth: 1,
     borderColor: '#e0e1e2',
@@ -466,7 +553,7 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   addressButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 70,
     paddingVertical: 6,
     borderWidth: 1,
     borderColor: '#f2f2f2',
@@ -529,9 +616,10 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderRadius: 10,
   },
-  fileUploadIcon: {
-    fontSize: 19,
-    marginRight: 15,
+  fileuploadIco: {
+    width: 19,
+    height: 25,
+    backgroundColor: '#fff',
   },
   fileUploadText: {
     marginTop: 2,
@@ -618,6 +706,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     overflow: 'hidden',
+  },
+  addressModalLarge: {
+    maxWidth: '90%',
+    maxHeight: '80%',
+  },
+  webViewContainer: {
+    height: 500,
+    backgroundColor: '#fff',
+  },
+  webView: {
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',

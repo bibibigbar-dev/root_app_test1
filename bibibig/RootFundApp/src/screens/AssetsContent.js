@@ -78,11 +78,10 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
           ? response.data 
           : response.data.balance || response.data;
         setBalance(newBalance);
-        Alert.alert('알림', '예치금 잔액이 갱신되었습니다.');
       }
     } catch (error) {
       console.error('잔액 갱신 실패:', error);
-      Alert.alert('오류', '예치금 잔액 갱신에 실패했습니다.');
+      Alert.alert('예치금 잔액 확인 처리도중 오류가 발생하였습니다.', '');
     }
   };
 

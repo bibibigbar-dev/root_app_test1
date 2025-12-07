@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -153,6 +153,33 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
   const validatePassword = (password) => {
     const validationPwd = /^((?=.*[0-9])(?=.*[a-z])(?=.*[!@#$%^&*]).{10,20})/;
     return validationPwd.test(password);
+  };
+
+  const lastAddressPayloadRef = useRef(null);
+
+  const handleAddressSelect = (payload) => {
+    if (!payload) return;
+    try {
+      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      if (lastAddressPayloadRef.current === payloadString) {
+        return;
+      }
+      lastAddressPayloadRef.current = payloadString;
+
+      const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      if (data?.zonecode || data?.roadAddress || data?.jibunAddress) {
+        setZipcode(data.zonecode || '');
+        setAddress1(data.roadAddress || data.jibunAddress || '');
+        setShowAddressModal(false);
+        setTimeout(() => {
+          Alert.alert('주소 선택 완료', '상세주소를 입력해주세요.');
+          lastAddressPayloadRef.current = null;
+        }, 100);
+      }
+    } catch (error) {
+      console.error('주소 데이터 파싱 오류:', error, payload);
+      lastAddressPayloadRef.current = null;
+    }
   };
 
   const handleSave = async () => {
@@ -1055,15 +1082,32 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                           var script = document.createElement('script');
                           script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
                           script.onload = function() {
-                            document.getElementById('loading').style.display = 'none';
-                            console.log('Daum Postcode 스크립트 로드 완료');
-                            
-                            var daunaddrlayer = document.getElementById('layer');
-                            
-                            function execDaumPostcode() {
-                              new daum.Postcode({
-                                oncomplete: function(data) {
-                                  console.log('주소 선택됨:', data);
+                          document.getElementById('loading').style.display = 'none';
+                          console.log('Daum Postcode 스크립트 로드 완료');
+                          
+                          var daunaddrlayer = document.getElementById('layer');
+
+                          // React Native 전달 헬퍼
+                          function sendToReactNative(payload) {
+                            var msg = typeof payload === 'string' ? payload : JSON.stringify(payload);
+                            try {
+                              if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                                window.ReactNativeWebView.postMessage(msg);
+                              }
+                            } catch (e) {
+                              console.error('postMessage 실패:', e.message);
+                            }
+                            try {
+                              window.location.href = 'postcode://' + encodeURIComponent(msg);
+                            } catch (err) {
+                              console.error('fallback 전송 실패: ' + err.message);
+                            }
+                          }
+                          
+                          function execDaumPostcode() {
+                            new daum.Postcode({
+                              oncomplete: function(data) {
+                                console.log('주소 선택됨:', data);
                                   var fullRoadAddr = data.roadAddress; // 도로명 주소 변수
                                   var extraRoadAddr = ''; // 도로명 조합형 주소 변수
                                   
@@ -1080,21 +1124,13 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                                     fullRoadAddr += extraRoadAddr;
                                   }
                                   
-                                  // React Native로 데이터 전송
-                                  console.log('데이터 전송:', {
+                                  var payload = {
                                     zonecode: data.zonecode,
-                                    roadAddress: fullRoadAddr
-                                  });
-                                  
-                                  try {
-                                    window.ReactNativeWebView.postMessage(JSON.stringify({
-                                      zonecode: data.zonecode,
-                                      roadAddress: fullRoadAddr,
-                                      jibunAddress: data.jibunAddress
-                                    }));
-                                  } catch(e) {
-                                    console.error('메시지 전송 실패: ' + e.message);
-                                  }
+                                    roadAddress: fullRoadAddr,
+                                    jibunAddress: data.jibunAddress
+                                  };
+
+                                  sendToReactNative(payload);
                                 },
                                 width: '100%',
                                 height: '460px',
@@ -1117,19 +1153,22 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                   `
                 }}
                 onMessage={(event) => {
-                  try {
-                    console.log('React Native 메시지 수신:', event.nativeEvent.data);
-                    const data = JSON.parse(event.nativeEvent.data);
-                    console.log('파싱된 데이터:', data);
-                    setZipcode(data.zonecode);
-                    setAddress1(data.roadAddress);
-                    setShowAddressModal(false);
-                    setTimeout(() => {
-                      Alert.alert('주소 선택 완료', '상세주소를 입력해주세요.');
-                    }, 100);
-                  } catch (error) {
-                    console.error('주소 데이터 파싱 오류:', error);
+                  console.log('React Native 메시지 수신:', event.nativeEvent.data);
+                  handleAddressSelect(event.nativeEvent.data);
+                }}
+                onNavigationStateChange={(navState) => {
+                  if (navState.url && navState.url.startsWith('postcode://')) {
+                    const payload = decodeURIComponent(navState.url.replace('postcode://', ''));
+                    handleAddressSelect(payload);
                   }
+                }}
+                onShouldStartLoadWithRequest={(request) => {
+                  if (request.url.startsWith('postcode://')) {
+                    const payload = decodeURIComponent(request.url.replace('postcode://', ''));
+                    handleAddressSelect(payload);
+                    return false;
+                  }
+                  return true;
                 }}
                 onLoadStart={() => console.log('WebView 로딩 시작')}
                 onLoad={() => console.log('WebView 로딩 완료')}
@@ -1139,6 +1178,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                 }}
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
+                mixedContentMode="always"
                 originWhitelist={['*']}
                 style={styles.webView}
               />
@@ -1591,4 +1631,3 @@ const styles = StyleSheet.create({
 });
 
 export default MyPageContent;
-

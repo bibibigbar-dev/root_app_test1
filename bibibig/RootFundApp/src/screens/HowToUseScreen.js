@@ -36,7 +36,6 @@ const HowToUseScreen = ({ navigation }) => {
       <ScrollView style={styles.content}>
         {/* 비주얼 헤더 */}
         <View style={styles.subVisual}>
-          <View style={styles.visualImgbox} />
           <View style={styles.visualTxtbox}>
             <Text style={styles.tagBlue}>이용방법</Text>
             <Text style={styles.titleB}>투자 이용안내</Text>
@@ -263,19 +262,12 @@ const styles = StyleSheet.create({
   // 비주얼 헤더
   subVisual: {
     position: 'relative',
-    height: 120,
+    height: 150,
     backgroundColor: '#fff',
-  },
-  visualImgbox: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   visualTxtbox: {
     position: 'absolute',
-    top: 0,
+    top: 20,
     right: 0,
     bottom: 0,
     left: 0,

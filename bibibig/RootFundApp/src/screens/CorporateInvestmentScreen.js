@@ -297,7 +297,7 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
             style={styles.btnStyle}
             onPress={() => {
               // 1:1 상담 신청 페이지로 이동
-              // navigation.navigate('CorpForm');
+              navigation.navigate('ConsultationRequest', { user });
             }}
           >
             <Text style={styles.btnText}>1:1 상담 신청</Text>

@@ -8,14 +8,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-// react-native-document-picker 패키지 필요
-// npm install react-native-document-picker
-let DocumentPicker;
-try {
-  DocumentPicker = require('react-native-document-picker').default;
-} catch (e) {
-  console.warn('react-native-document-picker가 설치되지 않았습니다.');
-}
+import DocumentPicker from 'react-native-document-picker';
 import ApiService from '../services/api';
 
 const UpwardRequestScreen = ({ navigation, route }) => {
@@ -51,15 +44,6 @@ const UpwardRequestScreen = ({ navigation, route }) => {
   };
 
   const handleFileSelect = async () => {
-    if (!DocumentPicker) {
-      Alert.alert(
-        '알림',
-        '파일 선택 기능을 사용하려면 react-native-document-picker 패키지가 필요합니다.\n\n설치 명령어:\nnpm install react-native-document-picker\n\n설치 후 앱을 재시작해주세요.',
-        [{ text: '확인' }]
-      );
-      return;
-    }
-
     try {
       const result = await DocumentPicker.pick({
         type: [
@@ -111,7 +95,7 @@ const UpwardRequestScreen = ({ navigation, route }) => {
       });
     } catch (error) {
       // 사용자가 취소한 경우
-      if (DocumentPicker && DocumentPicker.isCancel && DocumentPicker.isCancel(error)) {
+      if (DocumentPicker.isCancel(error)) {
         return;
       }
       console.error('파일 선택 오류:', error);
@@ -136,6 +120,10 @@ const UpwardRequestScreen = ({ navigation, route }) => {
     try {
       const memberId = user?.session?.member_id || user?.id;
       
+      console.log('📤 상향신청 시작 - member_id:', memberId);
+      console.log('📤 선택된 등급:', selectedGrade);
+      console.log('📤 선택된 파일 개수:', selectedFiles.length);
+      
       // FormData 생성
       const formData = new FormData();
       formData.append('member_class', selectedGrade);
@@ -143,6 +131,7 @@ const UpwardRequestScreen = ({ navigation, route }) => {
 
       // 파일 추가
       selectedFiles.forEach((file, index) => {
+        console.log(`📤 파일 ${index + 1}:`, file.name, file.type);
         formData.append('files', {
           uri: file.uri,
           type: file.type || 'application/octet-stream',
@@ -150,27 +139,33 @@ const UpwardRequestScreen = ({ navigation, route }) => {
         });
       });
 
-      const response = await ApiService.api.post('/my/process/upward', formData, {
+      console.log('📤 API 호출: /app/my/process/upward');
+      
+      const response = await ApiService.api.post('/app/my/process/upward', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
+      console.log('✅ 상향신청 응답:', response.data);
+
       if (response.data === '0' || response.data === 0) {
+        setIsSubmitting(false);
+        navigation.navigate('UpwardRequestDone', { user });
+      } else {
         Alert.alert(
           '투자등급 상향신청',
-          '신청이 완료되었습니다.',
+          '처리도중 오류가 발생하였습니다.',
           [
             {
               text: '확인',
               onPress: () => {
-                navigation.navigate('UpwardRequestDone', { user });
+                setIsSubmitting(false);
+                navigation.goBack();
               },
             },
           ]
         );
-      } else {
-        throw new Error('서버 오류');
       }
     } catch (error) {
       console.error('상향신청 제출 오류:', error);
@@ -182,6 +177,7 @@ const UpwardRequestScreen = ({ navigation, route }) => {
             text: '확인',
             onPress: () => {
               setIsSubmitting(false);
+              navigation.goBack();
             },
           },
         ]
@@ -363,6 +359,11 @@ const UpwardRequestScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.txtNotif}>
+          <Image
+            source={require('../assets/images/ico_notif.png')}
+            style={styles.txtNotifIcon}
+            resizeMode="contain"
+          />
           <Text style={styles.txtNotifText}>
             보안망으로 인하여 정상적으로 첨부가 되지 않을 경우 로그인 아이디를 포함하여 아래 고객센터 메일로 전달주시면 빠른 처리 진행하겠습니다.{'\n'}
             {'\n'}
@@ -580,7 +581,7 @@ const styles = StyleSheet.create({
   fileuploadIco: {
     width: 19,
     height: 25,
-    backgroundColor: '#bfc3c7',
+    backgroundColor: '#fff',
   },
   fileuploadTxt: {
     marginLeft: 15,
@@ -624,9 +625,17 @@ const styles = StyleSheet.create({
   },
   txtNotif: {
     position: 'relative',
+    paddingTop: 3,
     paddingLeft: 19,
     marginTop: 20,
     marginHorizontal: 20,
+  },
+  txtNotifIcon: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 17,
+    height: 17,
   },
   txtNotifText: {
     color: '#a3a7ab',

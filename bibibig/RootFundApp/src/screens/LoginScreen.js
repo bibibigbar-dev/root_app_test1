@@ -12,6 +12,7 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
@@ -203,8 +204,32 @@ const LoginScreen = ({ navigation, route }) => {
   };
 
   const handleKakaoLogin = async () => {
-    Alert.alert('카카오 로그인', '카카오 로그인 기능은 준비 중입니다.');
-    // TODO: 카카오 로그인 구현
+    try {
+      setMainLoginLoading(true);
+      
+      // 카카오 로그인 URL 가져오기
+      const response = await ApiService.api.get('/app/auth/kakaoLogin');
+      
+      if (response.data) {
+        const kakaoLoginUrl = response.data;
+        console.log('📱 카카오 로그인 URL:', kakaoLoginUrl);
+        
+        // 카카오 로그인 URL로 이동
+        const canOpen = await Linking.canOpenURL(kakaoLoginUrl);
+        if (canOpen) {
+          await Linking.openURL(kakaoLoginUrl);
+        } else {
+          Alert.alert('오류', '카카오 로그인 URL을 열 수 없습니다.');
+        }
+      } else {
+        Alert.alert('오류', '카카오 로그인 URL을 가져오는데 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('❌ 카카오 로그인 오류:', error);
+      Alert.alert('오류', '카카오 로그인 처리 중 오류가 발생했습니다.');
+    } finally {
+      setMainLoginLoading(false);
+    }
   };
 
   const handleFindEmail = () => {

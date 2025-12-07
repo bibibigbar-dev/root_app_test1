@@ -7,15 +7,27 @@ import {
   Image,
 } from 'react-native';
 
-const UpwardRequestDoneScreen = ({ navigation, route }) => {
+const ConsultationRequestDoneScreen = ({ navigation, route }) => {
+  const handleConfirm = () => {
+    // 스택을 초기화하고 법인투자 화면으로 이동
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'CorporateInvestment' }],
+    });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headCon}>
         <TouchableOpacity 
           style={styles.btnBack}
-          onPress={() => navigation.goBack()}
+          onPress={handleConfirm}
         >
-          <Text style={styles.backText}>‹</Text>
+          <Image
+            source={require('../assets/images/ico_back.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
       </View>
 
@@ -26,10 +38,9 @@ const UpwardRequestDoneScreen = ({ navigation, route }) => {
             style={styles.successIco}
             resizeMode="contain"
           />
-          <Text style={styles.successMsg}>신청이 완료되었습니다</Text>
+          <Text style={styles.successMsg}>상담신청이 완료되었습니다.</Text>
           <Text style={styles.successDesc}>
-            심사 후 순차적으로 승인처리 됩니다.{'\n'}
-            처리 결과는 마이페이지에서 확인하실 수 있습니다.
+            빠른 시일내에 연락드리겠습니다.
           </Text>
         </View>
       </View>
@@ -37,9 +48,9 @@ const UpwardRequestDoneScreen = ({ navigation, route }) => {
       <View style={styles.btnBox}>
         <TouchableOpacity
           style={styles.btnStyle}
-          onPress={() => navigation.navigate('MyHome')}
+          onPress={handleConfirm}
         >
-          <Text style={styles.btnText}>자산관리로 이동</Text>
+          <Text style={styles.btnText}>확인</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -49,14 +60,13 @@ const UpwardRequestDoneScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f7fa',
   },
   headCon: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
   },
   btnBack: {
     width: 24,
@@ -64,10 +74,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backText: {
-    fontSize: 24,
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
+  headTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '600',
     color: '#222',
-    fontWeight: 'bold',
+    textAlign: 'center',
+    marginRight: 24, // 중앙 정렬을 위해 back 버튼 너비만큼 오른쪽 마진
   },
   successContainer: {
     flex: 1,
@@ -99,12 +116,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   btnBox: {
+    marginTop: 40,
     paddingHorizontal: 16,
     paddingBottom: 56,
   },
   btnStyle: {
     height: 48,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2c3db8',
     backgroundColor: '#2c3db8',
     justifyContent: 'center',
     alignItems: 'center',
@@ -112,10 +132,9 @@ const styles = StyleSheet.create({
   btnText: {
     color: '#fff',
     fontSize: 20,
-    lineHeight: 48,
     fontWeight: '500',
   },
 });
 
-export default UpwardRequestDoneScreen;
+export default ConsultationRequestDoneScreen;
 

@@ -13,6 +13,7 @@ import WithdrawalScreen from '../screens/WithdrawalScreen';
 import AccountChangeScreen from '../screens/AccountChangeScreen';
 import FindEmailScreen from '../screens/FindEmailScreen';
 import FindPasswordScreen from '../screens/FindPasswordScreen';
+import PhoneAuthScreen from '../screens/PhoneAuthScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import CorporateInvestmentScreen from '../screens/CorporateInvestmentScreen';
 import ProductListScreen from '../screens/ProductListScreen';
@@ -35,6 +36,10 @@ import RepaymentHistoryScreen from '../screens/RepaymentHistoryScreen';
 import BalanceHistoryScreen from '../screens/BalanceHistoryScreen';
 import UpwardRequestScreen from '../screens/UpwardRequestScreen';
 import UpwardRequestDoneScreen from '../screens/UpwardRequestDoneScreen';
+import ConsultationRequestScreen from '../screens/ConsultationRequestScreen';
+import ConsultationRequestDoneScreen from '../screens/ConsultationRequestDoneScreen';
+import LoanRequestScreen from '../screens/LoanRequestScreen';
+import LoanRequestDoneScreen from '../screens/LoanRequestDoneScreen';
 import BondMarketHowToUseScreen from '../screens/BondMarketHowToUseScreen';
 import MemberWithdrawalScreen from '../screens/MemberWithdrawalScreen';
 import WithdrawalSurveyScreen from '../screens/WithdrawalSurveyScreen';
@@ -46,7 +51,7 @@ import InvestReceiptScreen from '../screens/InvestReceiptScreen';
 const Stack = createStackNavigator();
 
 // Header를 사용하지 않는 화면들 (로그인, 회원가입 등)
-const SCREENS_WITHOUT_HEADER = ['Login', 'WithdrawalLogin', 'FindEmail', 'FindPassword', 'SignUp', 'Withdrawal', 'AccountChange'];
+const SCREENS_WITHOUT_HEADER = ['Login', 'WithdrawalLogin', 'SignUp', 'Withdrawal', 'AccountChange', 'PhoneAuth'];
 
 // 딥링크 설정
 const linking = {
@@ -78,6 +83,10 @@ const linking = {
       BalanceHistory: 'balance-history',
       UpwardRequest: 'upward-request',
       UpwardRequestDone: 'upward-request-done',
+      ConsultationRequest: 'consultation-request',
+      ConsultationRequestDone: 'consultation-request-done',
+      LoanRequest: 'loan-request',
+      LoanRequestDone: 'loan-request-done',
       BondMarketHowToUse: 'bond-market-how-to-use',
     },
   },
@@ -147,7 +156,7 @@ const AppNavigator = () => {
   const isPromotionScreen = currentRoute === 'Promotion';
   
   // Back 버튼이 필요한 화면들
-  const screensWithBack = ['InvestReceipt', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms'];
+  const screensWithBack = ['FindEmail', 'FindPassword', 'InvestReceipt', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'ConsultationRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms'];
   const shouldShowBack = screensWithBack.includes(currentRoute);
 
   // Slightly increase offset so screens clear the fixed header/GNB
@@ -194,6 +203,7 @@ const AppNavigator = () => {
           <Stack.Screen name="AccountChange" component={AccountChangeScreen} />
           <Stack.Screen name="FindEmail" component={FindEmailScreen} />
           <Stack.Screen name="FindPassword" component={FindPasswordScreen} />
+          <Stack.Screen name="PhoneAuth" component={PhoneAuthScreen} />
           <Stack.Screen name="SignUp" component={SignUpScreen} />
           <Stack.Screen name="CorporateInvestment" component={CorporateInvestmentScreen} />
           <Stack.Screen name="ProductList" component={ProductListScreen} />
@@ -216,6 +226,10 @@ const AppNavigator = () => {
           <Stack.Screen name="BalanceHistory" component={BalanceHistoryScreen} />
           <Stack.Screen name="UpwardRequest" component={UpwardRequestScreen} />
           <Stack.Screen name="UpwardRequestDone" component={UpwardRequestDoneScreen} />
+          <Stack.Screen name="ConsultationRequest" component={ConsultationRequestScreen} />
+          <Stack.Screen name="ConsultationRequestDone" component={ConsultationRequestDoneScreen} />
+          <Stack.Screen name="LoanRequest" component={LoanRequestScreen} />
+          <Stack.Screen name="LoanRequestDone" component={LoanRequestDoneScreen} />
           <Stack.Screen name="BondMarketHowToUse" component={BondMarketHowToUseScreen} />
           <Stack.Screen name="MemberWithdrawal" component={MemberWithdrawalScreen} />
           <Stack.Screen name="WithdrawalSurvey" component={WithdrawalSurveyScreen} />

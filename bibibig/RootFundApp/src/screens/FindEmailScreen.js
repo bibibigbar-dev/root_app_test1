@@ -6,53 +6,71 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Image,
 } from 'react-native';
 import ApiService from '../services/api';
-import Header from '../components/Header';
 
 const FindEmailScreen = ({ navigation }) => {
   const [name, setName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleFindEmail = async () => {
-    if (!name || !phoneNumber) {
-      Alert.alert('입력 오류', '이름과 휴대전화번호를 모두 입력해주세요.');
+    // 입력 검증
+    if (!name.trim()) {
+      Alert.alert('아이디 찾기', '인증받은 이름을 입력해 주세요.');
       return;
     }
 
-    setLoading(true);
+    if (!phone.trim()) {
+      Alert.alert('아이디 찾기', '인증받은 휴대전화번호를 입력해 주세요.');
+      return;
+    }
+
     try {
-      // ApiService를 통해 API 호출
-      const data = await ApiService.findEmail({
-        name: name,
-        phone: phoneNumber,
-      });
+      setLoading(true);
 
-      console.log('아이디 찾기 응답:', data);
+      const response = await ApiService.api.post(
+        '/app/find/id/process',
+        ApiService.convertToFormData({
+          name: name.trim(),
+          phone: phone.trim(),
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
 
-      if (data.rtnvalue === '1') {
+      console.log('📧 아이디 찾기 응답:', response.data);
+
+      const rtnvalue = String(response.data.rtnvalue);
+
+      if (rtnvalue === '0') {
         Alert.alert(
-          '아이디 찾기 완료',
-          `회원님의 아이디는 ${data.web_id} 입니다.`,
+          '아이디 찾기',
+          `회원님의 아이디는 "${response.data.web_id}" 입니다.`,
           [
             {
-              text: '로그인',
+              text: '확인',
               onPress: () => navigation.navigate('Login'),
             },
           ]
         );
+      } else if (rtnvalue === '1') {
+        Alert.alert('아이디 찾기', '이름과 휴대전화번호를 모두 입력해 주세요.');
+      } else if (rtnvalue === '2') {
+        Alert.alert('아이디 찾기', '찾으시는 정보가 없습니다.');
       } else {
-        Alert.alert('아이디 찾기 실패', '일치하는 정보가 없습니다.');
+        Alert.alert('아이디 찾기', '처리도중 오류가 발생하였습니다.');
       }
     } catch (error) {
-      console.error('아이디 찾기 오류:', error);
-      Alert.alert('오류', '아이디 찾기 중 오류가 발생했습니다.');
+      console.error('❌ 아이디 찾기 오류:', error);
+      Alert.alert('아이디 찾기', '처리도중 오류가 발생하였습니다.');
     } finally {
       setLoading(false);
     }
@@ -63,23 +81,27 @@ const FindEmailScreen = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Header navigation={navigation} user={null} showBack={false} hideBorder={true} />
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.findWrap}>
-          <TouchableOpacity 
-            style={styles.backButton}
+        {/* Header with Back Button */}
+        <View style={styles.headCon}>
+          <TouchableOpacity
+            style={styles.btnBack}
             onPress={() => navigation.goBack()}
           >
-            <Image 
-              source={require('../assets/images/ico_back_gray_40.png')} 
-              style={styles.backIcon} 
+            <Image
+              source={require('../assets/images/ico_back.png')}
+              style={styles.backIcon}
               resizeMode="contain"
             />
           </TouchableOpacity>
+          <Text style={styles.headTitle}></Text>
+        </View>
 
+        <View style={styles.findWrap}>
           <View style={styles.loginId}>
             <Text style={styles.title}>아이디 찾기</Text>
             <Text style={styles.txt}>가입 시 등록한 정보로 아이디를 찾을 수 있습니다.</Text>
@@ -89,39 +111,37 @@ const FindEmailScreen = ({ navigation }) => {
             <View style={styles.flexInput}>
               <TextInput
                 style={styles.textInput}
-                placeholder="인증받은 이름을 입력해 주세요"
                 value={name}
                 onChangeText={setName}
-                autoCapitalize="none"
+                placeholder="인증받은 이름을 입력해 주세요"
+                placeholderTextColor="#a3a7ab"
                 returnKeyType="next"
-                onSubmitEditing={() => phoneNumberRef?.focus()}
+                onSubmitEditing={() => {}}
               />
             </View>
 
             <View style={styles.flexInput}>
               <TextInput
                 style={styles.textInput}
+                value={phone}
+                onChangeText={setPhone}
                 placeholder="인증받은 휴대전화번호를 입력해 주세요"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
+                placeholderTextColor="#a3a7ab"
                 keyboardType="phone-pad"
                 returnKeyType="done"
                 onSubmitEditing={handleFindEmail}
-                ref={(ref) => (phoneNumberRef = ref)}
               />
             </View>
 
             <View style={styles.btnBox}>
               <TouchableOpacity
-                style={[styles.btnStyle, loading && styles.disabledButton]}
+                style={[styles.btnStyle, loading && styles.btnDisabled]}
                 onPress={handleFindEmail}
                 disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.btnText}>아이디 찾기</Text>
-                )}
+                <Text style={styles.btnText}>
+                  {loading ? '처리 중...' : '아이디 찾기'}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -129,17 +149,20 @@ const FindEmailScreen = ({ navigation }) => {
               <TouchableOpacity onPress={() => navigation.navigate('FindPassword')}>
                 <Text style={styles.linkText}>비밀번호 찾기</Text>
               </TouchableOpacity>
+              <View style={styles.linkDivider} />
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.linkText}>로그인</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.rightBtn}
-                onPress={() => navigation.navigate('SignUp')}
-              >
-                <Text style={styles.btnJoinText}>
-                  <Text style={styles.emphasis}>회원가입</Text> 바로가기
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.rightBtn}>
+                <TouchableOpacity
+                  style={styles.btnJoin}
+                  onPress={() => navigation.navigate('SignUp')}
+                >
+                  <Text style={styles.btnJoinText}>
+                    <Text style={styles.btnJoinEmphasis}>회원가입</Text> 바로가기
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -148,108 +171,129 @@ const FindEmailScreen = ({ navigation }) => {
   );
 };
 
-let phoneNumberRef = null;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
   },
-  scrollContainer: {
+  scrollContent: {
     flexGrow: 1,
   },
-  findWrap: {
-    flex: 1,
-    flexDirection: 'column',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  headCon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    paddingHorizontal: 16,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    marginTop: 5,
-    marginBottom: 10,
+  btnBack: {
+    width: 24,
+    height: 24,
   },
   backIcon: {
     width: 24,
     height: 24,
   },
+  headTitle: {
+    marginLeft: 12,
+    paddingTop: 1,
+    fontSize: 15,
+    lineHeight: 19.5,
+    fontWeight: '600',
+  },
+  findWrap: {
+    flex: 1,
+    padding: 20,
+  },
   loginId: {
-    marginVertical: 12,
+    marginTop: 12,
+    marginBottom: 0,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 10,
+    fontSize: 25,
+    lineHeight: 35,
+    fontWeight: '700',
+    color: '#222',
   },
   txt: {
-    color: '#666666',
+    marginTop: 20,
+    color: '#666',
     fontSize: 13,
     lineHeight: 19.5,
     fontWeight: '400',
-    textAlign: 'left',
-    marginTop: 20,
   },
   loginForm: {
     marginTop: 20,
   },
   flexInput: {
-    marginBottom: 15,
+    marginTop: 12,
   },
   textInput: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
+    height: 44,
     paddingHorizontal: 15,
-    fontSize: 16,
-    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
+    fontSize: 15,
+    lineHeight: 22.5,
+    fontWeight: '600',
+    backgroundColor: '#fbfbfb',
+    color: '#222',
   },
   btnBox: {
     marginTop: 30,
   },
   btnStyle: {
     height: 48,
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: '#2c3db8',
   },
-  disabledButton: {
-    backgroundColor: '#CCCCCC',
+  btnDisabled: {
+    opacity: 0.6,
   },
   btnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '500',
   },
   loginLinks: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    marginTop: 16,
+    paddingHorizontal: 4,
   },
   linkText: {
-    fontSize: 14,
-    color: '#666666',
-    marginRight: 15,
+    color: '#a3a7ab',
+    fontSize: 13,
+    lineHeight: 24,
+  },
+  linkDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#f2f2f2',
+    marginHorizontal: 13,
   },
   rightBtn: {
     marginLeft: 'auto',
   },
-  btnJoinText: {
-    fontSize: 14,
-    color: '#666666',
+  btnJoin: {
+    height: 24,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  emphasis: {
-    color: '#007AFF',
-    fontWeight: 'bold',
+  btnJoinText: {
+    color: '#393f44',
+    fontSize: 13,
+    lineHeight: 22,
+  },
+  btnJoinEmphasis: {
+    color: '#2c3db8',
   },
 });
 

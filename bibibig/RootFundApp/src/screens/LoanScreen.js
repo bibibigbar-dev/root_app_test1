@@ -9,17 +9,28 @@ import {
   ImageBackground,
   Dimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const LoanScreen = ({ navigation, route }) => {
   const { user } = route.params || {};
 
-  const handleLoanRequest = () => {
-    if (user) {
-      // TODO: 대출 상담 신청 페이지로 이동
-      console.log('대출 상담 신청');
-    } else {
+  const handleLoanRequest = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const userToken = await AsyncStorage.getItem('userToken');
+      
+      if (userData && userToken) {
+        // 로그인 상태 - 대출 상담 신청 페이지로 이동
+        const user = JSON.parse(userData);
+        navigation.navigate('LoanRequest', { user, returnScreen: 'Loan' });
+      } else {
+        // 로그인 안 됨 - 로그인 페이지로 이동
+        navigation.navigate('Login', { type: 'loreq' });
+      }
+    } catch (error) {
+      console.error('로그인 상태 확인 오류:', error);
       navigation.navigate('Login', { type: 'loreq' });
     }
   };

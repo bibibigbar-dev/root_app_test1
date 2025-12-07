@@ -105,6 +105,27 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
+  const handleMyPress = async () => {
+    const loginCheck = await ApiService.checkLoginExpiration();
+    if (loginCheck.expired) {
+      navigation.navigate('Login');
+      return;
+    }
+
+    const currentUser = await ApiService.getCurrentUser();
+    if (!currentUser) {
+      navigation.navigate('Login');
+      return;
+    }
+
+    const memberId = currentUser?.session?.member_id || currentUser?.id;
+    navigation.navigate('MyPage', {
+      user: currentUser,
+      member_id: memberId,
+      initialTab: 'assets',
+    });
+  };
+
   return (
     <>
       <View style={[styles.headerSafeArea, { paddingTop: insets.top }]}>
@@ -113,26 +134,7 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
         {showBack ? (
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={onBackPress || (async () => {
-              const loginCheck = await ApiService.checkLoginExpiration();
-              if (loginCheck.expired) {
-                navigation.navigate('Login');
-              } else {
-                const currentUser = await ApiService.getCurrentUser();
-                const member_id = currentUser?.session?.member_id || currentUser?.id;
-                // 현재 라우트 확인
-                const state = navigation.getState();
-                const currentRoute = state?.routes[state?.index];
-                
-                if (currentRoute?.name === 'MyPage') {
-                  // 이미 MyPage에 있으면 파라미터만 업데이트
-                  navigation.setParams({ user: currentUser, member_id, initialTab: 'info' });
-                } else {
-                  // 다른 화면에 있으면 네비게이션
-                  navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'info' });
-                }
-              }
-            })}
+            onPress={handleMyPress}
           >
             <Image 
               source={require('../assets/images/ico_my.png')} 
@@ -143,26 +145,7 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
         ) : (
           <TouchableOpacity 
             style={styles.myButton}
-            onPress={async () => {
-              const loginCheck = await ApiService.checkLoginExpiration();
-              if (loginCheck.expired) {
-                navigation.navigate('Login');
-              } else {
-                const currentUser = await ApiService.getCurrentUser();
-                const member_id = currentUser?.session?.member_id || currentUser?.id;
-                // 현재 라우트 확인
-                const state = navigation.getState();
-                const currentRoute = state?.routes[state?.index];
-                
-                if (currentRoute?.name === 'MyPage') {
-                  // 이미 MyPage에 있으면 파라미터만 업데이트
-                  navigation.setParams({ user: currentUser, member_id, initialTab: 'info' });
-                } else {
-                  // 다른 화면에 있으면 네비게이션
-                  navigation.navigate('MyPage', { user: currentUser, member_id, initialTab: 'info' });
-                }
-              }
-            }}
+            onPress={handleMyPress}
           >
             <Image 
               source={require('../assets/images/ico_my.png')} 
@@ -625,9 +608,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   logoContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -918,4 +899,3 @@ const styles = StyleSheet.create({
 export const HEADER_HEIGHT = 69;
 
 export default Header;
-

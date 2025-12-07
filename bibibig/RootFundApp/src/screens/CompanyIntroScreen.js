@@ -30,11 +30,21 @@ const CompanyIntroScreen = ({ navigation }) => {
     }
   };
 
-  const handleLoanRequest = () => {
-    if (isLoggedIn) {
-      // TODO: 대출 상담 신청 페이지로 이동
-      console.log('대출 상담 신청 페이지로 이동');
-    } else {
+  const handleLoanRequest = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const userToken = await AsyncStorage.getItem('userToken');
+      
+      if (userData && userToken) {
+        // 로그인 상태 - 대출 상담 신청 페이지로 이동
+        const user = JSON.parse(userData);
+        navigation.navigate('LoanRequest', { user, returnScreen: 'CompanyIntro' });
+      } else {
+        // 로그인 안 됨 - 로그인 페이지로 이동
+        navigation.navigate('Login', { type: 'loreq' });
+      }
+    } catch (error) {
+      console.error('로그인 상태 확인 오류:', error);
       navigation.navigate('Login', { type: 'loreq' });
     }
   };

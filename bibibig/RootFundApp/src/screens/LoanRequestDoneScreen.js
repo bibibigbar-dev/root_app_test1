@@ -7,15 +7,30 @@ import {
   Image,
 } from 'react-native';
 
-const UpwardRequestDoneScreen = ({ navigation, route }) => {
+const LoanRequestDoneScreen = ({ navigation, route }) => {
+  const { orderNumber, returnScreen } = route.params || {};
+
+  const handleConfirm = () => {
+    // returnScreen이 지정되어 있으면 해당 화면으로, 없으면 Loan 화면으로
+    const targetScreen = returnScreen || 'Loan';
+    navigation.reset({
+      index: 0,
+      routes: [{ name: targetScreen }],
+    });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headCon}>
         <TouchableOpacity 
           style={styles.btnBack}
-          onPress={() => navigation.goBack()}
+          onPress={handleConfirm}
         >
-          <Text style={styles.backText}>‹</Text>
+          <Image
+            source={require('../assets/images/ico_back.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
       </View>
 
@@ -26,10 +41,12 @@ const UpwardRequestDoneScreen = ({ navigation, route }) => {
             style={styles.successIco}
             resizeMode="contain"
           />
-          <Text style={styles.successMsg}>신청이 완료되었습니다</Text>
+          <Text style={styles.successMsg}>대출 상담 신청이{'\n'}완료되었습니다.</Text>
+          {orderNumber && (
+            <Text style={styles.orderNumber}>대출번호: {orderNumber}</Text>
+          )}
           <Text style={styles.successDesc}>
-            심사 후 순차적으로 승인처리 됩니다.{'\n'}
-            처리 결과는 마이페이지에서 확인하실 수 있습니다.
+            심사 후 순차적으로 처리됩니다.
           </Text>
         </View>
       </View>
@@ -37,9 +54,9 @@ const UpwardRequestDoneScreen = ({ navigation, route }) => {
       <View style={styles.btnBox}>
         <TouchableOpacity
           style={styles.btnStyle}
-          onPress={() => navigation.navigate('MyHome')}
+          onPress={handleConfirm}
         >
-          <Text style={styles.btnText}>자산관리로 이동</Text>
+          <Text style={styles.btnText}>확인</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -49,14 +66,13 @@ const UpwardRequestDoneScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f7fa',
   },
   headCon: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
   },
   btnBack: {
     width: 24,
@@ -64,10 +80,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backText: {
-    fontSize: 24,
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
+  headTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '600',
     color: '#222',
-    fontWeight: 'bold',
+    textAlign: 'center',
+    marginRight: 24,
   },
   successContainer: {
     flex: 1,
@@ -90,6 +113,12 @@ const styles = StyleSheet.create({
     color: '#222',
     textAlign: 'center',
   },
+  orderNumber: {
+    marginTop: 12,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2c3db8',
+  },
   successDesc: {
     marginTop: 16,
     color: '#666',
@@ -99,12 +128,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   btnBox: {
+    marginTop: 40,
     paddingHorizontal: 16,
     paddingBottom: 56,
   },
   btnStyle: {
     height: 48,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2c3db8',
     backgroundColor: '#2c3db8',
     justifyContent: 'center',
     alignItems: 'center',
@@ -112,10 +144,9 @@ const styles = StyleSheet.create({
   btnText: {
     color: '#fff',
     fontSize: 20,
-    lineHeight: 48,
     fontWeight: '500',
   },
 });
 
-export default UpwardRequestDoneScreen;
+export default LoanRequestDoneScreen;
 
