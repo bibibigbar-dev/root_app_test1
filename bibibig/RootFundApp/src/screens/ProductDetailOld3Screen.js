@@ -13,27 +13,250 @@ import {
   Clipboard,
   Alert,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// HTML을 WebView에서 렌더링하기 위한 래퍼 함수
+const createHtmlContent = (htmlContent) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 15px;
+          line-height: 1.5;
+          color: #666;
+          padding: 16px;
+          background-color: transparent;
+          overflow-x: hidden;
+        }
+        p {
+          margin-bottom: 10px;
+          font-size: 15px;
+          line-height: 22.5px;
+        }
+        strong {
+          font-weight: 600;
+          color: #333;
+        }
+        h1 {
+          font-size: 20px;
+          font-weight: 700;
+          color: #333;
+          margin-top: 20px;
+          margin-bottom: 10px;
+        }
+        h2 {
+          font-size: 18px;
+          font-weight: 700;
+          color: #333;
+          margin-top: 16px;
+          margin-bottom: 8px;
+        }
+        h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #333;
+          margin-top: 12px;
+          margin-bottom: 8px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+          margin-bottom: 10px;
+          border: 1px solid #f6f6f6;
+        }
+        th {
+          padding: 10px;
+          background-color: rgba(246, 246, 246, 0.5);
+          color: #393f44;
+          font-size: 15px;
+          font-weight: 400;
+          text-align: center;
+          border: 1px solid #f6f6f6;
+        }
+        td {
+          padding: 10px;
+          color: #393f44;
+          font-size: 15px;
+          font-weight: 400;
+          text-align: center;
+          border: 1px solid #f6f6f6;
+        }
+        ul {
+          padding-left: 20px;
+          margin-top: 10px;
+          margin-bottom: 10px;
+        }
+        li {
+          font-size: 15px;
+          line-height: 22.5px;
+          color: #666;
+          margin-bottom: 5px;
+        }
+        /* 탭 스타일 */
+        .sub_tab {
+          display: flex;
+          border-bottom: 1px solid #e0e1e2;
+          margin-bottom: 10px;
+          list-style: none;
+          padding: 0;
+        }
+        .sub_tab li {
+          flex: 1;
+          list-style: none;
+          text-align: center;
+          padding: 10px 0;
+          cursor: pointer;
+          font-size: 16px;
+          font-weight: 500;
+          color: #999;
+          border-bottom: 3px solid transparent;
+          margin-bottom: -1px;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .sub_tab li.on {
+          color: #2c3db8;
+          font-weight: 600;
+          border-bottom-color: #2c3db8;
+        }
+        .tab_content {
+          display: none;
+          padding: 10px 0;
+        }
+        .tab_content.on {
+          display: block;
+        }
+        /* re__product-content 탭 스타일 */
+        .re__product-content__tab {
+          display: flex;
+          border-bottom: 1px solid #e0e1e2;
+          margin-bottom: 10px;
+          list-style: none;
+          padding: 0;
+        }
+        .re__product-content__tab-item {
+          flex: 1;
+          text-align: center;
+          padding: 10px 0;
+          cursor: pointer;
+          font-size: 16px;
+          font-weight: 500;
+          color: #999;
+          border-bottom: 3px solid transparent;
+          margin-bottom: -1px;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .re__product-content__tab-item.active {
+          color: #2c3db8;
+          font-weight: 600;
+          border-bottom-color: #2c3db8;
+        }
+        .re__product-content__item {
+          display: none;
+          padding: 10px 0;
+        }
+        .re__product-content__item.visible {
+          display: block;
+        }
+      </style>
+      <script>
+        function updateHeight() {
+          const height = document.body.scrollHeight;
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', height: height }));
+          }
+        }
+        
+        $(function(){
+          // re__product-content 탭 처리
+          $(".re__product-content__tab-item").click(function(){
+            var rte_pcb = $(this).closest(".re__product-content__tab");
+            $(rte_pcb).children(".re__product-content__tab-item").removeClass("active");
+            $(this).addClass("active");
+            
+            var rte_chindex = $(this).data("index");
+            $(this).closest(".re__product-content__box").children(".re__product-content__item").removeClass("visible");
+            $(this).closest(".re__product-content__box").children(".re__product-content__item").eq(rte_chindex).addClass("visible");
+            
+            // 높이 업데이트
+            setTimeout(updateHeight, 100);
+          });
+          
+          // 첫 번째 탭 활성화
+          $(".re__product-content__tab").each(function() {
+            $(this).children(".re__product-content__tab-item").first().click();
+          });
+          
+          // 기존 sub_tab 처리
+          $(".sub_tab li").click(function(e) {
+            e.preventDefault();
+            
+            var $parent = $(this).closest('.sub_tab');
+            $parent.find('li').removeClass('on');
+            $(this).addClass('on');
+            
+            var index = $(this).index();
+            var $contentParent = $parent.parent();
+            $contentParent.find('.tab_content').removeClass('on');
+            $contentParent.find('.tab_content').eq(index).addClass('on');
+            
+            setTimeout(updateHeight, 100);
+          });
+          
+          // 첫 번째 sub_tab 활성화
+          $(".sub_tab").each(function() {
+            $(this).find('li').first().click();
+          });
+          
+          // 초기 높이 설정
+          setTimeout(updateHeight, 300);
+        });
+        
+        // 이미지 로드 후 높이 재계산
+        $(window).on('load', function() {
+          setTimeout(updateHeight, 500);
+        });
+      </script>
+    </head>
+    <body>
+      ${htmlContent}
+    </body>
+    </html>
+  `;
+};
+
 const ProductDetailOld3Screen = ({ navigation, route }) => {
   const { orderKey } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [productData, setProductData] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
-    expert: true,
-    invest_detail: true,
-    summary: false,
-    schedule: false,
-    report: false,
-    evidence: false,
-    protect: false,
+    point: true,
+    status: true,
+    evidence: true,
+    protect: true,
   });
-  const [activeReportTab, setActiveReportTab] = useState(0);
-  const [activeProtectTab, setActiveProtectTab] = useState(0);
+  
+  // WebView 높이 상태
+  const [webViewHeights, setWebViewHeights] = useState({
+    contents1: 300,
+    contents2: 300,
+    contents3: 300,
+  });
   
   // 수익 계산 모달 상태
   const [showCalcModal, setShowCalcModal] = useState(false);
@@ -57,15 +280,12 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
   }, [orderKey]);
 
   useEffect(() => {
-    // 화면이 포커스될 때마다 로그인 상태 확인 및 상품 정보 재로드
+    // 화면이 포커스될 때 로그인 상태만 확인 (상품 정보는 재로드하지 않음)
     const unsubscribe = navigation.addListener('focus', () => {
       checkLoginStatus();
-      if (orderKey) {
-        loadProductDetail();
-      }
     });
     return unsubscribe;
-  }, [navigation, orderKey]);
+  }, [navigation]);
 
   useEffect(() => {
     if (productData && productData.prod && productData.option) {
@@ -397,12 +617,9 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
         );
       default: // 그 외 (이미 투자한 경우)
         return (
-          //<TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
-          //  <Text style={styles.btnText}>투자현황 바로가기</Text>
-          //</TouchableOpacity>
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
-          <Text style={styles.btnText}>투자하기</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
+            <Text style={styles.btnText}>투자현황 바로가기</Text>
+          </TouchableOpacity>
         );
     }
   };
@@ -643,412 +860,72 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
             <Text style={styles.starNotif}>* 또한 중도상환, 연체 등으로 지급일자와 지급액에 차이가 있을 수 있습니다.</Text>
           </View>
 
-          {/* 상품 유형 정보 박스 */}
-          <View style={styles.detailInfobox}>
-            {/* 상단 텍스트 */}
-            {completion && completion.map((item, index) => (
-              item.text_type === 'TOP_TEXT' && item.top_text && (
-                <Text key={index} style={styles.infoTitle}>{item.top_text}</Text>
-              )
-            ))}
-
-            {/* 상품 유형 탭 */}
-            <View style={styles.detailInfotab}>
-              <View style={[styles.infotabItem, prod.sort === 'bridge' && styles.infotabItemActive]}>
-                <View style={[styles.infotabInbox, prod.sort === 'bridge' && styles.infotabInboxActive]}>
-                  {prod.sort === 'bridge' && <Text style={styles.diType}>상품 유형</Text>}
-                  <View style={styles.infotabImgbox}>
-                    <Image source={require('../assets/images/ico_detail_infotab01.png')} style={styles.infotabImg} resizeMode="contain" />
-                  </View>
-                  <Text style={styles.infotabTit}>수익집중</Text>
-                  <Text style={styles.infotabTag}>#건설자금계열</Text>
-                </View>
-              </View>
-              <View style={[styles.infotabItem, prod.sort === 'pf' && styles.infotabItemActive]}>
-                <View style={[styles.infotabInbox, prod.sort === 'pf' && styles.infotabInboxActive]}>
-                  {prod.sort === 'pf' && <Text style={styles.diType}>상품 유형</Text>}
-                  <View style={styles.infotabImgbox}>
-                    <Image source={require('../assets/images/ico_detail_infotab02.png')} style={styles.infotabImg} resizeMode="contain" />
-                  </View>
-                  <Text style={styles.infotabTit}>안정추구</Text>
-                  <Text style={styles.infotabTag}>#운영자금계열</Text>
-                </View>
-              </View>
-              <View style={[styles.infotabItem, prod.sort === 'innovation' && styles.infotabItemActive]}>
-                <View style={[styles.infotabInbox, prod.sort === 'innovation' && styles.infotabInboxActive]}>
-                  {prod.sort === 'innovation' && <Text style={styles.diType}>상품 유형</Text>}
-                  <View style={styles.infotabImgbox}>
-                    <Image source={require('../assets/images/ico_detail_infotab03.png')} style={styles.infotabImg} resizeMode="contain" />
-                  </View>
-                  <Text style={styles.infotabTit}>주민참여</Text>
-                  <Text style={styles.infotabTag}>#지역주민한정</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* 상품 유형 설명 */}
-            {completion && completion.filter(item => {
-              // prod.sort에 해당하는 항목만 표시
-              if (prod.sort === 'bridge' && item.sort === 'bridge') return true;
-              if (prod.sort === 'pf' && item.sort === 'pf') return true;
-              if (prod.sort === 'innovation' && item.sort === 'innovation') return true;
-              // sort가 없는 항목은 모든 유형에 공통으로 표시
-              if (!item.sort) return true;
-              return false;
-            }).length > 0 && (
-              <View style={styles.detailInfotabCon}>
-                {completion
-                  .filter(item => {
-                    // prod.sort에 해당하는 항목만 표시
-                    if (prod.sort === 'bridge' && item.sort === 'bridge') return true;
-                    if (prod.sort === 'pf' && item.sort === 'pf') return true;
-                    if (prod.sort === 'innovation' && item.sort === 'innovation') return true;
-                    // sort가 없는 항목은 모든 유형에 공통으로 표시
-                    if (!item.sort) return true;
-                    return false;
-                  })
-                  .slice(0, 10) // 최대 10개만 표시
-                  .map((item, index) => (
-                  <View key={index}>
-                    {item.text_type === 'TITLE_CONTENTS' && (
-                      <>
-                        <View style={styles.numtit}>
-                          <Text style={styles.num}>{index + 1}</Text>
-                          <Text style={styles.numtitText}>{item.title}</Text>
-                        </View>
-                        <Text style={styles.txt}>{item.contents}</Text>
-                      </>
-                    )}
-                    {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                      <Text style={styles.txt}>{item.bottom_text}</Text>
-                    )}
-                  </View>
-                ))}
+          {/* 투자포인트 토글박스 */}
+          <View style={styles.detailTogglebox}>
+            <TouchableOpacity 
+              style={[styles.inTitle, expandedSections.point && styles.inTitleOn]}
+              onPress={() => toggleSection('point')}
+            >
+              <Text style={styles.inTitleText}>투자포인트</Text>
+            </TouchableOpacity>
+            
+            {expandedSections.point && (
+              <View style={styles.inCont}>
+                {contents?.contents_1 ? (
+                  <WebView
+                    originWhitelist={['*']}
+                    source={{ html: createHtmlContent(contents.contents_1) }}
+                    style={[styles.webView, { height: webViewHeights.contents1 }]}
+                    scrollEnabled={false}
+                    showsVerticalScrollIndicator={false}
+                    showsHorizontalScrollIndicator={false}
+                    onMessage={(event) => {
+                      try {
+                        const data = JSON.parse(event.nativeEvent.data);
+                        if (data.type === 'height' && data.height) {
+                          setWebViewHeights(prev => ({ ...prev, contents1: data.height + 20 }));
+                        }
+                      } catch (e) {
+                        console.log('WebView message parse error:', e);
+                      }
+                    }}
+                  />
+                ) : null}
               </View>
             )}
           </View>
 
-          {/* 전문가 한마디 토글박스 */}
+          {/* 사업 현황 토글박스 */}
           <View style={styles.detailTogglebox}>
             <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.expert && styles.inTitleOn]}
-              onPress={() => toggleSection('expert')}
+              style={[styles.inTitle, expandedSections.status && styles.inTitleOn]}
+              onPress={() => toggleSection('status')}
             >
-              <Text style={styles.inTitleText}>전문가 한마디</Text>
+              <Text style={styles.inTitleText}>사업 현황</Text>
             </TouchableOpacity>
             
-            {expandedSections.expert && (
+            {expandedSections.status && (
               <View style={styles.inCont}>
-                <View style={styles.expertBox}>
-                  <View style={styles.expertInfo}>
-                    <View style={styles.expertImgbox}>
-                      {expert_file && expert_file.length > 0 && (
-                        <Image source={{ uri: expert_file[0].filePath }} style={styles.expertImg} />
-                      )}
-                    </View>
-                    <View style={styles.expertTxtbox}>
-                      <Text style={styles.expertName}>{expertopinion?.name}</Text>
-                      <Text style={styles.expertPos}>{expertopinion?.task}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.expertTxt}>{expertopinion?.contents}</Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* 투자상세정보 토글박스 */}
-          <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.invest_detail && styles.inTitleOn]}
-              onPress={() => toggleSection('invest_detail')}
-            >
-              <Text style={styles.inTitleText}>투자상세정보</Text>
-            </TouchableOpacity>
-            
-            {expandedSections.invest_detail && (
-              <View style={styles.inCont}>
-                <View style={styles.contentWrap}>
-                  {invest_file && invest_file.length > 0 && (
-                    <View style={styles.imgbox}>
-                      {invest_file.map((file, index) => (
-                        <Image key={index} source={{ uri: file.filePath }} style={styles.imgboxImage} resizeMode="contain" />
-                      ))}
-                    </View>
-                  )}
-                  {invest && invest.map((item, index) => (
-                    <View key={index}>
-                      {item.text_type === 'TOP_TEXT' && item.top_text && (
-                        <View style={styles.txts}>
-                          <Text style={styles.txtsLi}>{item.top_text}</Text>
-                        </View>
-                      )}
-                      {item.text_type === 'TITLE_CONTENTS' && (
-                        <>
-                          <Text style={styles.tit}>{item.title}</Text>
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.contents}</Text>
-                          </View>
-                        </>
-                      )}
-                      {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                        <View style={styles.txts}>
-                          <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* 투자개요 토글박스 */}
-          <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.summary && styles.inTitleOn]}
-              onPress={() => toggleSection('summary')}
-            >
-              <Text style={styles.inTitleText}>투자개요</Text>
-            </TouchableOpacity>
-            
-            {expandedSections.summary && (
-              <View style={styles.inCont}>
-                <View style={styles.contentWrap}>
-                  {summary && summary.map((item, index) => (
-                    <View key={index}>
-                      {item.text_type === 'TOP_TEXT' && item.top_text && (
-                        <View style={styles.txts}>
-                          <Text style={styles.txtsLi}>{item.top_text}</Text>
-                        </View>
-                      )}
-                      {item.text_type === 'TITLE_CONTENTS' && (
-                        <>
-                          <Text style={styles.tit}>{item.title}</Text>
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.contents}</Text>
-                          </View>
-                        </>
-                      )}
-                      {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                        <View style={styles.txts}>
-                          <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* 투자일정 토글박스 */}
-          <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.schedule && styles.inTitleOn]}
-              onPress={() => toggleSection('schedule')}
-            >
-              <Text style={styles.inTitleText}>투자일정</Text>
-            </TouchableOpacity>
-            
-            {expandedSections.schedule && (
-              <View style={styles.inCont}>
-                <View style={styles.contentWrap}>
-                  {schedule && schedule.map((item, index) => (
-                    <View key={index}>
-                      {item.text_type === 'TOP_TEXT' && item.top_text && (
-                        <View style={styles.txts}>
-                          <Text style={styles.txtsLi}>{item.top_text}</Text>
-                        </View>
-                      )}
-                      {item.text_type === 'TITLE_CONTENTS' && (
-                        <>
-                          <Text style={styles.tit}>{item.title}</Text>
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.contents}</Text>
-                          </View>
-                        </>
-                      )}
-                      {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                        <View style={styles.txts}>
-                          <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* 상품 리포트 토글박스 */}
-          <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.report && styles.inTitleOn]}
-              onPress={() => toggleSection('report')}
-            >
-              <Text style={styles.inTitleText}>상품 리포트</Text>
-            </TouchableOpacity>
-            
-            {expandedSections.report && (
-              <View style={styles.inCont}>
-                {/* 탭 메뉴 */}
-                <View style={styles.subTab}>
-                  <TouchableOpacity 
-                    style={[styles.subTabItem, activeReportTab === 0 && styles.subTabItemActive]}
-                    onPress={() => setActiveReportTab(0)}
-                  >
-                    <Text style={[styles.subTabText, activeReportTab === 0 && styles.subTabTextActive]}>사업소개</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.subTabItem, activeReportTab === 1 && styles.subTabItemActive]}
-                    onPress={() => setActiveReportTab(1)}
-                  >
-                    <Text style={[styles.subTabText, activeReportTab === 1 && styles.subTabTextActive]}>사업구조</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.subTabItem, activeReportTab === 2 && styles.subTabItemActive]}
-                    onPress={() => setActiveReportTab(2)}
-                  >
-                    <Text style={[styles.subTabText, activeReportTab === 2 && styles.subTabTextActive]}>사업현장</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.subTabItem, activeReportTab === 3 && styles.subTabItemActive]}
-                    onPress={() => setActiveReportTab(3)}
-                  >
-                    <Text style={[styles.subTabText, activeReportTab === 3 && styles.subTabTextActive]}>차입자 정보</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* 사업소개 */}
-                {activeReportTab === 0 && (
-                  <View style={styles.contentWrap}>
-                    {intro && intro.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
-                            <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
-                            </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* 사업구조 */}
-                {activeReportTab === 1 && (
-                  <View style={styles.contentWrap}>
-                    {structure && structure.map((item, index) => (
-                      item.text_type === 'TOP_TEXT' && item.top_text && (
-                        <View key={index} style={styles.txts}>
-                          <Text style={styles.txtsLi}>{item.top_text}</Text>
-                        </View>
-                      )
-                    ))}
-                    {structure_file && structure_file.length > 0 && (
-                      <View style={styles.imgbox}>
-                        {structure_file.map((file, index) => (
-                          <Image key={index} source={{ uri: file.filePath }} style={styles.imgboxImage} resizeMode="contain" />
-                        ))}
-                      </View>
-                    )}
-                    {structure && structure.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
-                            <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
-                            </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* 사업현장 */}
-                {activeReportTab === 2 && (
-                  <View style={styles.contentWrap}>
-                    {place && place.map((item, index) => (
-                      item.text_type === 'TOP_TEXT' && item.top_text && (
-                        <View key={index} style={styles.txts}>
-                          <Text style={styles.txtsLi}>{item.top_text}</Text>
-                        </View>
-                      )
-                    ))}
-                    {place_file && place_file.length > 0 && (
-                      <View style={styles.imgbox}>
-                        {place_file.map((file, index) => (
-                          <Image key={index} source={{ uri: file.filePath }} style={styles.imgboxImage} resizeMode="contain" />
-                        ))}
-                      </View>
-                    )}
-                    {place && place.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
-                            <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
-                            </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* 차입자 정보 */}
-                {activeReportTab === 3 && (
-                  <View style={styles.contentWrap}>
-                    {borrower && borrower.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
-                            <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
-                            </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
+                {contents?.contents_2 ? (
+                  <WebView
+                    originWhitelist={['*']}
+                    source={{ html: createHtmlContent(contents.contents_2) }}
+                    style={[styles.webView, { height: webViewHeights.contents2 }]}
+                    scrollEnabled={false}
+                    showsVerticalScrollIndicator={false}
+                    showsHorizontalScrollIndicator={false}
+                    onMessage={(event) => {
+                      try {
+                        const data = JSON.parse(event.nativeEvent.data);
+                        if (data.type === 'height' && data.height) {
+                          setWebViewHeights(prev => ({ ...prev, contents2: data.height + 20 }));
+                        }
+                      } catch (e) {
+                        console.log('WebView message parse error:', e);
+                      }
+                    }}
+                  />
+                ) : null}
               </View>
             )}
           </View>
@@ -1075,122 +952,37 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
             )}
           </View>
 
-          {/* 강화된 투자자 보호 방안 토글박스 */}
+          {/* 투자자 보호 토글박스 */}
           <View style={[styles.detailTogglebox, styles.mb40]}>
             <TouchableOpacity 
               style={[styles.inTitle, expandedSections.protect && styles.inTitleOn]}
               onPress={() => toggleSection('protect')}
             >
-              <Text style={styles.inTitleText}>강화된 투자자 보호 방안</Text>
+              <Text style={styles.inTitleText}>투자자 보호</Text>
             </TouchableOpacity>
             
             {expandedSections.protect && (
               <View style={styles.inCont}>
-                {/* 탭 메뉴 */}
-                <View style={styles.subTab1}>
-                  <TouchableOpacity 
-                    style={[styles.subTabItem, activeProtectTab === 0 && styles.subTabItemActive]}
-                    onPress={() => setActiveProtectTab(0)}
-                  >
-                    <Text style={[styles.subTabText, activeProtectTab === 0 && styles.subTabTextActive]}>투자자 보호장치</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.subTabItem, activeProtectTab === 1 && styles.subTabItemActive]}
-                    onPress={() => setActiveProtectTab(1)}
-                  >
-                    <Text style={[styles.subTabText, activeProtectTab === 1 && styles.subTabTextActive]}>투자 리스크</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.subTabItem, activeProtectTab === 2 && styles.subTabItemActive]}
-                    onPress={() => setActiveProtectTab(2)}
-                  >
-                    <Text style={[styles.subTabText, activeProtectTab === 2 && styles.subTabTextActive]}>투자 유의사항</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* 투자자 보호장치 */}
-                {activeProtectTab === 0 && (
-                  <View style={styles.contentWrap}>
-                    {protect && protect.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
-                            <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
-                            </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* 투자 리스크 */}
-                {activeProtectTab === 1 && (
-                  <View style={styles.contentWrap}>
-                    {risk && risk.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
-                            <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
-                            </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* 투자 유의사항 */}
-                {activeProtectTab === 2 && (
-                  <View style={styles.contentWrap}>
-                    {caution && caution.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
-                            <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
-                            </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
+                {contents?.contents_3 ? (
+                  <WebView
+                    originWhitelist={['*']}
+                    source={{ html: createHtmlContent(contents.contents_3) }}
+                    style={[styles.webView, { height: webViewHeights.contents3 }]}
+                    scrollEnabled={false}
+                    showsVerticalScrollIndicator={false}
+                    showsHorizontalScrollIndicator={false}
+                    onMessage={(event) => {
+                      try {
+                        const data = JSON.parse(event.nativeEvent.data);
+                        if (data.type === 'height' && data.height) {
+                          setWebViewHeights(prev => ({ ...prev, contents3: data.height + 20 }));
+                        }
+                      } catch (e) {
+                        console.log('WebView message parse error:', e);
+                      }
+                    }}
+                  />
+                ) : null}
               </View>
             )}
           </View>
@@ -1699,9 +1491,9 @@ const styles = StyleSheet.create({
   },
   detailInfotab: {
     flexDirection: 'row',
-    marginTop: 10,
-    marginBottom: 40,
-    paddingBottom: 40,
+    marginTop: 20,
+    marginBottom: 20,
+    paddingBottom: 10,
   },
   infotabItem: {
     flex: 1,
@@ -1866,6 +1658,11 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingHorizontal: 16,
     paddingBottom: 36,
+  },
+  webView: {
+    width: SCREEN_WIDTH,
+    minHeight: 300,
+    backgroundColor: 'transparent',
   },
   imgbox: {
     paddingBottom: 4,

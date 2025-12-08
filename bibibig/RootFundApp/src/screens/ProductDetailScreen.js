@@ -52,15 +52,12 @@ const ProductDetailScreen = ({ navigation, route }) => {
   }, [orderKey]);
 
   useEffect(() => {
-    // 화면이 포커스될 때마다 로그인 상태 확인 및 상품 정보 재로드
+    // 화면이 포커스될 때 로그인 상태만 확인 (상품 정보는 재로드하지 않음)
     const unsubscribe = navigation.addListener('focus', () => {
       checkLoginStatus();
-      if (orderKey) {
-        loadProductDetail();
-      }
     });
     return unsubscribe;
-  }, [navigation, orderKey]);
+  }, [navigation]);
 
   useEffect(() => {
     if (productData && productData.prod && productData.option) {
@@ -405,7 +402,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
           //</TouchableOpacity>
           <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
           <Text style={styles.btnText}>투자하기</Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
         );
     }
   };

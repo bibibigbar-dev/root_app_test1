@@ -51,10 +51,11 @@ const ProductListScreen = ({ navigation, route }) => {
     setSearchText(''); // 검색어 초기화
   }, [activeTab]);
 
-  // 상환완료 탭에서 카테고리 변경 시 페이지 초기화
+  // 상환완료 탭에서 카테고리 변경 시 재조회
   useEffect(() => {
     if (activeTab === 'COMPLETE') {
       setCompletePage(1);
+      loadProductData(); // 카테고리 변경 시 재조회
     }
   }, [completeCategory]);
 
@@ -106,48 +107,83 @@ const ProductListScreen = ({ navigation, route }) => {
       setLoading(true);
       console.log('📦 상품 리스트 조회 시작 - 상태:', activeTab);
       
-      // API 호출: /app/product/list?status=FUNDING
-      const response = await ApiService.api.get('/app/product/list', {
-        params: {
-          status: activeTab
-        }
-      });
-      
-      console.log('✅ 상품 리스트 응답:', response.data);
-      
-      if (response.data) {
-        const data = response.data;
-        
-        console.log('📋 case_list 데이터:', data.case_list);
-        console.log('📋 case_list 길이:', data.case_list?.length);
-        
-        if (activeTab === 'COMPLETE') {
-          // 상환완료 탭
-          setCaseList(data.case_list || []);
-          setListMiddle(data.list || []);
-          setListLong(data.comlist || []);
+      if (activeTab === 'COMPLETE') {
+        // 상환완료 탭: 선택된 카테고리에 따라 조회
+        if (completeCategory === 'climate') {
+          // 기후펀드 조회
+          const response = await ApiService.api.get('/app/product/list', {
+            params: {
+              status: 'COMPLETE',
+              sort: '',
+              term: ''
+            }
+          });
+          
+          console.log('✅ 기후펀드 응답:', response.data);
+          
+          setCaseList([]);
+          setListMiddle(response.data?.list || []); // 기후펀드는 list를 listMiddle에 저장
+          setListLong([]);
           setListShort([]);
           setPromotionBanner([]);
-        } else if (activeTab === 'REPAY') {
-          // 상환중 탭 - 모집중과 동일한 구조
-          setCaseList(data.case_list || []);
-          setListShort(data.listShort || []);
-          setListMiddle(data.listMiddle || []);
-          setListLong(data.listLong || []);
-          setPromotionBanner(data.promotion_banner || []);
+          
+          console.log('✅ 기후펀드(listMiddle):', response.data?.list?.length || 0, '개');
         } else {
-          // 모집중 탭
-          setCaseList(data.case_list || []);
-          setListShort(data.listShort || []);
-          setListMiddle(data.listMiddle || []);
-          setListLong(data.listLong || []);
-          setPromotionBanner(data.promotion_banner || []);
+          // 커뮤니티펀드 조회
+          const response = await ApiService.api.get('/app/product/list', {
+            params: {
+              status: 'COMPLETE',
+              sort: 'innovation'
+            }
+          });
+          
+          console.log('✅ 커뮤니티펀드(innovation) 응답:', response.data);
+          
+          setCaseList([]);
+          setListMiddle([]);
+          setListLong(response.data?.comlist || []); // 커뮤니티펀드는 comlist를 listLong에 저장
+          setListShort([]);
+          setPromotionBanner([]);
+          
+          console.log('✅ 커뮤니티펀드(listLong):', response.data?.comlist?.length || 0, '개');
         }
+      } else {
+        // 모집중, 상환중 탭
+        const response = await ApiService.api.get('/app/product/list', {
+          params: {
+            status: activeTab
+          }
+        });
         
-        console.log('✅ caseList 설정 완료:', data.case_list?.length || 0, '개');
-        console.log('✅ listShort:', data.listShort?.length || 0, '개');
-        console.log('✅ listMiddle:', data.listMiddle?.length || 0, '개');
-        console.log('✅ listLong:', data.listLong?.length || 0, '개');
+        console.log('✅ 상품 리스트 응답:', response.data);
+        
+        if (response.data) {
+          const data = response.data;
+          
+          console.log('📋 case_list 데이터:', data.case_list);
+          console.log('📋 case_list 길이:', data.case_list?.length);
+          
+          if (activeTab === 'REPAY') {
+            // 상환중 탭 - 모집중과 동일한 구조
+            setCaseList(data.case_list || []);
+            setListShort(data.listShort || []);
+            setListMiddle(data.listMiddle || []);
+            setListLong(data.listLong || []);
+            setPromotionBanner(data.promotion_banner || []);
+          } else {
+            // 모집중 탭
+            setCaseList(data.case_list || []);
+            setListShort(data.listShort || []);
+            setListMiddle(data.listMiddle || []);
+            setListLong(data.listLong || []);
+            setPromotionBanner(data.promotion_banner || []);
+          }
+          
+          console.log('✅ caseList 설정 완료:', data.case_list?.length || 0, '개');
+          console.log('✅ listShort:', data.listShort?.length || 0, '개');
+          console.log('✅ listMiddle:', data.listMiddle?.length || 0, '개');
+          console.log('✅ listLong:', data.listLong?.length || 0, '개');
+        }
       }
     } catch (error) {
       console.error('❌ 상품 리스트 조회 실패:', error);
