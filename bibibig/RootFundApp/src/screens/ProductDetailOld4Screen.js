@@ -13,6 +13,8 @@ import {
   Clipboard,
   Alert,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -44,12 +46,113 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
     schedule: []
   });
   const [expandedSchedule, setExpandedSchedule] = useState({});
+  const [estimatedProfit, setEstimatedProfit] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     if (orderKey) {
       loadProductDetail();
     }
+    checkLoginStatus();
   }, [orderKey]);
+
+  useEffect(() => {
+    // 화면이 포커스될 때마다 로그인 상태 확인 및 상품 정보 재로드
+    const unsubscribe = navigation.addListener('focus', () => {
+      checkLoginStatus();
+      if (orderKey) {
+        loadProductDetail();
+      }
+    });
+    return unsubscribe;
+  }, [navigation, orderKey]);
+
+  useEffect(() => {
+    if (productData && productData.prod && productData.option) {
+      calculateEstimatedProfit();
+    }
+  }, [productData]);
+
+  // 100만원 기준 예상 수익 계산 (calculateInterest와 동일한 로직)
+  const calculateEstimatedProfit = () => {
+    if (!productData || !productData.prod || !productData.option) return;
+
+    const prod = productData.prod;
+    const option = productData.option;
+    
+    let tBal = 0;
+    let tInt = 0;
+    let tTax = 0;
+    let tComm = 0;
+
+    const sort = prod.sort;
+    const rpType = prod.repay_type;
+    const rate = Number(prod.rate);
+    const dRate = (rate / 100) / 365;
+    const price = 1000000; // 100만원 고정
+    const period = Number(prod.period);
+    const comm = Number(option.i_comm_1 || 0);
+    const dComm = (comm / 100) / 365;
+    const iTaxPer = Number(option.i_tax || 0);
+    const rTaxPer = Number(option.r_tax || 0);
+    let startDate = getCurrentDate();
+
+    tBal = price;
+    const rp1Rp = Math.floor(tBal / period);
+
+    for (let i = 1; i <= period; i++) {
+      let endDate;
+      
+      if (sort === 'BRIDGE' || sort === 'bridge') {
+        endDate = addMonths(startDate, 1);
+      } else if (sort === 'PF' || sort === 'pf') {
+        endDate = addMonths(startDate, 3);
+      } else {
+        endDate = addMonths(startDate, 3);
+      }
+
+      const diffDt = calcDateDiff(startDate, endDate) - 1;
+
+      let rp = 0;
+      if (i === period) {
+        rp = tBal;
+      } else {
+        if (rpType === '1') {
+          rp = rp1Rp;
+        }
+      }
+
+      const ri = (tBal * dRate) * diffDt;
+      const rti = Math.floor((ri * (iTaxPer / 100)) / 10) * 10;
+      const rtr = Math.floor((ri * (rTaxPer / 100)) / 10) * 10;
+      const rc = (price * dComm) * diffDt;
+
+      rp = Math.floor(rp);
+      const riFloor = Math.floor(ri);
+      const rcFloor = Math.floor(rc);
+
+      startDate = endDate;
+      tInt += riFloor;
+      tTax += rti + rtr;
+      tComm += rcFloor;
+      tBal = tBal - rp;
+    }
+
+    const rsInterestTotal = Number(tInt) - Number(tTax) - Number(tComm);
+    setEstimatedProfit(rsInterestTotal);
+  };
+
+  const checkLoginStatus = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const userToken = await AsyncStorage.getItem('userToken');
+      setIsLoggedIn(!!(userData && userToken));
+      console.log('로그인 상태:', !!(userData && userToken));
+    } catch (error) {
+      console.error('로그인 상태 확인 오류:', error);
+      setIsLoggedIn(false);
+    }
+  };
 
   const loadProductDetail = async () => {
     try {
@@ -222,12 +325,94 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
     Alert.alert('알림', 'URL이 복사되었습니다.');
   };
 
+  const handleInvestRequest = () => {
+    console.log('투자하기 클릭');
+    navigation.navigate('InvestRequest', {
+      orderKey: orderKey,
+      productData: productData
+    });
+  };
+
+  const handleAreaProductRequest = () => {
+    // TODO: 이웃신청하기 로직
+    console.log('이웃신청하기 클릭');
+  };
+
+  const handleInvestCancelRequest = () => {
+    // TODO: 투자 취소 로직
+    console.log('투자 취소하기 클릭');
+  };
+
+  const handleGoToInvestList = () => {
+    // TODO: 투자현황 페이지로 이동
+    console.log('투자현황 바로가기 클릭');
+    // navigation.navigate('InvestList');
+  };
+
+  const handleLogin = () => {
+    console.log('로그인하기 클릭');
+    navigation.navigate('Login', {
+      returnTo: 'ProductDetailOld4',
+      returnParams: { orderKey }
+    });
+  };
+
+  const renderInvestButton = () => {
+    // 로그인하지 않은 경우
+    if (!isLoggedIn) {
+      return (
+        <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleLogin}>
+          <Text style={styles.btnText}>로그인하기</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    // 로그인한 경우 checkInvest 값에 따라 버튼 변경
+    const { checkInvest } = productData || {};
+    
+    switch (checkInvest) {
+      case '0': // 투자 가능
+        return (
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
+            <Text style={styles.btnText}>투자하기</Text>
+          </TouchableOpacity>
+        );
+      case '22': // 이웃신청 필요
+        return (
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleAreaProductRequest}>
+            <Text style={styles.btnText}>이웃신청하기</Text>
+          </TouchableOpacity>
+        );
+      case '4': // 투자대기
+        return (
+          <TouchableOpacity style={[styles.btnStyle, styles.btnGray]} disabled>
+            <Text style={[styles.btnText, styles.btnTextGray]}>투자대기</Text>
+          </TouchableOpacity>
+        );
+      case '8': // 투자 취소 가능
+        return (
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestCancelRequest}>
+            <Text style={styles.btnText}>투자 취소 하기</Text>
+          </TouchableOpacity>
+        );
+      default: // 그 외 (이미 투자한 경우)
+        return (
+          //<TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
+          //  <Text style={styles.btnText}>투자현황 바로가기</Text>
+          //</TouchableOpacity>
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
+          <Text style={styles.btnText}>투자하기</Text>
+        </TouchableOpacity>
+        );
+    }
+  };
+
   const renderOrderTypeIcon = (orderType) => {
     const iconMap = {
-      '태양광': require('../assets/images/ico_status01.png'),
-      '풍력': require('../assets/images/ico_status02.png'),
-      'ESS': require('../assets/images/ico_status04.png'),
-      '전기차충전소': require('../assets/images/ico_status03.png'),
+      '태양광': require('../assets/images/img_product01_s.png'),
+      '풍력': require('../assets/images/img_product03_s.png'),
+      'ESS': require('../assets/images/img_product02_s.png'),
+      '전기차충전소': require('../assets/images/img_product02_s.png'),
     };
     
     const icon = iconMap[orderType];
@@ -238,7 +423,8 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
 
   if (loading) {
     return (
-      <View style={styles.container}>        <View style={styles.loadingContainer}>
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -247,7 +433,8 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
 
   if (!productData) {
     return (
-      <View style={styles.container}>        <View style={styles.loadingContainer}>
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>상품 정보를 불러올 수 없습니다.</Text>
         </View>
       </View>
@@ -280,7 +467,8 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
   } = productData;
 
   return (
-    <View style={styles.container}>      {/* Back 버튼과 공유 버튼 */}
+    <View style={styles.container}>
+      {/* Back 버튼과 공유 버튼 */}
       <View style={styles.topButtonContainer}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -357,7 +545,12 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
             </View>
             
             <View style={styles.progressBar}>
-              <View style={[styles.progressVal, { width: `${prod.percent}%` }]} />
+              <LinearGradient
+                colors={['#8FC5FF', '#5DA7FF', '#2C7FE8', '#2c3db8']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressVal, { width: `${prod.percent}%` }]}
+              />
             </View>
             
             <View style={styles.progressInfo}>
@@ -372,11 +565,7 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
 
           {/* 투자하기 버튼 */}
           <View style={styles.btnBox}>
-            <TouchableOpacity style={styles.btnStyle} onPress={() => {
-              // TODO: 투자하기 로직
-            }}>
-              <Text style={styles.btnText}>투자하기</Text>
-            </TouchableOpacity>
+            {renderInvestButton()}
           </View>
 
           {/* 전문가 의견 */}
@@ -387,9 +576,15 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
           {/* 수익 안내 박스 */}
           <View style={styles.detailIntrobox}>
             <View style={styles.detailIntro}>
+
+            <Image 
+                source={require('../assets/images/bg_detail_intro.png')} 
+                style={styles.detailIntroBg}
+                resizeMode="contain"
+              />
               <Text style={styles.title}>
                 100만원 투자하면{'\n'}
-                <Text style={styles.titleEm}>세후 {formatNumber(calcResult.totalProfit)}원</Text>이 쌓여요
+                <Text style={styles.titleEm}>세후 {formatNumber(estimatedProfit)}원</Text>이 쌓여요
               </Text>
               
               <View style={styles.revenueDl}>
@@ -413,31 +608,31 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
             {/* 환경적 성과 */}
             {contents && contents.etxt_2 && contents.etxt_4 && contents.etxt_5 && (
               <View style={styles.detailEco}>
-                <Text style={styles.titleEco}>환경적 성과까지 함께!</Text>
-                <View style={styles.ecoList}>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco01.png')} style={styles.ecoIcon1} />
-                    </View>
-                    <Text style={styles.ecoTit}>연간 전력생산</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
+              <Text style={styles.titleEco}>환경적 성과까지 함께!</Text>
+              <View style={styles.ecoList}>
+                <View style={styles.ecoItem}>
+                  <View style={styles.ecoImgbox}>
+                    <Image source={require('../assets/images/ico_detail_eco01.png')} style={styles.ecoIcon1} resizeMode="contain" />
                   </View>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco02.png')} style={styles.ecoIcon2} />
-                    </View>
-                    <Text style={styles.ecoTit}>화석 에너지</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
+                  <Text style={styles.ecoTit}>연간 전력생산</Text>
+                  <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
+                </View>
+                <View style={styles.ecoItem}>
+                  <View style={styles.ecoImgbox}>
+                    <Image source={require('../assets/images/ico_detail_eco02.png')} style={styles.ecoIcon2} resizeMode="contain" />
                   </View>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco03.png')} style={styles.ecoIcon3} />
-                    </View>
-                    <Text style={styles.ecoTit}>대기 오염물질</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_5} 감소</Text>
+                  <Text style={styles.ecoTit}>화석 에너지</Text>
+                  <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
+                </View>
+                <View style={styles.ecoItem}>
+                  <View style={styles.ecoImgbox}>
+                    <Image source={require('../assets/images/ico_detail_eco03.png')} style={styles.ecoIcon3} />
                   </View>
+                  <Text style={styles.ecoTit}>대기 오염물질</Text>
+                  <Text style={styles.ecoVal}>{contents.etxt_5} 감소</Text>
                 </View>
               </View>
+            </View>
             )}
           </View>
 
@@ -460,30 +655,30 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
             {/* 상품 유형 탭 */}
             <View style={styles.detailInfotab}>
               <View style={[styles.infotabItem, prod.sort === 'bridge' && styles.infotabItemActive]}>
-                <View style={styles.infotabInbox}>
+                <View style={[styles.infotabInbox, prod.sort === 'bridge' && styles.infotabInboxActive]}>
                   {prod.sort === 'bridge' && <Text style={styles.diType}>상품 유형</Text>}
                   <View style={styles.infotabImgbox}>
-                    <Image source={require('../assets/images/ico_detail_infotab01.png')} style={styles.infotabImg} />
+                    <Image source={require('../assets/images/ico_detail_infotab01.png')} style={styles.infotabImg} resizeMode="contain" />
                   </View>
                   <Text style={styles.infotabTit}>수익집중</Text>
                   <Text style={styles.infotabTag}>#건설자금계열</Text>
                 </View>
               </View>
               <View style={[styles.infotabItem, prod.sort === 'pf' && styles.infotabItemActive]}>
-                <View style={styles.infotabInbox}>
+                <View style={[styles.infotabInbox, prod.sort === 'pf' && styles.infotabInboxActive]}>
                   {prod.sort === 'pf' && <Text style={styles.diType}>상품 유형</Text>}
                   <View style={styles.infotabImgbox}>
-                    <Image source={require('../assets/images/ico_detail_infotab02.png')} style={styles.infotabImg} />
+                    <Image source={require('../assets/images/ico_detail_infotab02.png')} style={styles.infotabImg} resizeMode="contain" />
                   </View>
                   <Text style={styles.infotabTit}>안정추구</Text>
                   <Text style={styles.infotabTag}>#운영자금계열</Text>
                 </View>
               </View>
               <View style={[styles.infotabItem, prod.sort === 'innovation' && styles.infotabItemActive]}>
-                <View style={styles.infotabInbox}>
+                <View style={[styles.infotabInbox, prod.sort === 'innovation' && styles.infotabInboxActive]}>
                   {prod.sort === 'innovation' && <Text style={styles.diType}>상품 유형</Text>}
                   <View style={styles.infotabImgbox}>
-                    <Image source={require('../assets/images/ico_detail_infotab03.png')} style={styles.infotabImg} />
+                    <Image source={require('../assets/images/ico_detail_infotab03.png')} style={styles.infotabImg} resizeMode="contain" />
                   </View>
                   <Text style={styles.infotabTit}>주민참여</Text>
                   <Text style={styles.infotabTag}>#지역주민한정</Text>
@@ -492,24 +687,45 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
             </View>
 
             {/* 상품 유형 설명 */}
-            <View style={styles.detailInfotabCon}>
-              {completion && completion.map((item, index) => (
-                <View key={index}>
-                  {item.text_type === 'TITLE_CONTENTS' && (
-                    <>
-                      <View style={styles.numtit}>
-                        <Text style={styles.num}>{index + 1}</Text>
-                        <Text style={styles.numtitText}>{item.title}</Text>
-                      </View>
-                      <Text style={styles.txt}>{item.contents}</Text>
-                    </>
-                  )}
-                  {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                    <Text style={styles.txt}>{item.bottom_text}</Text>
-                  )}
-                </View>
-              ))}
-            </View>
+            {completion && completion.filter(item => {
+              // prod.sort에 해당하는 항목만 표시
+              if (prod.sort === 'bridge' && item.sort === 'bridge') return true;
+              if (prod.sort === 'pf' && item.sort === 'pf') return true;
+              if (prod.sort === 'innovation' && item.sort === 'innovation') return true;
+              // sort가 없는 항목은 모든 유형에 공통으로 표시
+              if (!item.sort) return true;
+              return false;
+            }).length > 0 && (
+              <View style={styles.detailInfotabCon}>
+                {completion
+                  .filter(item => {
+                    // prod.sort에 해당하는 항목만 표시
+                    if (prod.sort === 'bridge' && item.sort === 'bridge') return true;
+                    if (prod.sort === 'pf' && item.sort === 'pf') return true;
+                    if (prod.sort === 'innovation' && item.sort === 'innovation') return true;
+                    // sort가 없는 항목은 모든 유형에 공통으로 표시
+                    if (!item.sort) return true;
+                    return false;
+                  })
+                  .slice(0, 10) // 최대 10개만 표시
+                  .map((item, index) => (
+                  <View key={index}>
+                    {item.text_type === 'TITLE_CONTENTS' && (
+                      <>
+                        <View style={styles.numtit}>
+                          <Text style={styles.num}>{index + 1}</Text>
+                          <Text style={styles.numtitText}>{item.title}</Text>
+                        </View>
+                        <Text style={styles.txt}>{item.contents}</Text>
+                      </>
+                    )}
+                    {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                      <Text style={styles.txt}>{item.bottom_text}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* 전문가 한마디 토글박스 */}
@@ -1053,6 +1269,11 @@ const ProductDetailOld4Screen = ({ navigation, route }) => {
                         <Text style={styles.inHeadDd}>
                           세후 <Text style={styles.cnt}>{formatNumber(item.afterTax)}</Text> 원
                         </Text>
+                        <Image 
+                          source={require('../assets/images/arrow_select.png')} 
+                          style={[styles.scheduleArrow, expandedSchedule[index] && styles.scheduleArrowRotated]}
+                          resizeMode="contain"
+                        />
                       </TouchableOpacity>
                       
                       {expandedSchedule[index] && (
@@ -1182,17 +1403,18 @@ const styles = StyleSheet.create({
   prdName: {
     marginTop: 8,
     paddingHorizontal: 16,
-    fontSize: 24,
+    fontSize: 26,
     lineHeight: 33.8,
     fontWeight: '700',
     textAlign: 'center',
+    color: '#222',
   },
   prdDate: {
     marginTop: 10,
     paddingHorizontal: 16,
     color: '#a3a7ab',
-    fontSize: 12,
-    lineHeight: 15.6,
+    fontSize: 14,
+    lineHeight: 16.6,
     fontWeight: '400',
     textAlign: 'center',
   },
@@ -1219,12 +1441,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
     borderRadius: 51,
+    zIndex: 1,
   },
   sImg: {
     position: 'absolute',
     right: -20,
     bottom: 2,
     height: 50,
+    zIndex: 10,
   },
   progressGroup: {
     marginHorizontal: 30,
@@ -1246,13 +1470,13 @@ const styles = StyleSheet.create({
   },
   dd: {
     marginTop: 4,
-    fontSize: 16,
-    lineHeight: 20.8,
+    fontSize: 24,
+    lineHeight: 27.8,
     fontWeight: '700',
     color: '#333',
   },
   small: {
-    fontSize: 13,
+    fontSize: 20,
   },
   progressBar: {
     height: 5,
@@ -1272,7 +1496,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   totalText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#666',
   },
   totalEm: {
@@ -1291,18 +1515,27 @@ const styles = StyleSheet.create({
   },
   btnStyle: {
     height: 48,
-    backgroundColor: '#2c3db8',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  btnBlue: {
+    backgroundColor: '#2c3db8',
+  },
+  btnGray: {
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+  },
   btnText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#fff',
   },
+  btnTextGray: {
+    color: '#999',
+  },
   prdExpert: {
-    marginTop: 16,
     marginLeft: 5,
     paddingHorizontal: 16,
     color: '#393f44',
@@ -1325,6 +1558,14 @@ const styles = StyleSheet.create({
   detailIntro: {
     position: 'relative',
     padding: 20,
+    overflow: 'hidden',
+  },
+  detailIntroBg: {
+    position: 'absolute',
+    right: 5,
+    top: 0,
+    width: 260,
+    height: 260,
   },
   title: {
     fontSize: 20,
@@ -1360,11 +1601,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    minWidth: 54,
-    paddingHorizontal: 7,
-    paddingVertical: 0,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#222',
+    borderColor: '#d0d0d0',
+    borderRadius: 15,
     backgroundColor: 'transparent',
   },
   btnTextSmall: {
@@ -1400,15 +1642,12 @@ const styles = StyleSheet.create({
   },
   ecoIcon1: {
     width: 17,
-    height: 17,
   },
   ecoIcon2: {
     width: 26,
-    height: 26,
   },
   ecoIcon3: {
     width: 30,
-    height: 30,
   },
   ecoTit: {
     marginTop: 10,
@@ -1441,9 +1680,9 @@ const styles = StyleSheet.create({
   detailInfobox: {
     marginTop: 24,
     marginHorizontal: 16,
-    marginBottom: 40,
+    marginBottom: 30,
     padding: 20,
-    paddingBottom: 30,
+    paddingBottom: 100,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1451,6 +1690,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     backgroundColor: '#fff',
+    height: 300,
   },
   infoTitle: {
     fontSize: 20,
@@ -1459,31 +1699,37 @@ const styles = StyleSheet.create({
   },
   detailInfotab: {
     flexDirection: 'row',
-    marginTop: 32,
-    marginBottom: 12,
+    marginTop: 10,
+    marginBottom: 40,
+    paddingBottom: 40,
   },
   infotabItem: {
     flex: 1,
     opacity: 0.5,
+    paddingHorizontal: 4,
   },
   infotabItemActive: {
     opacity: 1,
   },
   infotabInbox: {
     position: 'relative',
-    height: '100%',
-    padding: 16,
-    paddingHorizontal: 8,
+    minHeight: 80,
+    paddingTop: 20,
+    paddingHorizontal: 5,
+    paddingBottom: 20,
     borderWidth: 1,
     borderColor: 'transparent',
     borderRadius: 10,
     alignItems: 'center',
   },
+  infotabInboxActive: {
+    borderColor: '#2c3db8',
+  },
   diType: {
     position: 'absolute',
     top: -10,
-    left: '50%',
-    paddingHorizontal: 8,
+    left: '60%',
+    paddingHorizontal: 5,
     borderRadius: 9,
     backgroundColor: '#2c3db8',
     color: '#fff',
@@ -1500,7 +1746,6 @@ const styles = StyleSheet.create({
   },
   infotabImg: {
     width: 42,
-    height: 42,
   },
   infotabTit: {
     marginTop: 5,
@@ -1510,6 +1755,7 @@ const styles = StyleSheet.create({
   },
   infotabTag: {
     marginTop: 4,
+    marginBottom: 10,
     color: '#666',
     fontSize: 11,
     lineHeight: 15.4,
@@ -1517,6 +1763,7 @@ const styles = StyleSheet.create({
   },
   detailInfotabCon: {
     marginTop: 12,
+    maxHeight: 800,
   },
   numtit: {
     position: 'relative',
@@ -1553,7 +1800,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   detailTogglebox: {
-    marginTop: 8,
+    marginTop: 10,
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -1847,6 +2094,16 @@ const styles = StyleSheet.create({
   inHeadDd: {
     fontSize: 14,
     color: '#666',
+    flex: 1,
+    marginLeft: 12,
+  },
+  scheduleArrow: {
+    width: 12,
+    height: 12,
+    marginLeft: 8,
+  },
+  scheduleArrowRotated: {
+    transform: [{ rotate: '180deg' }],
   },
   cnt: {
     fontWeight: '700',

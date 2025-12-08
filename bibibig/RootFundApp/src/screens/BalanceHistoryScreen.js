@@ -208,21 +208,22 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
+      {/* 헤더 */}
+      <View style={styles.headCon}>
+        <TouchableOpacity 
+          style={styles.btnBack}
+          onPress={() => navigation.goBack()}
+        >
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon} 
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <Text style={styles.headTitle}></Text>
+      </View>
+
       <ScrollView style={styles.scrollView}>
-        {/* 헤더 */}
-        <View style={styles.headCon}>
-          <TouchableOpacity 
-            style={styles.btnBack}
-            onPress={() => navigation.goBack()}
-          >
-            <Image 
-              source={require('../assets/images/ico_back.png')} 
-              style={styles.backIcon} 
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-          <Text style={styles.headTitle}></Text>
-        </View>
 
         {/* 제목 */}
         <View style={styles.subTitleBox}>

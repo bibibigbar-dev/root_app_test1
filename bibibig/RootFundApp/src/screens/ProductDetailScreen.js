@@ -598,14 +598,14 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 <View style={styles.ecoList}>
                   <View style={styles.ecoItem}>
                     <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco01.png')} style={styles.ecoIcon1} />
+                      <Image source={require('../assets/images/ico_detail_eco01.png')} style={styles.ecoIcon1} resizeMode="contain" />
                     </View>
                     <Text style={styles.ecoTit}>연간 전력생산</Text>
                     <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
                   </View>
                   <View style={styles.ecoItem}>
                     <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco02.png')} style={styles.ecoIcon2} />
+                      <Image source={require('../assets/images/ico_detail_eco02.png')} style={styles.ecoIcon2} resizeMode="contain" />
                     </View>
                     <Text style={styles.ecoTit}>화석 에너지</Text>
                     <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
@@ -1317,7 +1317,7 @@ const styles = StyleSheet.create({
     borderColor: '#d0d0d0',
   },
   btnText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#fff',
   },
@@ -1422,15 +1422,12 @@ const styles = StyleSheet.create({
   },
   ecoIcon1: {
     width: 17,
-    height: 17,
   },
   ecoIcon2: {
     width: 26,
-    height: 26,
   },
   ecoIcon3: {
     width: 30,
-    height: 30,
   },
   ecoTit: {
     marginTop: 10,

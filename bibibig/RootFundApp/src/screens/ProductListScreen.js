@@ -128,8 +128,15 @@ const ProductListScreen = ({ navigation, route }) => {
           setListLong(data.comlist || []);
           setListShort([]);
           setPromotionBanner([]);
+        } else if (activeTab === 'REPAY') {
+          // 상환중 탭 - 모집중과 동일한 구조
+          setCaseList(data.case_list || []);
+          setListShort(data.listShort || []);
+          setListMiddle(data.listMiddle || []);
+          setListLong(data.listLong || []);
+          setPromotionBanner(data.promotion_banner || []);
         } else {
-          // 모집중, 상환중 탭
+          // 모집중 탭
           setCaseList(data.case_list || []);
           setListShort(data.listShort || []);
           setListMiddle(data.listMiddle || []);
@@ -138,6 +145,9 @@ const ProductListScreen = ({ navigation, route }) => {
         }
         
         console.log('✅ caseList 설정 완료:', data.case_list?.length || 0, '개');
+        console.log('✅ listShort:', data.listShort?.length || 0, '개');
+        console.log('✅ listMiddle:', data.listMiddle?.length || 0, '개');
+        console.log('✅ listLong:', data.listLong?.length || 0, '개');
       }
     } catch (error) {
       console.error('❌ 상품 리스트 조회 실패:', error);

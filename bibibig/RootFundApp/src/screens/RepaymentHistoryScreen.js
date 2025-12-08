@@ -160,20 +160,21 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
+      {/* Back 버튼 */}
+      <View style={styles.headCon}>
+        <TouchableOpacity
+          style={styles.btnBack}
+          onPress={() => navigation.goBack()}
+        >
+          <Image
+            source={require('../assets/images/ico_back.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.scrollView}>
-        {/* Back 버튼 */}
-        <View style={styles.headCon}>
-          <TouchableOpacity
-            style={styles.btnBack}
-            onPress={() => navigation.goBack()}
-          >
-            <Image
-              source={require('../assets/images/ico_back.png')}
-              style={styles.backIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        </View>
 
         {/* 제목 */}
         <View style={styles.titleBox}>

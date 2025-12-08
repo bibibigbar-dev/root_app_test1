@@ -17,62 +17,9 @@ const PhoneAuthScreen = ({ navigation, route }) => {
   const [error, setError] = useState(null);
   const webViewRef = useRef(null);
 
-  // 개발 모드 플래그 (테스트용)
-  const DEV_MODE = __DEV__; // React Native의 개발 모드 체크
-  const USE_MOCK_AUTH = false; // true로 설정하면 Mock 데이터 사용
-
   useEffect(() => {
-    if (USE_MOCK_AUTH && DEV_MODE) {
-      // Mock 인증 데이터로 바로 성공 처리
-      setTimeout(() => {
-        handleMockAuth();
-      }, 1500);
-    } else {
-      initPhoneAuth();
-    }
+    initPhoneAuth();
   }, []);
-
-  // Mock 인증 처리 (개발/테스트용)
-  const handleMockAuth = () => {
-    console.log('🧪 Mock 인증 사용 (개발 모드)');
-    
-    Alert.alert(
-      '개발 모드',
-      'Mock 인증 데이터를 사용합니다. 실제 인증을 건너뜁니다.',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-          onPress: () => navigation.goBack(),
-        },
-        {
-          text: '인증 성공 시뮬레이션',
-          onPress: () => {
-            const mockAuthData = {
-              type: 'authResult',
-              rtnvalue: '0',
-              rtnmessage: '인증 성공 (Mock)',
-              authType: 'M',
-              name: '홍길동',
-              birthDate: '19900101',
-              gender: 'M',
-              mobile: '01012345678',
-              nationalInfo: '0',
-              di: 'mock_di_' + Date.now(),
-              ci: 'mock_ci_' + Date.now(),
-            };
-            
-            console.log('🧪 Mock 인증 완료:', mockAuthData);
-            
-            if (onAuthSuccess) {
-              onAuthSuccess(mockAuthData);
-            }
-            navigation.goBack();
-          },
-        },
-      ]
-    );
-  };
 
   // 백엔드에서 본인인증 URL 받아오기
   const initPhoneAuth = async () => {

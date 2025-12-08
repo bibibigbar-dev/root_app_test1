@@ -81,25 +81,26 @@ const FindEmailScreen = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Header with Back Button */}
+      <View style={styles.headCon}>
+        <TouchableOpacity
+          style={styles.btnBack}
+          onPress={() => navigation.goBack()}
+        >
+          <Image
+            source={require('../assets/images/ico_back.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <Text style={styles.headTitle}></Text>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header with Back Button */}
-        <View style={styles.headCon}>
-          <TouchableOpacity
-            style={styles.btnBack}
-            onPress={() => navigation.goBack()}
-          >
-            <Image
-              source={require('../assets/images/ico_back.png')}
-              style={styles.backIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-          <Text style={styles.headTitle}></Text>
-        </View>
 
         <View style={styles.findWrap}>
           <View style={styles.loginId}>

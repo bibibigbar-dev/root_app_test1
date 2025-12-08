@@ -6,13 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Dimensions,
   ActivityIndicator,
   Modal,
   TextInput,
-  Dimensions,
   Clipboard,
   Alert,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -22,11 +24,18 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [productData, setProductData] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
-    evidence: true,
+    expert: true,
+    invest_detail: true,
+    summary: false,
+    schedule: false,
+    report: false,
+    evidence: false,
+    protect: false,
   });
-  const [expandedFaq, setExpandedFaq] = useState({});
+  const [activeReportTab, setActiveReportTab] = useState(0);
+  const [activeProtectTab, setActiveProtectTab] = useState(0);
   
-  // 수익 계산 모달 상태 (Old4와 동일)
+  // 수익 계산 모달 상태
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [calcPrice, setCalcPrice] = useState('1000000');
   const [calcResult, setCalcResult] = useState({
@@ -37,12 +46,113 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
     schedule: []
   });
   const [expandedSchedule, setExpandedSchedule] = useState({});
+  const [estimatedProfit, setEstimatedProfit] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     if (orderKey) {
       loadProductDetail();
     }
+    checkLoginStatus();
   }, [orderKey]);
+
+  useEffect(() => {
+    // 화면이 포커스될 때마다 로그인 상태 확인 및 상품 정보 재로드
+    const unsubscribe = navigation.addListener('focus', () => {
+      checkLoginStatus();
+      if (orderKey) {
+        loadProductDetail();
+      }
+    });
+    return unsubscribe;
+  }, [navigation, orderKey]);
+
+  useEffect(() => {
+    if (productData && productData.prod && productData.option) {
+      calculateEstimatedProfit();
+    }
+  }, [productData]);
+
+  // 100만원 기준 예상 수익 계산 (calculateInterest와 동일한 로직)
+  const calculateEstimatedProfit = () => {
+    if (!productData || !productData.prod || !productData.option) return;
+
+    const prod = productData.prod;
+    const option = productData.option;
+    
+    let tBal = 0;
+    let tInt = 0;
+    let tTax = 0;
+    let tComm = 0;
+
+    const sort = prod.sort;
+    const rpType = prod.repay_type;
+    const rate = Number(prod.rate);
+    const dRate = (rate / 100) / 365;
+    const price = 1000000; // 100만원 고정
+    const period = Number(prod.period);
+    const comm = Number(option.i_comm_1 || 0);
+    const dComm = (comm / 100) / 365;
+    const iTaxPer = Number(option.i_tax || 0);
+    const rTaxPer = Number(option.r_tax || 0);
+    let startDate = getCurrentDate();
+
+    tBal = price;
+    const rp1Rp = Math.floor(tBal / period);
+
+    for (let i = 1; i <= period; i++) {
+      let endDate;
+      
+      if (sort === 'BRIDGE' || sort === 'bridge') {
+        endDate = addMonths(startDate, 1);
+      } else if (sort === 'PF' || sort === 'pf') {
+        endDate = addMonths(startDate, 3);
+      } else {
+        endDate = addMonths(startDate, 3);
+      }
+
+      const diffDt = calcDateDiff(startDate, endDate) - 1;
+
+      let rp = 0;
+      if (i === period) {
+        rp = tBal;
+      } else {
+        if (rpType === '1') {
+          rp = rp1Rp;
+        }
+      }
+
+      const ri = (tBal * dRate) * diffDt;
+      const rti = Math.floor((ri * (iTaxPer / 100)) / 10) * 10;
+      const rtr = Math.floor((ri * (rTaxPer / 100)) / 10) * 10;
+      const rc = (price * dComm) * diffDt;
+
+      rp = Math.floor(rp);
+      const riFloor = Math.floor(ri);
+      const rcFloor = Math.floor(rc);
+
+      startDate = endDate;
+      tInt += riFloor;
+      tTax += rti + rtr;
+      tComm += rcFloor;
+      tBal = tBal - rp;
+    }
+
+    const rsInterestTotal = Number(tInt) - Number(tTax) - Number(tComm);
+    setEstimatedProfit(rsInterestTotal);
+  };
+
+  const checkLoginStatus = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const userToken = await AsyncStorage.getItem('userToken');
+      setIsLoggedIn(!!(userData && userToken));
+      console.log('로그인 상태:', !!(userData && userToken));
+    } catch (error) {
+      console.error('로그인 상태 확인 오류:', error);
+      setIsLoggedIn(false);
+    }
+  };
 
   const loadProductDetail = async () => {
     try {
@@ -70,13 +180,6 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
     }));
   };
 
-  const toggleFaq = (index) => {
-    setExpandedFaq(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
-
   const toggleSchedule = (index) => {
     setExpandedSchedule(prev => ({
       ...prev,
@@ -84,7 +187,7 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
     }));
   };
 
-  // 날짜 계산 함수들 (Old4와 동일)
+  // 날짜 계산 함수들 (ProductDetailScreen과 동일)
   const getCurrentDate = () => {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -120,6 +223,7 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
     if (!productData || !prod || !option) return;
 
     let tBal = 0;
+    let tRrp = 0;
     let tInt = 0;
     let tTax = 0;
     let tComm = 0;
@@ -188,6 +292,7 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
       });
 
       startDate = endDate;
+      tRrp += rrpFloor;
       tInt += riFloor;
       tTax += rti + rtr;
       tComm += rcFloor;
@@ -220,12 +325,94 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
     Alert.alert('알림', 'URL이 복사되었습니다.');
   };
 
+  const handleInvestRequest = () => {
+    console.log('투자하기 클릭');
+    navigation.navigate('InvestRequest', {
+      orderKey: orderKey,
+      productData: productData
+    });
+  };
+
+  const handleAreaProductRequest = () => {
+    // TODO: 이웃신청하기 로직
+    console.log('이웃신청하기 클릭');
+  };
+
+  const handleInvestCancelRequest = () => {
+    // TODO: 투자 취소 로직
+    console.log('투자 취소하기 클릭');
+  };
+
+  const handleGoToInvestList = () => {
+    // TODO: 투자현황 페이지로 이동
+    console.log('투자현황 바로가기 클릭');
+    // navigation.navigate('InvestList');
+  };
+
+  const handleLogin = () => {
+    console.log('로그인하기 클릭');
+    navigation.navigate('Login', {
+      returnTo: 'ProductDetailOld3',
+      returnParams: { orderKey }
+    });
+  };
+
+  const renderInvestButton = () => {
+    // 로그인하지 않은 경우
+    if (!isLoggedIn) {
+      return (
+        <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleLogin}>
+          <Text style={styles.btnText}>로그인하기</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    // 로그인한 경우 checkInvest 값에 따라 버튼 변경
+    const { checkInvest } = productData || {};
+    
+    switch (checkInvest) {
+      case '0': // 투자 가능
+        return (
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
+            <Text style={styles.btnText}>투자하기</Text>
+          </TouchableOpacity>
+        );
+      case '22': // 이웃신청 필요
+        return (
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleAreaProductRequest}>
+            <Text style={styles.btnText}>이웃신청하기</Text>
+          </TouchableOpacity>
+        );
+      case '4': // 투자대기
+        return (
+          <TouchableOpacity style={[styles.btnStyle, styles.btnGray]} disabled>
+            <Text style={[styles.btnText, styles.btnTextGray]}>투자대기</Text>
+          </TouchableOpacity>
+        );
+      case '8': // 투자 취소 가능
+        return (
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestCancelRequest}>
+            <Text style={styles.btnText}>투자 취소 하기</Text>
+          </TouchableOpacity>
+        );
+      default: // 그 외 (이미 투자한 경우)
+        return (
+          //<TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
+          //  <Text style={styles.btnText}>투자현황 바로가기</Text>
+          //</TouchableOpacity>
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
+          <Text style={styles.btnText}>투자하기</Text>
+        </TouchableOpacity>
+        );
+    }
+  };
+
   const renderOrderTypeIcon = (orderType) => {
     const iconMap = {
-      '태양광': require('../assets/images/ico_status01.png'),
-      '풍력': require('../assets/images/ico_status02.png'),
-      'ESS': require('../assets/images/ico_status04.png'),
-      '전기차충전소': require('../assets/images/ico_status03.png'),
+      '태양광': require('../assets/images/img_product01_s.png'),
+      '풍력': require('../assets/images/img_product03_s.png'),
+      'ESS': require('../assets/images/img_product02_s.png'),
+      '전기차충전소': require('../assets/images/img_product02_s.png'),
     };
     
     const icon = iconMap[orderType];
@@ -236,7 +423,8 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
 
   if (loading) {
     return (
-      <View style={styles.container}>        <View style={styles.loadingContainer}>
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -245,7 +433,8 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
 
   if (!productData) {
     return (
-      <View style={styles.container}>        <View style={styles.loadingContainer}>
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>상품 정보를 불러올 수 없습니다.</Text>
         </View>
       </View>
@@ -256,14 +445,30 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
     prod, 
     option, 
     contents, 
+    expertopinion, 
+    expert_file,
     circle_thumbnail, 
     file_thumbnail, 
-    file_attachment,
-    faq
+    completion,
+    summary, 
+    schedule,
+    intro, 
+    structure,
+    structure_file,
+    place,
+    place_file,
+    borrower, 
+    invest, 
+    invest_file, 
+    protect,
+    risk, 
+    caution,
+    file_attachment
   } = productData;
 
   return (
-    <View style={styles.container}>      {/* Back 버튼과 공유 버튼 */}
+    <View style={styles.container}>
+      {/* Back 버튼과 공유 버튼 */}
       <View style={styles.topButtonContainer}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -340,7 +545,12 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
             </View>
             
             <View style={styles.progressBar}>
-              <View style={[styles.progressVal, { width: `${prod.percent}%` }]} />
+              <LinearGradient
+                colors={['#8FC5FF', '#5DA7FF', '#2C7FE8', '#2c3db8']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressVal, { width: `${prod.percent}%` }]}
+              />
             </View>
             
             <View style={styles.progressInfo}>
@@ -353,17 +563,33 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
             </View>
           </View>
 
+          {/* 투자하기 버튼 */}
+          <View style={styles.btnBox}>
+            {renderInvestButton()}
+          </View>
+
+          {/* 전문가 의견 */}
+          {expertopinion && expertopinion.note && (
+            <Text style={styles.prdExpert}>{expertopinion.note.replace(/\n/g, '\n')}</Text>
+          )}
+
           {/* 수익 안내 박스 */}
           <View style={styles.detailIntrobox}>
             <View style={styles.detailIntro}>
+
+            <Image 
+                source={require('../assets/images/bg_detail_intro.png')} 
+                style={styles.detailIntroBg}
+                resizeMode="contain"
+              />
               <Text style={styles.title}>
                 100만원 투자하면{'\n'}
-                <Text style={styles.titleEm}>세후 {formatNumber(calcResult.totalProfit)}원</Text>이 쌓여요
+                <Text style={styles.titleEm}>세후 {formatNumber(estimatedProfit)}원</Text>이 쌓여요
               </Text>
               
               <View style={styles.revenueDl}>
                 <Text style={styles.revenueDt}>세전 수익률</Text>
-                <Text style={styles.revenueDd}>{prod.rate}%</Text>
+                <Text style={styles.revenueDd}>{prod.rate || '-'}%</Text>
                 <Text style={styles.revenueDt}>순수 수익률</Text>
                 <Text style={styles.revenueDd}>{contents?.etxt_7 || '-'}</Text>
               </View>
@@ -382,57 +608,449 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
             {/* 환경적 성과 */}
             {contents && contents.etxt_2 && contents.etxt_4 && contents.etxt_5 && (
               <View style={styles.detailEco}>
-                <Text style={styles.titleEco}>환경적 성과까지 함께!</Text>
-                <View style={styles.ecoList}>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco01.png')} style={styles.ecoIcon1} />
-                    </View>
-                    <Text style={styles.ecoTit}>연간 전력생산</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
+              <Text style={styles.titleEco}>환경적 성과까지 함께!</Text>
+              <View style={styles.ecoList}>
+                <View style={styles.ecoItem}>
+                  <View style={styles.ecoImgbox}>
+                    <Image source={require('../assets/images/ico_detail_eco01.png')} style={styles.ecoIcon1} resizeMode="contain" />
                   </View>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco02.png')} style={styles.ecoIcon2} />
-                    </View>
-                    <Text style={styles.ecoTit}>화석 에너지</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
+                  <Text style={styles.ecoTit}>연간 전력생산</Text>
+                  <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
+                </View>
+                <View style={styles.ecoItem}>
+                  <View style={styles.ecoImgbox}>
+                    <Image source={require('../assets/images/ico_detail_eco02.png')} style={styles.ecoIcon2} resizeMode="contain" />
                   </View>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco03.png')} style={styles.ecoIcon3} />
-                    </View>
-                    <Text style={styles.ecoTit}>대기 오염물질</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_5} 감소</Text>
+                  <Text style={styles.ecoTit}>화석 에너지</Text>
+                  <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
+                </View>
+                <View style={styles.ecoItem}>
+                  <View style={styles.ecoImgbox}>
+                    <Image source={require('../assets/images/ico_detail_eco03.png')} style={styles.ecoIcon3} />
                   </View>
+                  <Text style={styles.ecoTit}>대기 오염물질</Text>
+                  <Text style={styles.ecoVal}>{contents.etxt_5} 감소</Text>
                 </View>
               </View>
+            </View>
             )}
           </View>
 
           {/* 안내 문구 */}
-          <View style={styles.mt16pr20pl20mb34}>
+          <View style={styles.mt16pr20pl20}>
             <Text style={styles.starNotif}>* 플랫폼 이용료(월 0.1%), 세금(개인15.4% 기준) 제외한 순 수익금</Text>
             <Text style={styles.starNotif}>* 위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서 변경될 수 있습니다.</Text>
             <Text style={styles.starNotif}>* 또한 중도상환, 연체 등으로 지급일자와 지급액에 차이가 있을 수 있습니다.</Text>
           </View>
 
-          {/* 투자포인트 (항상 표시) */}
-          <View style={styles.detailTogglebox}>
-            <View style={styles.inCont}>
-              <View style={styles.contentWrap}>
-                <Text style={styles.htmlContent}>{contents?.contents_1}</Text>
+          {/* 상품 유형 정보 박스 */}
+          <View style={styles.detailInfobox}>
+            {/* 상단 텍스트 */}
+            {completion && completion.map((item, index) => (
+              item.text_type === 'TOP_TEXT' && item.top_text && (
+                <Text key={index} style={styles.infoTitle}>{item.top_text}</Text>
+              )
+            ))}
+
+            {/* 상품 유형 탭 */}
+            <View style={styles.detailInfotab}>
+              <View style={[styles.infotabItem, prod.sort === 'bridge' && styles.infotabItemActive]}>
+                <View style={[styles.infotabInbox, prod.sort === 'bridge' && styles.infotabInboxActive]}>
+                  {prod.sort === 'bridge' && <Text style={styles.diType}>상품 유형</Text>}
+                  <View style={styles.infotabImgbox}>
+                    <Image source={require('../assets/images/ico_detail_infotab01.png')} style={styles.infotabImg} resizeMode="contain" />
+                  </View>
+                  <Text style={styles.infotabTit}>수익집중</Text>
+                  <Text style={styles.infotabTag}>#건설자금계열</Text>
+                </View>
+              </View>
+              <View style={[styles.infotabItem, prod.sort === 'pf' && styles.infotabItemActive]}>
+                <View style={[styles.infotabInbox, prod.sort === 'pf' && styles.infotabInboxActive]}>
+                  {prod.sort === 'pf' && <Text style={styles.diType}>상품 유형</Text>}
+                  <View style={styles.infotabImgbox}>
+                    <Image source={require('../assets/images/ico_detail_infotab02.png')} style={styles.infotabImg} resizeMode="contain" />
+                  </View>
+                  <Text style={styles.infotabTit}>안정추구</Text>
+                  <Text style={styles.infotabTag}>#운영자금계열</Text>
+                </View>
+              </View>
+              <View style={[styles.infotabItem, prod.sort === 'innovation' && styles.infotabItemActive]}>
+                <View style={[styles.infotabInbox, prod.sort === 'innovation' && styles.infotabInboxActive]}>
+                  {prod.sort === 'innovation' && <Text style={styles.diType}>상품 유형</Text>}
+                  <View style={styles.infotabImgbox}>
+                    <Image source={require('../assets/images/ico_detail_infotab03.png')} style={styles.infotabImg} resizeMode="contain" />
+                  </View>
+                  <Text style={styles.infotabTit}>주민참여</Text>
+                  <Text style={styles.infotabTag}>#지역주민한정</Text>
+                </View>
               </View>
             </View>
+
+            {/* 상품 유형 설명 */}
+            {completion && completion.filter(item => {
+              // prod.sort에 해당하는 항목만 표시
+              if (prod.sort === 'bridge' && item.sort === 'bridge') return true;
+              if (prod.sort === 'pf' && item.sort === 'pf') return true;
+              if (prod.sort === 'innovation' && item.sort === 'innovation') return true;
+              // sort가 없는 항목은 모든 유형에 공통으로 표시
+              if (!item.sort) return true;
+              return false;
+            }).length > 0 && (
+              <View style={styles.detailInfotabCon}>
+                {completion
+                  .filter(item => {
+                    // prod.sort에 해당하는 항목만 표시
+                    if (prod.sort === 'bridge' && item.sort === 'bridge') return true;
+                    if (prod.sort === 'pf' && item.sort === 'pf') return true;
+                    if (prod.sort === 'innovation' && item.sort === 'innovation') return true;
+                    // sort가 없는 항목은 모든 유형에 공통으로 표시
+                    if (!item.sort) return true;
+                    return false;
+                  })
+                  .slice(0, 10) // 최대 10개만 표시
+                  .map((item, index) => (
+                  <View key={index}>
+                    {item.text_type === 'TITLE_CONTENTS' && (
+                      <>
+                        <View style={styles.numtit}>
+                          <Text style={styles.num}>{index + 1}</Text>
+                          <Text style={styles.numtitText}>{item.title}</Text>
+                        </View>
+                        <Text style={styles.txt}>{item.contents}</Text>
+                      </>
+                    )}
+                    {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                      <Text style={styles.txt}>{item.bottom_text}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
-          {/* 사업 현황 (항상 표시) */}
+          {/* 전문가 한마디 토글박스 */}
           <View style={styles.detailTogglebox}>
-            <View style={styles.inCont}>
-              <View style={styles.contentWrap}>
-                <Text style={styles.htmlContent}>{contents?.contents_2}</Text>
+            <TouchableOpacity 
+              style={[styles.inTitle, expandedSections.expert && styles.inTitleOn]}
+              onPress={() => toggleSection('expert')}
+            >
+              <Text style={styles.inTitleText}>전문가 한마디</Text>
+            </TouchableOpacity>
+            
+            {expandedSections.expert && (
+              <View style={styles.inCont}>
+                <View style={styles.expertBox}>
+                  <View style={styles.expertInfo}>
+                    <View style={styles.expertImgbox}>
+                      {expert_file && expert_file.length > 0 && (
+                        <Image source={{ uri: expert_file[0].filePath }} style={styles.expertImg} />
+                      )}
+                    </View>
+                    <View style={styles.expertTxtbox}>
+                      <Text style={styles.expertName}>{expertopinion?.name}</Text>
+                      <Text style={styles.expertPos}>{expertopinion?.task}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.expertTxt}>{expertopinion?.contents}</Text>
+                </View>
               </View>
-            </View>
+            )}
+          </View>
+
+          {/* 투자상세정보 토글박스 */}
+          <View style={styles.detailTogglebox}>
+            <TouchableOpacity 
+              style={[styles.inTitle, expandedSections.invest_detail && styles.inTitleOn]}
+              onPress={() => toggleSection('invest_detail')}
+            >
+              <Text style={styles.inTitleText}>투자상세정보</Text>
+            </TouchableOpacity>
+            
+            {expandedSections.invest_detail && (
+              <View style={styles.inCont}>
+                <View style={styles.contentWrap}>
+                  {invest_file && invest_file.length > 0 && (
+                    <View style={styles.imgbox}>
+                      {invest_file.map((file, index) => (
+                        <Image key={index} source={{ uri: file.filePath }} style={styles.imgboxImage} resizeMode="contain" />
+                      ))}
+                    </View>
+                  )}
+                  {invest && invest.map((item, index) => (
+                    <View key={index}>
+                      {item.text_type === 'TOP_TEXT' && item.top_text && (
+                        <View style={styles.txts}>
+                          <Text style={styles.txtsLi}>{item.top_text}</Text>
+                        </View>
+                      )}
+                      {item.text_type === 'TITLE_CONTENTS' && (
+                        <>
+                          <Text style={styles.tit}>{item.title}</Text>
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.contents}</Text>
+                          </View>
+                        </>
+                      )}
+                      {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                        <View style={styles.txts}>
+                          <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* 투자개요 토글박스 */}
+          <View style={styles.detailTogglebox}>
+            <TouchableOpacity 
+              style={[styles.inTitle, expandedSections.summary && styles.inTitleOn]}
+              onPress={() => toggleSection('summary')}
+            >
+              <Text style={styles.inTitleText}>투자개요</Text>
+            </TouchableOpacity>
+            
+            {expandedSections.summary && (
+              <View style={styles.inCont}>
+                <View style={styles.contentWrap}>
+                  {summary && summary.map((item, index) => (
+                    <View key={index}>
+                      {item.text_type === 'TOP_TEXT' && item.top_text && (
+                        <View style={styles.txts}>
+                          <Text style={styles.txtsLi}>{item.top_text}</Text>
+                        </View>
+                      )}
+                      {item.text_type === 'TITLE_CONTENTS' && (
+                        <>
+                          <Text style={styles.tit}>{item.title}</Text>
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.contents}</Text>
+                          </View>
+                        </>
+                      )}
+                      {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                        <View style={styles.txts}>
+                          <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* 투자일정 토글박스 */}
+          <View style={styles.detailTogglebox}>
+            <TouchableOpacity 
+              style={[styles.inTitle, expandedSections.schedule && styles.inTitleOn]}
+              onPress={() => toggleSection('schedule')}
+            >
+              <Text style={styles.inTitleText}>투자일정</Text>
+            </TouchableOpacity>
+            
+            {expandedSections.schedule && (
+              <View style={styles.inCont}>
+                <View style={styles.contentWrap}>
+                  {schedule && schedule.map((item, index) => (
+                    <View key={index}>
+                      {item.text_type === 'TOP_TEXT' && item.top_text && (
+                        <View style={styles.txts}>
+                          <Text style={styles.txtsLi}>{item.top_text}</Text>
+                        </View>
+                      )}
+                      {item.text_type === 'TITLE_CONTENTS' && (
+                        <>
+                          <Text style={styles.tit}>{item.title}</Text>
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.contents}</Text>
+                          </View>
+                        </>
+                      )}
+                      {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                        <View style={styles.txts}>
+                          <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* 상품 리포트 토글박스 */}
+          <View style={styles.detailTogglebox}>
+            <TouchableOpacity 
+              style={[styles.inTitle, expandedSections.report && styles.inTitleOn]}
+              onPress={() => toggleSection('report')}
+            >
+              <Text style={styles.inTitleText}>상품 리포트</Text>
+            </TouchableOpacity>
+            
+            {expandedSections.report && (
+              <View style={styles.inCont}>
+                {/* 탭 메뉴 */}
+                <View style={styles.subTab}>
+                  <TouchableOpacity 
+                    style={[styles.subTabItem, activeReportTab === 0 && styles.subTabItemActive]}
+                    onPress={() => setActiveReportTab(0)}
+                  >
+                    <Text style={[styles.subTabText, activeReportTab === 0 && styles.subTabTextActive]}>사업소개</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.subTabItem, activeReportTab === 1 && styles.subTabItemActive]}
+                    onPress={() => setActiveReportTab(1)}
+                  >
+                    <Text style={[styles.subTabText, activeReportTab === 1 && styles.subTabTextActive]}>사업구조</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.subTabItem, activeReportTab === 2 && styles.subTabItemActive]}
+                    onPress={() => setActiveReportTab(2)}
+                  >
+                    <Text style={[styles.subTabText, activeReportTab === 2 && styles.subTabTextActive]}>사업현장</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.subTabItem, activeReportTab === 3 && styles.subTabItemActive]}
+                    onPress={() => setActiveReportTab(3)}
+                  >
+                    <Text style={[styles.subTabText, activeReportTab === 3 && styles.subTabTextActive]}>차입자 정보</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 사업소개 */}
+                {activeReportTab === 0 && (
+                  <View style={styles.contentWrap}>
+                    {intro && intro.map((item, index) => (
+                      <View key={index}>
+                        {item.text_type === 'TOP_TEXT' && item.top_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.top_text}</Text>
+                          </View>
+                        )}
+                        {item.text_type === 'TITLE_CONTENTS' && (
+                          <>
+                            <Text style={styles.tit}>{item.title}</Text>
+                            <View style={styles.txts}>
+                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                            </View>
+                          </>
+                        )}
+                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* 사업구조 */}
+                {activeReportTab === 1 && (
+                  <View style={styles.contentWrap}>
+                    {structure && structure.map((item, index) => (
+                      item.text_type === 'TOP_TEXT' && item.top_text && (
+                        <View key={index} style={styles.txts}>
+                          <Text style={styles.txtsLi}>{item.top_text}</Text>
+                        </View>
+                      )
+                    ))}
+                    {structure_file && structure_file.length > 0 && (
+                      <View style={styles.imgbox}>
+                        {structure_file.map((file, index) => (
+                          <Image key={index} source={{ uri: file.filePath }} style={styles.imgboxImage} resizeMode="contain" />
+                        ))}
+                      </View>
+                    )}
+                    {structure && structure.map((item, index) => (
+                      <View key={index}>
+                        {item.text_type === 'TITLE_CONTENTS' && (
+                          <>
+                            <Text style={styles.tit}>{item.title}</Text>
+                            <View style={styles.txts}>
+                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                            </View>
+                          </>
+                        )}
+                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* 사업현장 */}
+                {activeReportTab === 2 && (
+                  <View style={styles.contentWrap}>
+                    {place && place.map((item, index) => (
+                      item.text_type === 'TOP_TEXT' && item.top_text && (
+                        <View key={index} style={styles.txts}>
+                          <Text style={styles.txtsLi}>{item.top_text}</Text>
+                        </View>
+                      )
+                    ))}
+                    {place_file && place_file.length > 0 && (
+                      <View style={styles.imgbox}>
+                        {place_file.map((file, index) => (
+                          <Image key={index} source={{ uri: file.filePath }} style={styles.imgboxImage} resizeMode="contain" />
+                        ))}
+                      </View>
+                    )}
+                    {place && place.map((item, index) => (
+                      <View key={index}>
+                        {item.text_type === 'TITLE_CONTENTS' && (
+                          <>
+                            <Text style={styles.tit}>{item.title}</Text>
+                            <View style={styles.txts}>
+                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                            </View>
+                          </>
+                        )}
+                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* 차입자 정보 */}
+                {activeReportTab === 3 && (
+                  <View style={styles.contentWrap}>
+                    {borrower && borrower.map((item, index) => (
+                      <View key={index}>
+                        {item.text_type === 'TOP_TEXT' && item.top_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.top_text}</Text>
+                          </View>
+                        )}
+                        {item.text_type === 'TITLE_CONTENTS' && (
+                          <>
+                            <Text style={styles.tit}>{item.title}</Text>
+                            <View style={styles.txts}>
+                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                            </View>
+                          </>
+                        )}
+                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
           </View>
 
           {/* 증빙서류 토글박스 */}
@@ -457,62 +1075,269 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
             )}
           </View>
 
-          {/* 투자자 보호 (항상 표시) */}
-          <View style={[styles.detailTogglebox, styles.mb80]}>
-            <View style={styles.inCont}>
-              <View style={styles.contentWrap}>
-                <Text style={styles.htmlContent}>{contents?.contents_3}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* 자주하는질문 */}
-        <View style={styles.maWhiteBox}>
-          <View style={styles.inHead}>
-            <Text style={styles.icoFaq}>💬</Text>
-            <Text style={styles.whiteBoxTitle}>자주하는질문</Text>
-            <TouchableOpacity onPress={() => {
-              // TODO: FAQ 전체보기 페이지로 이동
-            }}>
-              <Text style={styles.more}>전체보기</Text>
+          {/* 강화된 투자자 보호 방안 토글박스 */}
+          <View style={[styles.detailTogglebox, styles.mb40]}>
+            <TouchableOpacity 
+              style={[styles.inTitle, expandedSections.protect && styles.inTitleOn]}
+              onPress={() => toggleSection('protect')}
+            >
+              <Text style={styles.inTitleText}>강화된 투자자 보호 방안</Text>
             </TouchableOpacity>
-          </View>
-          <View style={styles.inContFaq}>
-            {faq && faq.map((item, index) => (
-              <View key={index} style={styles.faqItem}>
-                <TouchableOpacity 
-                  style={[styles.faqTitbox, expandedFaq[index] && styles.faqTitboxOn]}
-                  onPress={() => toggleFaq(index)}
-                >
-                  <Text style={styles.faqIco}>Q</Text>
-                  <Text style={styles.faqTit}>{item.subject}</Text>
-                </TouchableOpacity>
-                {expandedFaq[index] && (
-                  <View style={styles.faqConbox}>
-                    <Text style={styles.faqCon}>{item.contents}</Text>
+            
+            {expandedSections.protect && (
+              <View style={styles.inCont}>
+                {/* 탭 메뉴 */}
+                <View style={styles.subTab1}>
+                  <TouchableOpacity 
+                    style={[styles.subTabItem, activeProtectTab === 0 && styles.subTabItemActive]}
+                    onPress={() => setActiveProtectTab(0)}
+                  >
+                    <Text style={[styles.subTabText, activeProtectTab === 0 && styles.subTabTextActive]}>투자자 보호장치</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.subTabItem, activeProtectTab === 1 && styles.subTabItemActive]}
+                    onPress={() => setActiveProtectTab(1)}
+                  >
+                    <Text style={[styles.subTabText, activeProtectTab === 1 && styles.subTabTextActive]}>투자 리스크</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.subTabItem, activeProtectTab === 2 && styles.subTabItemActive]}
+                    onPress={() => setActiveProtectTab(2)}
+                  >
+                    <Text style={[styles.subTabText, activeProtectTab === 2 && styles.subTabTextActive]}>투자 유의사항</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 투자자 보호장치 */}
+                {activeProtectTab === 0 && (
+                  <View style={styles.contentWrap}>
+                    {protect && protect.map((item, index) => (
+                      <View key={index}>
+                        {item.text_type === 'TOP_TEXT' && item.top_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.top_text}</Text>
+                          </View>
+                        )}
+                        {item.text_type === 'TITLE_CONTENTS' && (
+                          <>
+                            <Text style={styles.tit}>{item.title}</Text>
+                            <View style={styles.txts}>
+                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                            </View>
+                          </>
+                        )}
+                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* 투자 리스크 */}
+                {activeProtectTab === 1 && (
+                  <View style={styles.contentWrap}>
+                    {risk && risk.map((item, index) => (
+                      <View key={index}>
+                        {item.text_type === 'TOP_TEXT' && item.top_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.top_text}</Text>
+                          </View>
+                        )}
+                        {item.text_type === 'TITLE_CONTENTS' && (
+                          <>
+                            <Text style={styles.tit}>{item.title}</Text>
+                            <View style={styles.txts}>
+                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                            </View>
+                          </>
+                        )}
+                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* 투자 유의사항 */}
+                {activeProtectTab === 2 && (
+                  <View style={styles.contentWrap}>
+                    {caution && caution.map((item, index) => (
+                      <View key={index}>
+                        {item.text_type === 'TOP_TEXT' && item.top_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.top_text}</Text>
+                          </View>
+                        )}
+                        {item.text_type === 'TITLE_CONTENTS' && (
+                          <>
+                            <Text style={styles.tit}>{item.title}</Text>
+                            <View style={styles.txts}>
+                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                            </View>
+                          </>
+                        )}
+                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
+                          <View style={styles.txts}>
+                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
                   </View>
                 )}
               </View>
-            ))}
+            )}
           </View>
         </View>
       </ScrollView>
 
-      {/* 수익 계산 모달 (Old4와 동일) */}
+      {/* 수익 계산 모달 (ProductDetailScreen과 동일) */}
       <Modal
         visible={showCalcModal}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setShowCalcModal(false)}
       >
-        {/* 모달 내용은 Old4와 동일하므로 생략 (너무 길어서) */}
+        <View style={styles.popContainer}>
+          <TouchableOpacity 
+            style={styles.popMask} 
+            activeOpacity={1}
+            onPress={() => setShowCalcModal(false)}
+          />
+          <View style={styles.popWrapper}>
+            <View style={styles.popBox}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.popTitle}>예상 수익계산</Text>
+                
+                <View style={styles.pr4pl4}>
+                  <View style={styles.flexTit}>
+                    <Text style={styles.titText}>투자예정 금액</Text>
+                  </View>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.textInput}
+                      value={formatNumber(calcPrice)}
+                      onChangeText={handleCalcPriceChange}
+                      keyboardType="numeric"
+                    />
+                    <Text style={styles.txtUnit}>원</Text>
+                    <TouchableOpacity 
+                      style={styles.btnCalc}
+                      onPress={calculateInterest}
+                    >
+                      <Text style={styles.btnCalcText}>계산하기</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.hrLine} />
+
+                <View style={styles.boxCalc}>
+                  <View style={styles.dlTotal}>
+                    <Text style={styles.dtTotal}>예상 투자수익</Text>
+                    <Text style={styles.ddTotal}>{formatNumber(calcResult.totalProfit)} 원</Text>
+                  </View>
+                  <View style={styles.dlModal}>
+                    <Text style={styles.dtModal}>세전 총 수익</Text>
+                    <Text style={styles.ddModal}>{formatNumber(calcResult.totalInterest)} 원</Text>
+                  </View>
+                  <View style={styles.dlModal}>
+                    <Text style={styles.dtModal}>세금(이자소득세+주민세)</Text>
+                    <Text style={styles.ddModal}>{formatNumber(calcResult.totalTax)} 원</Text>
+                  </View>
+                  <View style={styles.dlModal}>
+                    <Text style={styles.dtModal}>플랫폼 수수료</Text>
+                    <Text style={styles.ddModal}>{formatNumber(calcResult.totalComm)} 원</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.repayTit}>상환 스케줄</Text>
+                <View style={styles.repayList}>
+                  {calcResult.schedule.map((item, index) => (
+                    <View key={index} style={styles.repayItem}>
+                      <TouchableOpacity 
+                        style={[styles.inHead, expandedSchedule[index] && styles.inHeadOn]}
+                        onPress={() => toggleSchedule(index)}
+                      >
+                        <Text style={styles.inHeadDt}>{item.round}회차</Text>
+                        <Text style={styles.inHeadDd}>
+                          세후 <Text style={styles.cnt}>{formatNumber(item.afterTax)}</Text> 원
+                        </Text>
+                        <Image 
+                          source={require('../assets/images/arrow_select.png')} 
+                          style={[styles.scheduleArrow, expandedSchedule[index] && styles.scheduleArrowRotated]}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                      
+                      {expandedSchedule[index] && (
+                        <View style={styles.inContModal}>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>지급일</Text>
+                            <Text style={styles.ddRow}>{item.paymentDate}</Text>
+                          </View>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>원금</Text>
+                            <Text style={styles.ddRow}>{formatNumber(item.principal)} 원</Text>
+                          </View>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>이자</Text>
+                            <Text style={styles.ddRow}>{formatNumber(item.interest)} 원</Text>
+                          </View>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>이자소득세</Text>
+                            <Text style={styles.ddRow}>{formatNumber(item.incomeTax)} 원</Text>
+                          </View>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>주민세</Text>
+                            <Text style={styles.ddRow}>{formatNumber(item.residentTax)} 원</Text>
+                          </View>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>플랫폼수수료</Text>
+                            <Text style={styles.ddRow}>{formatNumber(item.commission)} 원</Text>
+                          </View>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>실지급액</Text>
+                            <Text style={styles.ddRow}>{formatNumber(item.actualPayment)} 원</Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.flexText}>
+                  <Text style={styles.excIcon}>ⓘ</Text>
+                  <Text style={styles.txtNote}>
+                    위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
+                    변경될 수 있습니다. 또한 중도상환, 연체 등으로 지급일자와{'\n'}
+                    지급액에 차이가 있을 수 있습니다.
+                  </Text>
+                </View>
+
+                <View style={styles.btnBoxModal}>
+                  <TouchableOpacity 
+                    style={styles.btnStyleModal}
+                    onPress={() => setShowCalcModal(false)}
+                  >
+                    <Text style={styles.btnTextModal}>확인</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
 };
 
-// 스타일은 Old4와 유사하지만 간소화됨
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -571,22 +1396,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     color: '#393f44',
     fontSize: 14,
-    lineHeight: 15,
+    lineHeight: 21,
     fontWeight: '400',
     textAlign: 'center',
   },
   prdName: {
     marginTop: 8,
     paddingHorizontal: 16,
-    color: '#222',
-    fontSize: 20,
-    lineHeight: 30,
+    fontSize: 26,
+    lineHeight: 33.8,
     fontWeight: '700',
     textAlign: 'center',
+    color: '#222',
   },
-  sImg: {
-    width: 20,
-    height: 20,
+  prdDate: {
+    marginTop: 10,
+    paddingHorizontal: 16,
+    color: '#a3a7ab',
+    fontSize: 14,
+    lineHeight: 16.6,
+    fontWeight: '400',
+    textAlign: 'center',
   },
   prdImgbox: {
     position: 'relative',
@@ -611,6 +1441,725 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
     borderRadius: 51,
+    zIndex: 1,
+  },
+  sImg: {
+    position: 'absolute',
+    right: -20,
+    bottom: 2,
+    height: 50,
+    zIndex: 10,
+  },
+  progressGroup: {
+    marginHorizontal: 30,
+    marginTop: 30,
+  },
+  flexDl: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dl: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  dt: {
+    fontSize: 13,
+    lineHeight: 16.9,
+    color: '#666',
+    fontWeight: '400',
+  },
+  dd: {
+    marginTop: 4,
+    fontSize: 24,
+    lineHeight: 27.8,
+    fontWeight: '700',
+    color: '#333',
+  },
+  small: {
+    fontSize: 20,
+  },
+  progressBar: {
+    height: 5,
+    backgroundColor: '#e0e1e2',
+    borderRadius: 2.5,
+    marginTop: 16,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  progressVal: {
+    height: '100%',
+    backgroundColor: '#2c3db8',
+  },
+  progressInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  totalEm: {
+    fontWeight: '600',
+    color: '#333',
+  },
+  pctText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+  },
+  btnBox: {
+    marginTop: 24,
+    paddingHorizontal: 16,
+    marginBottom: 40,
+  },
+  btnStyle: {
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnBlue: {
+    backgroundColor: '#2c3db8',
+  },
+  btnGray: {
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+  },
+  btnText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  btnTextGray: {
+    color: '#999',
+  },
+  prdExpert: {
+    marginLeft: 5,
+    paddingHorizontal: 16,
+    color: '#393f44',
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '400',
+    textAlign: 'left',
+  },
+  detailIntrobox: {
+    marginHorizontal: 16,
+    marginTop: 5,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    backgroundColor: '#fff',
+  },
+  detailIntro: {
+    position: 'relative',
+    padding: 20,
+    overflow: 'hidden',
+  },
+  detailIntroBg: {
+    position: 'absolute',
+    right: 5,
+    top: 0,
+    width: 260,
+    height: 260,
+  },
+  title: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+  },
+  titleEm: {
+    color: '#197cff',
+  },
+  revenueDl: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  revenueDt: {
+    width: 84,
+    marginTop: 8,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 16.9,
+    fontWeight: '400',
+  },
+  revenueDd: {
+    width: SCREEN_WIDTH - 32 - 40 - 84,
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 16.9,
+    fontWeight: '600',
+  },
+  btnStyleSmall: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    borderRadius: 15,
+    backgroundColor: 'transparent',
+  },
+  btnTextSmall: {
+    fontSize: 13,
+    lineHeight: 16.9,
+    fontWeight: '400',
+    color: '#222',
+  },
+  detailEco: {
+    padding: 16,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f6f6f6',
+  },
+  titleEco: {
+    fontSize: 17,
+    lineHeight: 22.1,
+    fontWeight: '600',
+  },
+  ecoList: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+  },
+  ecoItem: {
+    alignItems: 'center',
+  },
+  ecoImgbox: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ecoIcon1: {
+    width: 17,
+  },
+  ecoIcon2: {
+    width: 26,
+  },
+  ecoIcon3: {
+    width: 30,
+  },
+  ecoTit: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 16.9,
+    fontWeight: '400',
+  },
+  ecoVal: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 16.9,
+    fontWeight: '600',
+  },
+  mt16pr20pl20: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+  },
+  starNotif: {
+    position: 'relative',
+    paddingLeft: 7,
+    color: '#a3a7ab',
+    fontSize: 13,
+    lineHeight: 19.5,
+    fontWeight: '400',
+    letterSpacing: -0.39,
+    textIndent: -7,
+    marginTop: 2,
+  },
+  detailInfobox: {
+    marginTop: 24,
+    marginHorizontal: 16,
+    marginBottom: 30,
+    padding: 20,
+    paddingBottom: 100,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    backgroundColor: '#fff',
+    height: 300,
+  },
+  infoTitle: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+  },
+  detailInfotab: {
+    flexDirection: 'row',
+    marginTop: 10,
+    marginBottom: 40,
+    paddingBottom: 40,
+  },
+  infotabItem: {
+    flex: 1,
+    opacity: 0.5,
+    paddingHorizontal: 4,
+  },
+  infotabItemActive: {
+    opacity: 1,
+  },
+  infotabInbox: {
+    position: 'relative',
+    minHeight: 80,
+    paddingTop: 20,
+    paddingHorizontal: 5,
+    paddingBottom: 20,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  infotabInboxActive: {
+    borderColor: '#2c3db8',
+  },
+  diType: {
+    position: 'absolute',
+    top: -10,
+    left: '60%',
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: '#2c3db8',
+    color: '#fff',
+    fontSize: 11,
+    lineHeight: 18,
+    fontWeight: '500',
+    transform: [{ translateX: -30 }],
+  },
+  infotabImgbox: {
+    width: 42,
+    height: 42,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infotabImg: {
+    width: 42,
+  },
+  infotabTit: {
+    marginTop: 5,
+    fontSize: 17,
+    lineHeight: 23.8,
+    fontWeight: '900',
+  },
+  infotabTag: {
+    marginTop: 4,
+    marginBottom: 10,
+    color: '#666',
+    fontSize: 11,
+    lineHeight: 15.4,
+    fontWeight: '400',
+  },
+  detailInfotabCon: {
+    marginTop: 12,
+    maxHeight: 800,
+  },
+  numtit: {
+    position: 'relative',
+    marginTop: 20,
+    paddingLeft: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  num: {
+    position: 'absolute',
+    top: 3,
+    left: 0,
+    minWidth: 16,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: '#2c3db8',
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  numtitText: {
+    color: '#2c3db8',
+    fontSize: 17,
+    lineHeight: 22.1,
+    fontWeight: '700',
+  },
+  txt: {
+    marginTop: 10,
+    color: '#393f44',
+    fontSize: 15,
+    lineHeight: 22.5,
+    fontWeight: '600',
+  },
+  detailTogglebox: {
+    marginTop: 10,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 0,
+    elevation: 1,
+  },
+  inTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    height: 55,
+    paddingHorizontal: 20,
+    paddingRight: 40,
+  },
+  inTitleOn: {
+    // 확장 상태
+  },
+  inTitleText: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '700',
+  },
+  inCont: {
+    // 컨텐츠 영역
+  },
+  expertBox: {
+    padding: 20,
+    paddingBottom: 24,
+  },
+  expertInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  expertImgbox: {
+    marginRight: 8,
+  },
+  expertImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  expertTxtbox: {
+    flex: 1,
+  },
+  expertName: {
+    color: '#393f44',
+    fontSize: 12,
+    lineHeight: 15.6,
+  },
+  expertPos: {
+    color: '#bfc3c7',
+    fontSize: 12,
+    lineHeight: 15.6,
+  },
+  expertTxt: {
+    marginTop: 16,
+    color: '#666',
+    fontSize: 15,
+    lineHeight: 22.5,
+  },
+  contentWrap: {
+    padding: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 36,
+  },
+  imgbox: {
+    paddingBottom: 4,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  imgboxImage: {
+    width: '100%',
+    height: 200,
+  },
+  tit: {
+    paddingHorizontal: 4,
+    marginTop: 20,
+    color: '#393f44',
+    fontSize: 20,
+    lineHeight: 30,
+    fontWeight: '700',
+  },
+  txts: {
+    paddingHorizontal: 4,
+    marginTop: 8,
+  },
+  txtsLi: {
+    position: 'relative',
+    paddingLeft: 9,
+    color: '#666',
+    fontSize: 15,
+    lineHeight: 22.5,
+  },
+  subTab: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  subTab1: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  subTabItem: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  subTabItemActive: {
+    borderBottomColor: '#2c3db8',
+  },
+  subTabText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#999',
+  },
+  subTabTextActive: {
+    color: '#2c3db8',
+    fontWeight: '600',
+  },
+  docEvidence: {
+    padding: 20,
+  },
+  fileLink: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e1e2',
+  },
+  fileLinkText: {
+    fontSize: 15,
+    color: '#2c3db8',
+    textDecorationLine: 'underline',
+  },
+  mb40: {
+    marginBottom: 40,
+  },
+  // 모달 스타일
+  popContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    paddingVertical: 48,
+    paddingHorizontal: 16,
+  },
+  popMask: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(34, 34, 34, 0.7)',
+  },
+  popWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  popBox: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    maxHeight: '90%',
+  },
+  popTitle: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  pr4pl4: {
+    paddingHorizontal: 4,
+  },
+  flexTit: {
+    marginBottom: 8,
+  },
+  titText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  flexInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  textInput: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: '#333',
+  },
+  txtUnit: {
+    marginLeft: 8,
+    fontSize: 15,
+    color: '#666',
+  },
+  btnCalc: {
+    height: 44,
+    paddingHorizontal: 16,
+    marginLeft: 20,
+    backgroundColor: '#2c3db8',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnCalcText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  hrLine: {
+    height: 1,
+    backgroundColor: '#e0e1e2',
+    marginVertical: 20,
+  },
+  boxCalc: {
+    paddingVertical: 16,
+  },
+  dlTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e1e2',
+    marginBottom: 12,
+  },
+  dtTotal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+  },
+  ddTotal: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#197cff',
+  },
+  dlModal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  dtModal: {
+    fontSize: 14,
+    color: '#666',
+  },
+  ddModal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  repayTit: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  repayList: {
+    marginBottom: 20,
+  },
+  repayItem: {
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  inHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f6f6f6',
+  },
+  inHeadOn: {
+    backgroundColor: '#e8eeff',
+  },
+  inHeadDt: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  inHeadDd: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+    marginLeft: 12,
+  },
+  scheduleArrow: {
+    width: 12,
+    height: 12,
+    marginLeft: 8,
+  },
+  scheduleArrowRotated: {
+    transform: [{ rotate: '180deg' }],
+  },
+  cnt: {
+    fontWeight: '700',
+    color: '#2c3db8',
+  },
+  inContModal: {
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  dlRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  dtRow: {
+    fontSize: 13,
+    color: '#666',
+  },
+  ddRow: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  flexText: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 8,
+    marginBottom: 20,
+  },
+  excIcon: {
+    fontSize: 16,
+    color: '#197cff',
+    marginRight: 8,
+    marginTop: 2,
+  },
+  txtNote: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#666',
+  },
+  btnBoxModal: {
+    marginTop: 24,
+  },
+  btnStyleModal: {
+    height: 48,
+    backgroundColor: '#2c3db8',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnTextModal: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
 
