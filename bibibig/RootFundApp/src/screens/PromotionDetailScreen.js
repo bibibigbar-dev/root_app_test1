@@ -18,6 +18,7 @@ const PromotionDetailScreen = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [promotionData, setPromotionData] = useState(null);
+  const [isOngoing, setIsOngoing] = useState(true); // 진행 중 여부
 
   useEffect(() => {
     loadPromotionDetail();
@@ -29,7 +30,29 @@ const PromotionDetailScreen = ({ navigation, route }) => {
       const response = await ApiService.api.get(`/app/board/promotion/${idx}`);
       
       if (response.data && response.data.dto) {
-        setPromotionData(response.data.dto);
+        const data = response.data.dto;
+        setPromotionData(data);
+        
+        // 프로모션 진행 상태 판단
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // 시간을 00:00:00으로 설정
+        
+        if (data.start_date && data.end_date) {
+          const startDate = new Date(data.start_date);
+          const endDate = new Date(data.end_date);
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999); // 종료일은 23:59:59까지
+          
+          // 오늘이 시작일과 종료일 사이에 있으면 진행중
+          const ongoing = today >= startDate && today <= endDate;
+          setIsOngoing(ongoing);
+          console.log('프로모션 상태:', {
+            today: today.toISOString(),
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            ongoing: ongoing
+          });
+        }
       }
     } catch (error) {
       console.error('프로모션 상세 조회 실패:', error);
@@ -76,16 +99,16 @@ const PromotionDetailScreen = ({ navigation, route }) => {
         <View style={styles.tabSwiper}>
           <View style={styles.tabSwiperWrapper}>
             <TouchableOpacity 
-              style={styles.tabSlide}
+              style={[styles.tabSlide, isOngoing && styles.tabSlideActive]}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.tabLink}>진행중 프로모션</Text>
+              <Text style={[styles.tabLink, isOngoing && styles.tabLinkActive]}>진행중 프로모션</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.tabSlide}
+              style={[styles.tabSlide, !isOngoing && styles.tabSlideActive]}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.tabLink}>종료된 프로모션</Text>
+              <Text style={[styles.tabLink, !isOngoing && styles.tabLinkActive]}>종료된 프로모션</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -172,6 +195,10 @@ const styles = StyleSheet.create({
     marginRight: 24,
     position: 'relative',
   },
+  tabSlideActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#2c3db8',
+  },
   tabLink: {
     paddingTop: 3,
     paddingBottom: 7,
@@ -179,6 +206,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '600',
     color: '#bfc3c7',
+  },
+  tabLinkActive: {
+    color: '#2c3db8',
   },
   loadingContainer: {
     flex: 1,

@@ -9,8 +9,10 @@ import {
   Image,
   Dimensions,
   Linking,
+  Modal,
   FlatList,
 } from 'react-native';
+import Swiper from 'react-native-swiper';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
@@ -29,11 +31,16 @@ const MainScreen = ({ navigation }) => {
     notice: [],
     topBanner: null,
     topPromotionBanner: [],
+    popup: [],
+    popup_cnt: 0,
   });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentReviewSlide, setCurrentReviewSlide] = useState(0);
   const [currentNewsSlide, setCurrentNewsSlide] = useState(0);
   const [expandedFaqIndex, setExpandedFaqIndex] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [dontShowFor24Hours, setDontShowFor24Hours] = useState(false);
+  const [filteredPopups, setFilteredPopups] = useState([]);
   const flatListRef = useRef(null);
   const reviewScrollRef = useRef(null);
   const newsScrollRef = useRef(null);
@@ -42,6 +49,10 @@ const MainScreen = ({ navigation }) => {
     loadUserData();
     loadMainData();
   }, []);
+
+  useEffect(() => {
+    checkAndShowPopup();
+  }, [mainData.popup, mainData.popup_cnt, user]);
 
   const loadUserData = async () => {
     try {
@@ -85,6 +96,8 @@ const MainScreen = ({ navigation }) => {
         notice: result?.notice || [],
         topBanner: result?.top_banner_m_filepath || null,
         topPromotionBanner: result?.top_promotion_banner || [],
+        popup: result?.popup || [],
+        popup_cnt: result?.popup_cnt || 0,
       });
     } catch (error) {
       console.error('메인 데이터 로드 오류:', error);
@@ -100,11 +113,162 @@ const MainScreen = ({ navigation }) => {
     );
   };
 
+  const checkAndShowPopup = async () => {
+    try {
+      console.log('팝업 체크 시작:', {
+        popup_cnt: mainData.popup_cnt,
+        popup_length: mainData.popup.length,
+        user: user ? '로그인' : '비로그인'
+      });
+
+      if (mainData.popup_cnt > 0 && mainData.popup.length > 0) {
+        // 24시간 동안 보지 않기 체크
+        const popupHideTime = await AsyncStorage.getItem('popupHideTime');
+        if (popupHideTime) {
+          const hideTime = parseInt(popupHideTime, 10);
+          const now = Date.now();
+          if (now < hideTime) {
+            console.log('팝업 24시간 동안 보지 않기 설정됨');
+            return;
+          } else {
+            // 시간이 지났으면 삭제
+            await AsyncStorage.removeItem('popupHideTime');
+          }
+        }
+
+        // 로그인 상태에 따라 팝업 필터링
+        let popups = mainData.popup;
+        if (!user) {
+          // 비로그인 상태: member_open_yn이 없는 팝업만 표시
+          popups = mainData.popup.filter(popup => !popup.member_open_yn);
+          console.log('비로그인 팝업 필터링:', popups.length);
+        }
+      
+        console.log('팝업 표시:', popups.length);
+        if (popups.length > 0) {
+          setFilteredPopups(popups);
+          setShowPopup(true);
+        }
+      }
+    } catch (error) {
+      console.error('팝업 체크 오류:', error);
+    }
+  };
+
+  const handleClosePopup = async () => {
+    console.log('팝업 닫기');
+
+    // 24시간 보지 않기 체크되어 있으면 저장
+    if (dontShowFor24Hours) {
+      const hideUntil = Date.now() + (24 * 60 * 60 * 1000);
+      await AsyncStorage.setItem('popupHideTime', hideUntil.toString());
+      console.log('24시간 동안 보지 않기 설정됨');
+    }
+
+    // 팝업 완전히 닫기
+    setShowPopup(false);
+    setDontShowFor24Hours(false);
+    setFilteredPopups([]);
+  };
+
+  const handlePopupLinkPress = async (url) => {
+    if (!url) return;
+
+    console.log('팝업 링크 클릭:', url);
+
+    // 먼저 팝업 닫기
+    setShowPopup(false);
+
+    try {
+      // /board/promotion 포함 여부 확인
+      if (url.includes('/board/promotion')) {
+        const match = url.match(/\/board\/promotion\/(\d+)/);
+        if (match && match[1]) {
+          const promotionId = match[1];
+          console.log('프로모션 상세로 이동:', promotionId);
+          
+          // 프로모션 상세 화면으로 이동 (idx를 promotionId로 전달)
+          navigation.navigate('PromotionDetail', { 
+            idx: promotionId,
+            promotionId: promotionId
+          });
+          return;
+        }
+      }
+
+      // /product/detail 포함 여부 확인
+      if (url.includes('/product/detail')) {
+        const match = url.match(/\/product\/detail\/([A-Z0-9]+)/);
+        if (match && match[1]) {
+          const orderKey = match[1];
+          console.log('상품 상세로 이동:', orderKey);
+          
+          // API 호출하여 상품 정보 가져오기
+          const apiService = new ApiService();
+          const response = await apiService.get(`/app/product/detail/${orderKey}`);
+          console.log('상품 데이터:', response);
+          
+          // idx에 따라 적절한 화면으로 이동
+          const idx = response?.prod?.idx || 999;
+          let screenName = 'ProductDetail'; // 기본값 (idx > 498)
+          
+          if (idx > 498) {
+            screenName = 'ProductDetail';
+          } else if (idx > 415) {
+            screenName = 'ProductDetailOld4';
+          } else if (idx > 309) {
+            screenName = 'ProductDetailOld1';
+          } else if (idx > 242) {
+            screenName = 'ProductDetailOld2';
+          } else if (idx <= 242) {
+            screenName = 'ProductDetailOld3';
+          }
+          
+          console.log(`📱 팝업에서 상품 상세 이동: idx=${idx}, screen=${screenName}`);
+          navigation.navigate(screenName, { orderKey: orderKey });
+          return;
+        }
+      }
+
+      // 그 외의 경우 외부 브라우저로 열기
+      console.log('외부 링크로 열기:', url);
+      Linking.openURL(url).catch((err) =>
+        console.error('팝업 링크 열기 실패:', err)
+      );
+    } catch (error) {
+      console.error('팝업 링크 처리 오류:', error);
+      // 오류 발생 시 외부 브라우저로 열기
+      Linking.openURL(url).catch((err) =>
+        console.error('팝업 링크 열기 실패:', err)
+      );
+    }
+  };
+
   const formatCurrency = (value) => {
     if (!value) return '0';
     const stringValue = typeof value === 'string' ? value : String(value);
     const numericValue = stringValue.replace(/[^0-9]/g, '');
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  const navigateToProductDetail = (item) => {
+    const idx = item.idx;
+    let screenName = 'ProductDetail'; // 기본값 (idx > 498)
+
+    if (idx > 498) {
+      screenName = 'ProductDetail';
+    } else if (idx > 415) {
+      screenName = 'ProductDetailOld4';
+    } else if (idx > 309) {
+      screenName = 'ProductDetailOld1';
+    } else if (idx > 242) {
+      screenName = 'ProductDetailOld2';
+    } else if (idx <= 242) {
+      screenName = 'ProductDetailOld3';
+    }
+
+    console.log(`📱 상품 상세 이동: idx=${idx}, screen=${screenName}`);
+    navigation.navigate(screenName, { orderKey: item.orderKey });
   };
 
   // 배너 슬라이드 렌더링
@@ -115,7 +279,7 @@ const MainScreen = ({ navigation }) => {
       return (
         <TouchableOpacity
           style={styles.slideContainer}
-          onPress={() => console.log('상품 상세:', product.orderKey)}
+          onPress={() => navigateToProductDetail(product)}
           activeOpacity={0.9}
         >
           <View style={styles.slideInbox}>
@@ -209,7 +373,13 @@ const MainScreen = ({ navigation }) => {
                 </View>
               </View>
             </View>
-            <TouchableOpacity style={styles.btnGo}>
+            <TouchableOpacity 
+              style={styles.btnGo}
+              onPress={(e) => {
+                e.stopPropagation();
+                navigateToProductDetail(product);
+              }}
+            >
               <Text style={styles.btnGoText}>상품 보러가기</Text>
             </TouchableOpacity>
           </View>
@@ -249,7 +419,11 @@ const MainScreen = ({ navigation }) => {
       return (
         <TouchableOpacity
           style={styles.slideContainer}
-          onPress={() => item.data.url && Linking.openURL(item.data.url)}
+          onPress={() => {
+            if (item.data.url) {
+              navigation.navigate('WebView', { url: item.data.url });
+            }
+          }}
           activeOpacity={0.9}
         >
           <View style={styles.slideInbox}>
@@ -261,13 +435,30 @@ const MainScreen = ({ navigation }) => {
               {item.data.linkText && (
                 <TouchableOpacity
                   style={styles.viewPast}
-                  onPress={() => item.data.linkUrl && Linking.openURL(item.data.linkUrl)}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    if (item.data.linkUrl) {
+                      navigation.navigate('WebView', { url: item.data.linkUrl });
+                    }
+                  }}
                 >
                   <Text style={styles.viewPastText}>{item.data.linkText}</Text>
                 </TouchableOpacity>
               )}
             </View>
-            <TouchableOpacity style={[styles.btnGo, item.data.btnStyle]}>
+            <TouchableOpacity 
+              style={[styles.btnGo, item.data.btnStyle]}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (item.data.navigateTo) {
+                  // 특정 화면으로 이동
+                  navigation.navigate(item.data.navigateTo);
+                } else if (item.data.url) {
+                  // WebView로 이동
+                  navigation.navigate('WebView', { url: item.data.url });
+                }
+              }}
+            >
               <Text style={styles.btnGoText}>{item.data.btnText}</Text>
             </TouchableOpacity>
           </View>
@@ -317,6 +508,7 @@ const MainScreen = ({ navigation }) => {
         btnText: '상담 신청하기',
         btnStyle: styles.btnGoBlack,
         bgColor: '#F5F5F5',
+        navigateTo: 'ConsultationRequest', // 특별 처리: 상담 신청 화면으로 이동
       }
     });
     
@@ -989,6 +1181,88 @@ const MainScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* 팝업 모달 */}
+      {showPopup && filteredPopups.length > 0 && (
+        <Modal
+          visible={true}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={handleClosePopup}
+        >
+          <View style={styles.popupContainer}>
+            <View style={styles.popupMask} />
+            <View style={styles.popupWrapper}>
+              <View style={styles.popupBox}>
+                {/* 팝업 스와이퍼 */}
+                <View style={styles.popupSwiperContainer}>
+                  <Swiper
+                    loop={true}
+                    autoplay={true}
+                    autoplayTimeout={3}
+                    showsPagination={true}
+                    paginationStyle={styles.popupPagination}
+                    dot={<View style={styles.popupPaginationDot} />}
+                    activeDot={<View style={styles.popupPaginationDotActive} />}
+                  >
+                    {filteredPopups.map((item, index) => (
+                      <View key={index} style={styles.popupSlide}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (item?.link_url) {
+                              handlePopupLinkPress(item.link_url);
+                            }
+                          }}
+                          activeOpacity={0.9}
+                        >
+                          <Image
+                            source={{ uri: item?.filePath }}
+                            style={styles.popupImage}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </Swiper>
+                </View>
+
+                {/* 팝업 하단 */}
+                <View style={styles.popupBottom}>
+                  <TouchableOpacity
+                    style={styles.popupCheckbox}
+                    onPress={() => {
+                      console.log('체크박스 클릭:', !dontShowFor24Hours);
+                      setDontShowFor24Hours(!dontShowFor24Hours);
+                    }}
+                  >
+                    <Image
+                      source={
+                        dontShowFor24Hours
+                          ? require('../assets/images/checkbox_on.png')
+                          : require('../assets/images/checkbox_off.png')
+                      }
+                      style={styles.popupCheckboxIcon}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.popupCheckboxText}>24시간 열지 않기</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.popupCloseBtn}
+                    onPress={handleClosePopup}
+                  >
+                    <Image
+                      source={require('../assets/images/ico_close_gray.png')}
+                      style={styles.popupCloseIcon}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.popupCloseText}>닫기</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 };
@@ -1580,7 +1854,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   kakaoBanner: {
-    borderRadius: 10,
+    borderRadius: 15,
     overflow: 'hidden',
     marginHorizontal: 15,
   },
@@ -1971,6 +2245,99 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     opacity: 0.7,
     fontWeight: '400',
+  },
+  // Popup styles
+  popupContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popupMask: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#222',
+    opacity: 0.7,
+  },
+  popupWrapper: {
+    width: '100%',
+    paddingHorizontal: 15,
+    zIndex: 1,
+  },
+  popupBox: {
+    backgroundColor: '#fff',
+    borderRadius: 0,
+    overflow: 'hidden',
+  },
+  popupSwiperContainer: {
+    position: 'relative',
+    height: 470,
+  },
+  popupSlide: {
+    width: SCREEN_WIDTH - 30,
+    height: 470,
+    flex: 1,
+  },
+  popupImage: {
+    width: '100%',
+    height: 470,
+  },
+  popupPagination: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    left: 'auto',
+    bottom: 'auto',
+  },
+  popupPaginationDot: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: '#e0e1e2',
+    marginLeft: 8,
+  },
+  popupPaginationDotActive: {
+    backgroundColor: '#fff',
+  },
+  popupBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingRight: 10,
+    backgroundColor: '#fff',
+  },
+  popupCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 15,
+  },
+  popupCheckboxIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 6,
+  },
+  popupCheckboxText: {
+    fontSize: 15,
+    color: '#393f44',
+  },
+  popupCloseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  popupCloseIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 4,
+  },
+  popupCloseText: {
+    fontSize: 15,
+    color: '#393f44',
   },
 });
 

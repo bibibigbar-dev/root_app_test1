@@ -14,7 +14,11 @@ import AccountChangeScreen from '../screens/AccountChangeScreen';
 import FindEmailScreen from '../screens/FindEmailScreen';
 import FindPasswordScreen from '../screens/FindPasswordScreen';
 import PhoneAuthScreen from '../screens/PhoneAuthScreen';
-import SignUpScreen from '../screens/SignUpScreen';
+import SignUpTypeScreen from '../screens/SignUpTypeScreen';
+import SignUpPrivateSelectScreen from '../screens/SignUpPrivateSelectScreen';
+import SignUpPrivateScreen from '../screens/SignUpPrivateScreen';
+import SignUpPrivateAdultScreen from '../screens/SignUpPrivateAdultScreen';
+import SignUpCorpScreen from '../screens/SignUpCorpScreen';
 import CorporateInvestmentScreen from '../screens/CorporateInvestmentScreen';
 import ProductListScreen from '../screens/ProductListScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
@@ -23,6 +27,8 @@ import ProductDetailOld2Screen from '../screens/ProductDetailOld2Screen';
 import ProductDetailOld3Screen from '../screens/ProductDetailOld3Screen';
 import ProductDetailOld4Screen from '../screens/ProductDetailOld4Screen';
 import InvestRequestScreen from '../screens/InvestRequestScreen';
+import InvestSuccessScreen from '../screens/InvestSuccessScreen';
+import WebViewScreen from '../screens/WebViewScreen';
 import HowToUseScreen from '../screens/HowToUseScreen';
 import CompanyIntroScreen from '../screens/CompanyIntroScreen';
 import LoanScreen from '../screens/LoanScreen';
@@ -51,7 +57,7 @@ import InvestReceiptScreen from '../screens/InvestReceiptScreen';
 const Stack = createStackNavigator();
 
 // Header를 사용하지 않는 화면들 (로그인, 회원가입 등)
-const SCREENS_WITHOUT_HEADER = ['Login', 'WithdrawalLogin', 'SignUp', 'Withdrawal', 'AccountChange', 'PhoneAuth'];
+const SCREENS_WITHOUT_HEADER = ['Login', 'WithdrawalLogin', 'Withdrawal', 'AccountChange', 'PhoneAuth'];
 
 // 딥링크 설정
 const linking = {
@@ -70,6 +76,7 @@ const linking = {
       ProductList: 'products',
       ProductDetail: 'product/:orderKey',
       InvestRequest: 'invest-request/:orderKey',
+      InvestSuccess: 'invest-success',
       HowToUse: 'how-to-use',
       CompanyIntro: 'company-intro',
       Loan: 'loan',
@@ -156,7 +163,7 @@ const AppNavigator = () => {
   const isPromotionScreen = currentRoute === 'Promotion';
   
   // Back 버튼이 필요한 화면들
-  const screensWithBack = ['FindEmail', 'FindPassword', 'InvestReceipt', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'ConsultationRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms'];
+  const screensWithBack = ['FindEmail', 'FindPassword', 'SignUpType', 'SignUpPrivateSelect', 'SignUpPrivate', 'SignUpCorp', 'InvestReceipt', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'ConsultationRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms', 'WebView'];
   const shouldShowBack = screensWithBack.includes(currentRoute);
 
   // Slightly increase offset so screens clear the fixed header/GNB
@@ -204,7 +211,11 @@ const AppNavigator = () => {
           <Stack.Screen name="FindEmail" component={FindEmailScreen} />
           <Stack.Screen name="FindPassword" component={FindPasswordScreen} />
           <Stack.Screen name="PhoneAuth" component={PhoneAuthScreen} />
-          <Stack.Screen name="SignUp" component={SignUpScreen} />
+          <Stack.Screen name="SignUpType" component={SignUpTypeScreen} />
+          <Stack.Screen name="SignUpPrivateSelect" component={SignUpPrivateSelectScreen} />
+          <Stack.Screen name="SignUpPrivate" component={SignUpPrivateScreen} />
+          <Stack.Screen name="SignUpPrivateAdult" component={SignUpPrivateAdultScreen} />
+          <Stack.Screen name="SignUpCorp" component={SignUpCorpScreen} />
           <Stack.Screen name="CorporateInvestment" component={CorporateInvestmentScreen} />
           <Stack.Screen name="ProductList" component={ProductListScreen} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
@@ -213,6 +224,8 @@ const AppNavigator = () => {
           <Stack.Screen name="ProductDetailOld3" component={ProductDetailOld3Screen} />
           <Stack.Screen name="ProductDetailOld4" component={ProductDetailOld4Screen} />
           <Stack.Screen name="InvestRequest" component={InvestRequestScreen} />
+          <Stack.Screen name="InvestSuccess" component={InvestSuccessScreen} />
+          <Stack.Screen name="WebView" component={WebViewScreen} />
           <Stack.Screen name="HowToUse" component={HowToUseScreen} />
           <Stack.Screen name="CompanyIntro" component={CompanyIntroScreen} />
           <Stack.Screen name="Loan" component={LoanScreen} />

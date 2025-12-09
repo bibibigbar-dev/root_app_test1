@@ -67,10 +67,10 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
   const checkLoginStatus = async () => {
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      const userToken = await AsyncStorage.getItem('userToken');
-      setIsLoggedIn(!!(userData && userToken));
-      console.log('로그인 상태:', !!(userData && userToken));
+      const currentUser = await ApiService.getCurrentUser();
+      const isUserLoggedIn = !!(currentUser && currentUser.id);
+      setIsLoggedIn(isUserLoggedIn);
+      console.log('로그인 상태:', isUserLoggedIn, '사용자:', currentUser);
     } catch (error) {
       console.error('로그인 상태 확인 오류:', error);
       setIsLoggedIn(false);
@@ -431,7 +431,8 @@ const ProductDetailScreen = ({ navigation, route }) => {
   const isNewDesign = prod.idx > 498;
 
   return (
-    <View style={styles.container}>      {/* Back 버튼과 공유 버튼 */}
+    <View style={styles.container}>
+      {/* Back 버튼과 공유 버튼 */}
       <View style={styles.topButtonContainer}>
         <TouchableOpacity 
           style={styles.backButton}

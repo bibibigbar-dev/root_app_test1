@@ -10,14 +10,20 @@ import {
   Alert,
   Linking,
   Clipboard,
+  Dimensions,
+  Modal,
+  useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import LinearGradient from 'react-native-linear-gradient';
+import RenderHtml from 'react-native-render-html';
 import api from '../services/api';
 
 const InvestRequestScreen = ({ navigation, route }) => {
   const { orderNumber, orderKey } = route.params || {};
   // orderKey와 orderNumber 둘 다 지원 (호환성)
   const productOrderNumber = orderNumber || orderKey;
+  const { width } = useWindowDimensions();
 
   // State
   const [prod, setProd] = useState({});
@@ -42,6 +48,11 @@ const InvestRequestScreen = ({ navigation, route }) => {
   const [expandedToggle, setExpandedToggle] = useState({
     charge: false,
   });
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const scrollViewRef = React.useRef(null);
+  const [showInvestLimitModal, setShowInvestLimitModal] = useState(false);
+  const [showInvestGradeModal, setShowInvestGradeModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     loadInvestData();
@@ -117,21 +128,24 @@ const InvestRequestScreen = ({ navigation, route }) => {
   };
 
   const formatNumber = (num) => {
-    if (!num && num !== 0) return '0';
+    if (!num && num !== 0) return '';
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
   const handleAmountChange = (text) => {
     const numericValue = text.replace(/[^0-9]/g, '');
-    setInvestAmount(formatNumber(numericValue));
+    if (numericValue === '') {
+      setInvestAmount('');
+    } else {
+      setInvestAmount(formatNumber(numericValue));
+    }
   };
 
   const handleRefresh = async () => {
     try {
-      const response = await api.api.post('/product/balance/refresh', api.convertToFormData({}));
-      if (response.data) {
+      const response = await api.api.post('/app/product/balance/refresh', api.convertToFormData({}));
+      if (response.data !== undefined && response.data !== null) {
         setBalance(response.data);
-        Alert.alert('투자하기', '예치금 잔액이 갱신되었습니다.');
       }
     } catch (error) {
       console.error('❌ 예치금 갱신 실패:', error);
@@ -149,9 +163,14 @@ const InvestRequestScreen = ({ navigation, route }) => {
   const handleRefereeCheck = async () => {
     const trimmedCode = refereeCode.replace(/ /g, '');
     
+    if (!trimmedCode) {
+      Alert.alert('투자하기', '추천인 코드를 입력해주세요.');
+      return;
+    }
+    
     try {
-      const formData = api.convertToFormData({ referee_code: trimmedCode });
-      const response = await api.api.post('/product/referee/check', formData);
+      const formData = api.convertToFormData({ referee_code: trimmedCode.toString() });
+      const response = await api.api.post('/app/product/referee/check', formData);
       
       if (response.data.rtnvalue === '0') {
         setRefereeCheckYn('Y');
@@ -162,6 +181,7 @@ const InvestRequestScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('❌ 추천인 확인 실패:', error);
+      setRefereeCheckYn('N');
       Alert.alert('투자하기', '추천인코드 확인 도중 오류가 발생하였습니다.');
     }
   };
@@ -202,12 +222,36 @@ const InvestRequestScreen = ({ navigation, route }) => {
     }
 
     try {
+      // 현재 로그인한 사용자 정보 가져오기
+      const currentUser = await api.getCurrentUser();
+      const memberId = currentUser?.session?.member_id || currentUser?.member_id;
+      
+      if (!memberId) {
+        Alert.alert('오류', '로그인이 필요합니다.');
+        navigation.navigate('Login');
+        return;
+      }
+
+      // 보안 요청 데이터 생성
+      const reqModesFormData = api.convertToFormData({ reqdata: investment });
+      const reqModesResponse = await api.api.post('/app/setreqmodes', reqModesFormData);
+      
+      if (!reqModesResponse.data) {
+        Alert.alert('투자하기', '요청 데이터 생성 중 오류가 발생하였습니다. 다시 시도하여 주세요.');
+        return;
+      }
+
+      // 투자 처리 API 호출
       const formData = api.convertToFormData({
+        member_id: memberId.toString(),
         orderNumber: productOrderNumber.toString(),
         investment: investment.toString(),
         referee_code: trimmedRefereeCode.toString(),
+        _bcsrmd1: reqModesResponse.data.data1,
+        _bcsrmd2: reqModesResponse.data.data2,
       });
-      const response = await api.api.post('/product/invest/process', formData);
+      
+      const response = await api.api.post('/app/product/invest/process', formData);
 
       if (response.data.rtnvalue === '0') {
         // Navigate to success screen
@@ -326,6 +370,7 @@ const InvestRequestScreen = ({ navigation, route }) => {
       <ScrollView style={styles.scrollView}>
         {/* Product Item */}
         <View style={styles.blBox}>
+          <View style={styles.blBoxBefore} />
           <View style={styles.productItem}>
             <View style={styles.productImgbox}>
               {renderThumbnail()}
@@ -337,9 +382,11 @@ const InvestRequestScreen = ({ navigation, route }) => {
             </View>
             
             <View style={styles.productTxtbox}>
-              <Text style={styles.productNum}>
-                {expertopinion.note ? expertopinion.note.replace(/\n/g, ' ') : ''}
-              </Text>
+              {expertopinion?.note && (
+                <Text style={styles.productNum}>
+                  {expertopinion.note.replace(/\n/g, ' ')}
+                </Text>
+              )}
               <Text style={styles.productName}>{prod.orderName}</Text>
               <Text style={styles.productDate}>
                 모집기간 {prod.start_date}({prod.start_week}) ~ {prod.end_date}({prod.end_week})
@@ -393,11 +440,18 @@ const InvestRequestScreen = ({ navigation, route }) => {
           <View style={styles.progressGroup}>
             <Text style={styles.txtStit}>투자 진행률</Text>
             <View style={styles.progressBar}>
-              <View style={[styles.progressVal, { width: `${prod.percent || 0}%` }]} />
+              <View style={styles.progressBarBefore} />
+              <LinearGradient
+                colors={['#495ad8', '#77abf8']}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 0 }}
+                style={[styles.progressVal, { width: `${prod.percent || 0}%` }]}
+              />
               <View style={styles.progressTip}>
                 <Text style={styles.progressTipText}>
                   모집 잔액 {formatNumber(prod.left_price)}원
                 </Text>
+                <View style={styles.progressTipArrow} />
               </View>
             </View>
             <View style={styles.progressInfo}>
@@ -414,15 +468,19 @@ const InvestRequestScreen = ({ navigation, route }) => {
         <View style={styles.bodyGray}>
           {/* Special Investor Notice */}
           <View style={styles.flexTxtlimit}>
-            <View style={styles.icoCoin} />
+            <Image
+              source={require('../assets/images/ico_coin.png')}
+              style={styles.icoCoin}
+              resizeMode="contain"
+            />
             <Text style={styles.flexTxtlimitText}>더 높은 투자한도를 원한다면?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Upward')}>
+            <TouchableOpacity onPress={() => navigation.navigate('UpwardRequest')}>
               <Text style={styles.flexTxtlimitLink}>특수투자자 전환하기 {'>'}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Investor Info */}
-          <View style={styles.subWhitebox}>
+          <View style={[styles.subWhitebox, styles.pb24]}>
             <View style={styles.subSTitleBox}>
               <Text style={styles.subSTitle}>투자자 정보</Text>
             </View>
@@ -434,7 +492,7 @@ const InvestRequestScreen = ({ navigation, route }) => {
               <View style={styles.dlItem}>
                 <View style={styles.dtWithTip}>
                   <Text style={styles.dt}>투자등급</Text>
-                  <TouchableOpacity onPress={() => {/* Show tooltip */}}>
+                  <TouchableOpacity onPress={() => setShowInvestGradeModal(true)}>
                     <Image
                       source={require('../assets/images/ico_tip.png')}
                       style={styles.icoTip}
@@ -447,32 +505,101 @@ const InvestRequestScreen = ({ navigation, route }) => {
           </View>
 
           {/* Investment Method */}
-          <View style={styles.subSTitleBox}>
+          <View style={[styles.subSTitleBox, styles.mt24]}>
             <Text style={styles.subSTitle}>투자방법</Text>
           </View>
           
           <View style={styles.invMethodSwiper}>
-            <View style={styles.invMethodSlide}>
-              <View style={styles.invMethodInbox}>
-                <View style={styles.invMethodImgbox}>
-                  <Image
-                    source={require('../assets/images/bg_inv_method01.png')}
-                    style={styles.invMethodImg}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.invMethodTxtbox}>
-                  <Text style={styles.invMethodTit}>개인전용 가상계좌번호 확인</Text>
-                  <Text style={styles.invMethodTxt}>아래 가상계좌번호를 확인해주세요</Text>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled={false}
+              showsHorizontalScrollIndicator={false}
+              onScroll={(event) => {
+                const slideWidth = Dimensions.get('window').width * 0.78 + 16;
+                const index = Math.round(event.nativeEvent.contentOffset.x / slideWidth);
+                setCurrentSlide(index);
+              }}
+              scrollEventThrottle={16}
+              decelerationRate="fast"
+              snapToInterval={Dimensions.get('window').width * 0.78 + 16}
+              snapToAlignment="start"
+              contentContainerStyle={styles.invMethodScrollContent}
+            >
+              {/* Slide 1 */}
+              <View style={styles.invMethodSlide}>
+                <View style={styles.invMethodInbox}>
+                  <View style={styles.invMethodImgbox}>
+                    <Image
+                      source={require('../assets/images/bg_inv_method01.png')}
+                      style={styles.invMethodImg}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={styles.invMethodTxtbox}>
+                    <Text style={styles.invMethodTit}>개인전용 가상계좌번호 확인</Text>
+                    <Text style={styles.invMethodTxt}>아래 가상계좌번호를 확인해주세요</Text>
+                  </View>
                 </View>
               </View>
+
+              {/* Slide 2 */}
+              <View style={styles.invMethodSlide}>
+                <View style={styles.invMethodInbox}>
+                  <View style={styles.invMethodImgbox}>
+                    <Image
+                      source={require('../assets/images/bg_inv_method02.png')}
+                      style={styles.invMethodImg}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={styles.invMethodTxtbox}>
+                    <Text style={styles.invMethodTit}>예치금 입금</Text>
+                    <Text style={styles.invMethodTxt}>*가입 시 등록한 출금계좌에서만 입금가능</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Slide 3 */}
+              <View style={[styles.invMethodSlide, styles.invMethodSlideLast]}>
+                <View style={styles.invMethodInbox}>
+                  <View style={styles.invMethodImgbox}>
+                    <Image
+                      source={require('../assets/images/bg_inv_method02.png')}
+                      style={styles.invMethodImg}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={styles.invMethodTxtbox}>
+                    <Text style={styles.invMethodTit}>투자 준비 완료</Text>
+                    <Text style={styles.invMethodTxt}>이제 마음껏 투자하세요!</Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Pagination */}
+            <View style={styles.swiperPagination}>
+              {[0, 1, 2].map((index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.paginationBullet,
+                    currentSlide === index && styles.paginationBulletActive,
+                  ]}
+                />
+              ))}
             </View>
           </View>
 
           {/* Bank Card */}
           <View style={styles.bankCard}>
             <TouchableOpacity style={styles.btnRefresh} onPress={handleRefresh}>
-              <Text style={styles.btnRefreshText}>새로고침</Text>
+              <Image
+                source={require('../assets/images/ico_refresh.png')}
+                style={styles.btnRefreshImg}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
             
             <View style={styles.cntbox}>
@@ -497,13 +624,19 @@ const InvestRequestScreen = ({ navigation, route }) => {
                   <View style={styles.bankNum}>
                     <Text style={styles.bankNumText}>{member.v_account}</Text>
                     <View style={styles.bankNumTip}>
+                      <View style={styles.bankNumTipArrow} />
+                      <View style={styles.bankNumTipArrowInner} />
                       <Text style={styles.bankNumTipText}>
                         위 계좌로 <Text style={styles.bankNumTipEm}>예치금을 입금</Text>해주세요!
                       </Text>
                     </View>
                   </View>
                   <TouchableOpacity style={styles.btnCopy} onPress={handleCopyAccount}>
-                    <Text style={styles.btnCopyText}>복사</Text>
+                    <Image
+                      source={require('../assets/images/ico_copy.png')}
+                      style={styles.btnCopyImg}
+                      resizeMode="contain"
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -522,7 +655,7 @@ const InvestRequestScreen = ({ navigation, route }) => {
             <View style={styles.dlAmount}>
               <View style={styles.dtWithTip}>
                 <Text style={styles.dlAmountDt}>투자가능금액</Text>
-                <TouchableOpacity onPress={() => {/* Show tooltip */}}>
+                <TouchableOpacity onPress={() => setShowInvestLimitModal(true)}>
                   <Image
                     source={require('../assets/images/ico_tip.png')}
                     style={styles.icoTip}
@@ -543,12 +676,16 @@ const InvestRequestScreen = ({ navigation, route }) => {
 
             <View style={styles.wrAmount}>
               <TextInput
-                style={styles.inputAmount}
+                style={[styles.inputAmount, { color: '#ffffff' }]}
                 value={investAmount}
                 onChangeText={handleAmountChange}
                 placeholder="최소 투자금액 10,000원 부터 입력"
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 keyboardType="numeric"
+                selectionColor="#ffffff"
+                underlineColorAndroid="transparent"
+                autoCorrect={false}
+                autoCapitalize="none"
               />
               <Text style={styles.wrAmountTxt}>원</Text>
             </View>
@@ -593,18 +730,18 @@ const InvestRequestScreen = ({ navigation, route }) => {
           </View>
 
           {/* Referee Registration */}
-          <View style={styles.subWhitebox}>
+          <View style={[styles.subWhitebox, styles.mt36]}>
             <View style={styles.subSTitleBox}>
               <Text style={styles.subSTitle}>추천인 등록</Text>
               <Text style={styles.titleP}>
                 * 해당 상품을 소개해 준 추천인에 대한 코드를 입력{'\n'}
                 * 추천인 코드 위치 : 추천인의 마이페이지 {'>'} 개인정보관리{'\n'}
                 * 본인 추천인 코드 입력 불가{'\n'}
-                * 추천인 코드 변경시 [추천인 확인] 재진행 필요
+                * 추천인 코드 변경시 [추천인 확인] 재진행 필요{'\n'}
               </Text>
             </View>
 
-            <View style={styles.invintroBox}>
+            <View style={styles.invintroBox2}>
               <View style={styles.flexInputRow}>
                 <TextInput
                   style={[styles.textInput, styles.flexInputText]}
@@ -630,13 +767,22 @@ const InvestRequestScreen = ({ navigation, route }) => {
           <View style={styles.termsArea}>
             <Text style={styles.termsTxt}>
               본인은 투자위험을 인지하였으며, 온투법 제 23조 제 1항에 따라 위 내용의 투자계약서와{' '}
-              <Text style={styles.termsLink}>연계투자계약 약관</Text>에 동의합니다.
+              <Text style={styles.termsLink} onPress={() => setShowTermsModal(true)}>
+                연계투자계약 약관
+              </Text>에 동의합니다.
             </Text>
             <TouchableOpacity
               style={styles.termsBox}
               onPress={() => setIsAgreed(!isAgreed)}
             >
-              <View style={[styles.checkbox, isAgreed && styles.checkboxChecked]} />
+              <Image
+                source={
+                  isAgreed
+                    ? require('../assets/images/checkbox_on.png')
+                    : require('../assets/images/checkbox_off.png')
+                }
+                style={styles.checkboxIcon}
+              />
               <Text style={styles.checkboxTxt}>약관에 동의합니다.</Text>
             </TouchableOpacity>
           </View>
@@ -695,6 +841,22 @@ const InvestRequestScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
 
+          {/* 임시 테스트 버튼 - 디자인 확인용 */}
+          {/*<View style={[styles.btnBox, { marginTop: 10 }]}>
+            <TouchableOpacity
+              style={[styles.btnStyleH48, { backgroundColor: '#28a745' }]}
+              onPress={() => {
+                // 임시 데이터로 투자 성공 화면 이동
+                navigation.navigate('InvestSuccess', {
+                  orderNumber: prod.orderNumber || productOrderNumber,
+                  tid: 'TEST_TID_' + Date.now()
+                });
+              }}
+            >
+              <Text style={styles.btnStyleH48Text}>투자 완료 (디자인 확인용)</Text>
+            </TouchableOpacity>
+          </View>*/}
+
           {/* Event Banner */}
           {banner.banner_text01 && (
             <View style={styles.eventBox}>
@@ -715,6 +877,159 @@ const InvestRequestScreen = ({ navigation, route }) => {
           )}
         </View>
       </ScrollView>
+
+      {/* 투자가능금액 안내 모달 */}
+      <Modal
+        visible={showInvestLimitModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowInvestLimitModal(false)}
+      >
+        <View style={styles.popContainer}>
+          <TouchableOpacity 
+            style={styles.popMask} 
+            activeOpacity={1}
+            onPress={() => setShowInvestLimitModal(false)}
+          />
+          <View style={styles.popWrapper}>
+            <View style={styles.popBox}>
+              <Text style={styles.popTitle}>투자가능금액 안내</Text>
+              
+              <Text style={styles.popMsg}>
+                해당 상품에 투자한 이력이 없는 경우{'\n'}
+                전체 투자한도까지 투자 가능합니다.
+              </Text>
+              
+              <Text style={styles.popMsg}>
+                해당 상품에 일부 금액을 투자한 적 있거나,{'\n'}
+                투자한도 전체 금액을 투자한 적이 있는 경우{'\n'}
+                해당 금액을 제외한 금액만 투자 가능합니다.
+              </Text>
+              
+              <Text style={styles.popMsg}>
+                ex) A-1호 상품에 200만원 투자 시{'\n'}
+                A-2호 상품에 300만원 투자 가능
+              </Text>
+              
+              <View style={styles.popBtnBox}>
+                <TouchableOpacity 
+                  style={styles.popBtnStyleH48}
+                  onPress={() => setShowInvestLimitModal(false)}
+                >
+                  <Text style={styles.popBtnText}>확인</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 투자등급 안내 모달 */}
+      <Modal
+        visible={showInvestGradeModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowInvestGradeModal(false)}
+      >
+        <View style={styles.popContainer}>
+          <TouchableOpacity 
+            style={styles.popMask} 
+            activeOpacity={1}
+            onPress={() => setShowInvestGradeModal(false)}
+          />
+          <View style={styles.popWrapper}>
+            <View style={styles.popBox}>
+              <Text style={styles.popTitle}>투자등급 안내</Text>
+              
+              <Text style={styles.popMsg}>
+                소득적격 투자자 : 투자한도 2천만원{'\n'}
+                전문투자자 : 투자한도 모집금액의 40%{'\n'}
+                등급 변경에 관한 조건은 상단의{'\n'}
+                특수투자자 전환하기를 참고해 주세요.
+              </Text>
+              
+              <Text style={styles.popMsg}>
+                해당 차입자 상품에 투자한 적 없으면 500만원{'\n'}
+                해당 차입자 상품에 일부 투자한 적 있으면 해당 금액 제외
+              </Text>
+              
+              <Text style={styles.popMsg}>
+                예) 이전 상품 300만원 투자 시 200만원{'\n'}
+                해당 차입자 상품에 투자한도 전액 투자한 상태면 0원
+              </Text>
+              
+              <View style={styles.popBtnBox}>
+                <TouchableOpacity 
+                  style={styles.popBtnStyleH48}
+                  onPress={() => setShowInvestGradeModal(false)}
+                >
+                  <Text style={styles.popBtnText}>확인</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 연계투자계약 약관 모달 */}
+      <Modal
+        visible={showTermsModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowTermsModal(false)}
+      >
+        <View style={styles.popContainer}>
+          <TouchableOpacity 
+            style={styles.popMask} 
+            activeOpacity={1}
+            onPress={() => setShowTermsModal(false)}
+          />
+          <View style={styles.popWrapper}>
+            <View style={styles.popBox}>
+              <Text style={styles.popTitle}>연계투자계약 약관</Text>
+              
+              <ScrollView style={styles.popTermsScroll}>
+                <View style={styles.popTermsContent}>
+                  {term.contents ? (
+                    <RenderHtml
+                      contentWidth={width - 100}
+                      source={{ html: term.contents }}
+                      tagsStyles={{
+                        body: {
+                          color: '#666',
+                          fontSize: 13,
+                          lineHeight: 19.5,
+                          fontWeight: '400',
+                        },
+                        p: {
+                          marginTop: 0,
+                          marginBottom: 8,
+                        },
+                        br: {
+                          height: 8,
+                        },
+                      }}
+                    />
+                  ) : (
+                    <Text style={styles.popTermsTxt}>
+                      약관 내용을 불러오는 중입니다...
+                    </Text>
+                  )}
+                </View>
+              </ScrollView>
+              
+              <View style={styles.popBtnBox}>
+                <TouchableOpacity 
+                  style={styles.popBtnStyleH48}
+                  onPress={() => setShowTermsModal(false)}
+                >
+                  <Text style={styles.popBtnText}>확인</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -764,6 +1079,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  blBoxBefore: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 4,
+    backgroundColor: '#2c3db8',
+    zIndex: 1,
   },
   productItem: {
     flexDirection: 'row',
@@ -778,6 +1103,8 @@ const styles = StyleSheet.create({
   productImgbox: {
     position: 'relative',
     marginRight: 16,
+    top: 22,
+    left: 27,
   },
   productImg: {
     width: 47,
@@ -800,7 +1127,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   productName: {
-    marginTop: 4,
+    marginLeft: 20,
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '700',
@@ -828,7 +1155,7 @@ const styles = StyleSheet.create({
   dlItem: {
     width: '50%',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 14,
   },
   dt: {
     color: '#666',
@@ -874,6 +1201,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     height: 5,
     borderRadius: 3,
+  },
+  progressBarBefore: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: 1,
     backgroundColor: '#e0e1e2',
   },
   progressVal: {
@@ -882,24 +1216,40 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     borderRadius: 3,
-    backgroundColor: '#197cff',
+    zIndex: 1,
   },
   progressTip: {
     position: 'absolute',
     bottom: '100%',
     right: 0,
     marginBottom: 10,
-    paddingVertical: 5,
+    paddingTop: 5,
     paddingHorizontal: 8,
+    paddingBottom: 4,
     borderWidth: 1,
     borderColor: '#197cff',
     borderRadius: 5,
     backgroundColor: '#197cff',
   },
+  progressTipArrow: {
+    position: 'absolute',
+    top: 23,
+    right: 15,
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 4.5,
+    borderRightWidth: 4.5,
+    borderTopWidth: 5,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#197cff',
+  },
   progressTipText: {
     color: '#fff',
     fontSize: 11,
-    lineHeight: 14.3,
+    lineHeight: 13,
     fontWeight: '400',
   },
   progressInfo: {
@@ -939,7 +1289,6 @@ const styles = StyleSheet.create({
     width: 18,
     height: 13,
     marginRight: 6,
-    backgroundColor: 'transparent',
   },
   flexTxtlimitText: {
     color: '#666',
@@ -954,7 +1303,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   subSTitleBox: {
-    marginTop: 16,
+    marginTop: 24,
     paddingHorizontal: 20,
   },
   subSTitle: {
@@ -965,24 +1314,32 @@ const styles = StyleSheet.create({
   },
   titleP: {
     marginTop: 12,
-    fontSize: 15,
-    lineHeight: 22.5,
+    fontSize: 13,
+    lineHeight: 19,
     color: '#666',
   },
   mt50: {
     marginTop: 50,
   },
   invMethodSwiper: {
+    position: 'relative',
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 25,
   },
+  invMethodScrollContent: {
+    paddingRight: 2,
+  },
   invMethodSlide: {
-    height: 'auto',
+    width: Dimensions.get('window').width * 0.78,
+    marginRight: 16,
+  },
+  invMethodSlideLast: {
+    marginRight: 0,
   },
   invMethodInbox: {
     position: 'relative',
-    height: 200,
+    height: 270,
   },
   invMethodImgbox: {
     borderRadius: 10,
@@ -996,7 +1353,7 @@ const styles = StyleSheet.create({
   },
   invMethodImg: {
     width: '100%',
-    height: 200,
+    height: 270,
   },
   invMethodTxtbox: {
     position: 'absolute',
@@ -1020,6 +1377,26 @@ const styles = StyleSheet.create({
     lineHeight: 22.5,
     fontWeight: '600',
   },
+  swiperPagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  paginationBullet: {
+    width: 5,
+    height: 5,
+    marginHorizontal: 2,
+    borderRadius: 5,
+    backgroundColor: '#aab1bc',
+  },
+  paginationBulletActive: {
+    width: 16,
+    backgroundColor: '#2c3db8',
+  },
   bankCard: {
     position: 'relative',
     marginHorizontal: 16,
@@ -1035,14 +1412,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 13,
     right: 17,
-    width: 60,
+    width: 20,
     height: 20,
     zIndex: 10,
   },
-  btnRefreshText: {
-    color: '#2c3db8',
-    fontSize: 12,
-    fontWeight: '600',
+  btnRefreshImg: {
+    width: 20,
+    height: 20,
   },
   cntbox: {
     paddingTop: 24,
@@ -1081,7 +1457,7 @@ const styles = StyleSheet.create({
   },
   bankInfo: {
     position: 'relative',
-    padding: 10,
+    paddingVertical: 5,
     paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: '#2c3db8',
@@ -1091,7 +1467,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8faff',
   },
   bankInfoAccountnum: {
-    marginBottom: 12,
+    marginBottom: 6,
   },
   bankInfoDt: {
     marginBottom: 12,
@@ -1121,19 +1497,56 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   bankNumTip: {
+    position: 'absolute',
+    top: 23,
+    right: 40,
     marginTop: 5,
-    paddingVertical: 5,
+    paddingTop: 5,
     paddingHorizontal: 8,
+    paddingBottom: 4,
     borderWidth: 1,
     borderColor: '#197cff',
     borderRadius: 5,
     backgroundColor: '#fff',
+  },
+  bankNumTipArrow: {
+    position: 'absolute',
+    bottom: '100%',
+    right: 22,
+    top: -6,
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderBottomWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#197cff',
+  },
+  bankNumTipArrowInner: {
+    position: 'absolute',
+    bottom: '100%',
+    right: 23,
+    top: -5,
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 5,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#fff',
   },
   bankNumTipText: {
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '400',
     color: '#393f44',
+    whiteSpace: 'nowrap',
   },
   bankNumTipEm: {
     color: '#197cff',
@@ -1141,15 +1554,14 @@ const styles = StyleSheet.create({
   },
   btnCopy: {
     marginLeft: 10,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    backgroundColor: '#2c3db8',
-    borderRadius: 5,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  btnCopyText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+  btnCopyImg: {
+    width: 13,
+    height: 13,
   },
   bankInfoUsername: {
     flexDirection: 'row',
@@ -1173,10 +1585,12 @@ const styles = StyleSheet.create({
   bankAmount: {
     marginHorizontal: 16,
     marginTop: 34,
+    marginBottom: 40,
     padding: 20,
     paddingBottom: 30,
     borderRadius: 10,
     backgroundColor: '#2c3db8',
+
   },
   bankAmountTitle: {
     color: '#fff',
@@ -1198,7 +1612,7 @@ const styles = StyleSheet.create({
   },
   dlAmountDd: {
     color: '#fff',
-    fontSize: 23,
+    fontSize: 20,
     lineHeight: 29.9,
     fontWeight: '600',
   },
@@ -1206,7 +1620,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 6,
   },
   dlAmountBDt: {
     color: '#fff',
@@ -1216,7 +1630,7 @@ const styles = StyleSheet.create({
   },
   dlAmountBDd: {
     color: '#fff',
-    fontSize: 23,
+    fontSize: 20,
     lineHeight: 29.9,
     fontWeight: '600',
   },
@@ -1228,13 +1642,17 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 38,
     paddingRight: 20,
+    paddingLeft: 0,
+    paddingTop: 0,
     borderBottomWidth: 2,
     borderBottomColor: '#fff',
     backgroundColor: 'transparent',
     color: '#fff',
     fontSize: 16,
-    lineHeight: 36,
     fontWeight: '600',
+    textAlign: 'left',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   wrAmountTxt: {
     position: 'absolute',
@@ -1248,6 +1666,10 @@ const styles = StyleSheet.create({
   invintroBox: {
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 24,
+  },
+  invintroBox2: { 
+    paddingHorizontal: 20,
     paddingBottom: 24,
   },
   txtchk: {
@@ -1278,6 +1700,7 @@ const styles = StyleSheet.create({
     lineHeight: 22.5,
     fontWeight: '600',
     backgroundColor: '#fbfbfb',
+    paddingBottom: 5,
   },
   starNotif: {
     marginTop: 12,
@@ -1308,8 +1731,8 @@ const styles = StyleSheet.create({
   },
   termsTxt: {
     paddingHorizontal: 4,
-    fontSize: 15,
-    lineHeight: 22.5,
+    fontSize: 14,
+    lineHeight: 20.5,
     fontWeight: '400',
     color: '#222',
   },
@@ -1320,24 +1743,30 @@ const styles = StyleSheet.create({
   termsBox: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 55,
     marginTop: 16,
-    paddingHorizontal: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    shadowColor: 'rgba(81, 108, 137, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  checkbox: {
+  checkboxIcon: {
     width: 21,
     height: 21,
-    borderWidth: 2,
-    borderColor: '#e0e1e2',
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  checkboxChecked: {
-    backgroundColor: '#2c3db8',
-    borderColor: '#2c3db8',
   },
   checkboxTxt: {
+    marginLeft: 12,
+    marginTop: 1,
     fontSize: 15,
-    lineHeight: 22.5,
+    lineHeight: 19.5,
+    fontWeight: '600',
     color: '#222',
   },
   detailTogglebox: {
@@ -1367,8 +1796,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     right: 18,
-    width: 14,
-    height: 14,
+    width: 10,
+    height: 10,
     marginTop: -7,
     borderLeftWidth: 2,
     borderBottomWidth: 2,
@@ -1422,13 +1851,21 @@ const styles = StyleSheet.create({
   mt24: {
     marginTop: 24,
   },
+  mt36: {
+    marginTop: 36,
+  },
+  pt15: {
+    paddingTop: 15,
+  },
+  pb24: {
+    paddingBottom: 24,
+  },
   wFull: {
     flex: 1,
   },
   btnBox: {
     paddingHorizontal: 16,
     marginTop: 30,
-    marginBottom: 40,
   },
   btnStyleH48: {
     height: 48,
@@ -1447,7 +1884,6 @@ const styles = StyleSheet.create({
   },
   eventBox: {
     marginHorizontal: 16,
-    marginBottom: 40,
     borderRadius: 10,
     backgroundColor: '#fff',
     shadowColor: 'rgba(104, 111, 115, 0.15)',
@@ -1482,6 +1918,97 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: '#666',
+  },
+  // 모달 스타일
+  popContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    padding: 48,
+    paddingTop: 48,
+    paddingBottom: 48,
+    zIndex: 999,
+  },
+  popMask: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: '#222',
+    opacity: 0.7,
+  },
+  popWrapper: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  popBox: {
+    position: 'relative',
+    width: '100%',
+    padding: 24,
+    paddingTop: 24,
+    paddingRight: 16,
+    paddingBottom: 16,
+    paddingLeft: 16,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    zIndex: 1,
+  },
+  popTitle: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#393f44',
+  },
+  popMsg: {
+    marginTop: 20,
+    color: '#393f44',
+    fontSize: 15,
+    lineHeight: 19.5,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  popBtnBox: {
+    marginTop: 24,
+  },
+  popBtnStyleH48: {
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2c3db8',
+    backgroundColor: '#2c3db8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popBtnText: {
+    color: '#fff',
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '500',
+  },
+  // 약관 모달 추가 스타일
+  popTermsScroll: {
+    maxHeight: 400,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  popTermsContent: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  popTermsTxt: {
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 19.5,
+    fontWeight: '400',
   },
 });
 

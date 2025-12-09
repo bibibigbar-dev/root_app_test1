@@ -241,7 +241,7 @@ const LoginScreen = ({ navigation, route }) => {
   };
 
   const handleSignUp = () => {
-    navigation.navigate('SignUp');
+    navigation.navigate('SignUpType');
   };
 
   if (initialLoading) {
@@ -266,13 +266,17 @@ const LoginScreen = ({ navigation, route }) => {
         <View style={styles.logoSection}>
           <View style={styles.logoSpacer} />
           <Text style={styles.subtitle}>환경을 생각하는 투자 플랫폼</Text>
-          <View style={styles.logoImageContainer}>
+          <TouchableOpacity 
+            style={styles.logoImageContainer}
+            onPress={() => navigation.navigate('Main')}
+            activeOpacity={0.8}
+          >
             <Image 
               source={require('../assets/images/thumbnail_logo_en.jpg')} 
               style={styles.logoImage}
               resizeMode="cover"
             />
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* 로그인 폼 */}
@@ -481,7 +485,7 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     height: 48,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#2c3db8',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -555,15 +559,22 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   signupButton: {
-    paddingVertical: 5,
+    height: 24,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 'auto',
   },
   signupButtonText: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: 13,
+    lineHeight: 22,
+    color: '#393f44',
   },
   signupEmphasis: {
-    fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#2c3db8',
   },
   skipButton: {
     marginTop: 30,

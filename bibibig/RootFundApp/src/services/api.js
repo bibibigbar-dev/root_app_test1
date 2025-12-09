@@ -1167,6 +1167,23 @@ DwIDAQAB
   }
 
   // 메인 페이지 데이터 조회
+  // 범용 GET 메서드
+  async get(url, config = {}) {
+    try {
+      const response = await this.api.get(url, {
+        headers: {
+          Accept: 'application/json',
+          ...config.headers,
+        },
+        ...config,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`GET ${url} error:`, error);
+      throw error;
+    }
+  }
+
   async getMainData() {
     try {
       const response = await this.api.get('/app/main', {

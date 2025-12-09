@@ -189,7 +189,10 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
                 navigation.navigate('ProductList', { user });
               }}
             >
-              <Text style={styles.gnbText}>투자하기</Text>
+              <View style={styles.gnbItemWrapper}>
+                <Text style={styles.gnbText}>투자하기</Text>
+                <View style={styles.blueDot} />
+              </View>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.gnbItem}
@@ -645,10 +648,22 @@ const styles = StyleSheet.create({
     paddingBottom: 9,
     alignItems: 'center',
   },
+  gnbItemWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+  },
   gnbText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#333333',
+  },
+  blueDot: {
+    position: 'absolute',
+    right: -8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#197cff',
   },
   menuWrap: {
     flex: 1,

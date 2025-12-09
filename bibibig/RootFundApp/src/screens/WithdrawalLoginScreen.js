@@ -150,7 +150,7 @@ const WithdrawalLoginScreen = ({ navigation, route }) => {
   };
 
   const handleSignUp = () => {
-    navigation.navigate('SignUp');
+    navigation.navigate('SignUpType');
   };
 
   if (initialLoading) {
@@ -174,7 +174,7 @@ const WithdrawalLoginScreen = ({ navigation, route }) => {
         {/* 로고 섹션 */}
         <View style={styles.logoSection}>
           <View style={styles.logoSpacer} />
-          <Text style={styles.subtitle}>출금 신청을 위한 로그인</Text>
+          <Text style={styles.subtitle}>출금신청 전용 로그인</Text>
           <View style={styles.logoImageContainer}>
             <Image 
               source={require('../assets/images/thumbnail_logo_en.jpg')} 
@@ -384,15 +384,22 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   signupButton: {
-    paddingVertical: 5,
+    height: 24,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 'auto',
   },
   signupButtonText: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: 13,
+    lineHeight: 22,
+    color: '#393f44',
   },
   signupEmphasis: {
-    fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#2c3db8',
   },
 });
 
