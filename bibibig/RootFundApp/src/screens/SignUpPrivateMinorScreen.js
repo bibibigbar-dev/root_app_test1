@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   Modal,
   Linking,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
+import DocumentPicker from 'react-native-document-picker';
 import ApiService from '../services/api';
 
 const joinRootOptions = [
@@ -50,7 +52,7 @@ const jobOptions = [
   { value: '18', label: '대부업 종사자' },
 ];
 
-const SignUpPrivateAdultScreen = () => {
+const SignUpPrivateMinorScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { okname, kakaoCi, bc5jsencpublickey, marketing, f_joinType } = route.params || {};
@@ -58,8 +60,6 @@ const SignUpPrivateAdultScreen = () => {
   const [loading, setLoading] = useState(false);
   const [verificationCompleted, setVerificationCompleted] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
-  const [authToken, setAuthToken] = useState(null);
-  const [waitingForAuth, setWaitingForAuth] = useState(false);
   
   // 폼 데이터
   const [email, setEmail] = useState('');
@@ -72,6 +72,9 @@ const SignUpPrivateAdultScreen = () => {
   const [joinRootEtc, setJoinRootEtc] = useState('');
   const [jobCode, setJobCode] = useState('00');
   
+  // 18세 미만 추가 필드 - 첨부 파일
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  
   // 에러 메시지
   const [errors, setErrors] = useState({});
 
@@ -81,61 +84,63 @@ const SignUpPrivateAdultScreen = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
 
   useEffect(() => {
-    console.log('SignUpPrivateAdult params:', route.params);
-  }, [route.params]);
+    console.log('SignUpPrivateMinor params:', route.params);
 
-  // 본인인증 완료 확인
-  const handleCheckAuthResult = async () => {
-    if (!authToken) {
-      Alert.alert('오류', '인증 토큰이 없습니다.');
-      return;
-    }
+    // Deep Link 처리 (KCB 본인인증 콜백)
+    const handleDeepLink = ({ url }) => {
+      console.log('📱 Deep Link received:', url);
+      
+      if (url && url.includes('kcb-callback')) {
+        try {
+          const params = new URLSearchParams(url.split('?')[1]);
+          const rtnvalue = params.get('rtnvalue');
+          const rtnmessage = params.get('rtnmessage');
+          const authtype = params.get('authtype');
+          const name = params.get('name');
+          const birthdate = params.get('birthdate');
+          const gender = params.get('gender');
+          const mobile = params.get('mobile');
+          const nationalInfo = params.get('nationalInfo');
+          const di = params.get('di');
+          const ci = params.get('ci');
 
-    try {
-      setLoading(true);
-      console.log('🔍 인증 결과 조회 중... token:', authToken);
-      
-      const response = await ApiService.api.get('/app/kcb/auth/result', {
-        params: { token: authToken }
-      });
-      
-      console.log('📥 인증 결과 응답:', JSON.stringify(response.data, null, 2));
-      
-      if (response.data.status === 'success') {
-        const authData = response.data.data;
-        
-        console.log('✅ 파싱된 인증 데이터:', authData);
-        
-        if (authData.rtnvalue === '0') {
-          setVerificationData({
-            authtype: authData.authtype,
-            name: authData.name,
-            birthdate: authData.birthdate,
-            gender: authData.gender,
-            mobile: authData.mobile,
-            nationalInfo: authData.nationalInfo,
-            di: authData.di,
-            ci: authData.ci,
-          });
-          setVerificationCompleted(true);
-          setWaitingForAuth(false);
-          Alert.alert('본인인증 완료', '본인인증이 완료되었습니다.\n회원가입을 계속 진행해주세요.');
-        } else {
-          Alert.alert('본인인증 실패', authData.rtnmessage || '본인인증에 실패했습니다.');
+          console.log('✅ KCB 콜백 데이터:', { rtnvalue, name, mobile });
+
+          if (rtnvalue === '0') {
+            setVerificationData({
+              authtype,
+              name,
+              birthdate,
+              gender,
+              mobile,
+              nationalInfo,
+              di,
+              ci,
+            });
+            setVerificationCompleted(true);
+            Alert.alert('본인인증 완료', '본인인증이 완료되었습니다.\n회원가입을 계속 진행해주세요.');
+          } else {
+            Alert.alert('본인인증 실패', rtnmessage || '본인인증에 실패했습니다.');
+          }
+        } catch (error) {
+          console.error('❌ Deep Link 파싱 오류:', error);
         }
-      } else {
-        Alert.alert(
-          '본인인증 대기 중',
-          '아직 본인인증이 완료되지 않았습니다.\n외부 브라우저에서 본인인증을 완료한 후 다시 확인해주세요.'
-        );
       }
-    } catch (error) {
-      console.error('❌ 인증 결과 조회 오류:', error);
-      Alert.alert('오류', '인증 결과를 확인하는 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // 앱이 닫힌 상태에서 딥링크로 열린 경우
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [route.params]);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -146,6 +151,11 @@ const SignUpPrivateAdultScreen = () => {
     // 영문, 숫자, 특수문자 최소 10자리 이상
     const passwordRegex = /^(?=.*[0-9])(?=.*[a-z])(?=.*[!@#$%^&*])[a-z\d!@#$%^&*]{10,20}$/i;
     return passwordRegex.test(password);
+  };
+
+  const validatePhone = (phone) => {
+    const phoneRegex = /^01[0-9]{8,9}$/;
+    return phoneRegex.test(phone.replace(/-/g, ''));
   };
 
   const handleAddressSearch = () => {
@@ -171,34 +181,57 @@ const SignUpPrivateAdultScreen = () => {
       return;
     }
 
+    // 첨부 파일 검증
+    if (selectedFiles.length === 0) {
+      Alert.alert('첨부 파일', '필요 서류를 첨부해주세요.');
+      return;
+    }
+
     try {
       setLoading(true);
 
       const finalJoinRoot = joinRoot === 'ETC' ? joinRootEtc : joinRoot;
 
-      const signUpData = {
-        web_id: email,
-        email: email,
-        member_pwd: password,
-        marketing: marketing || 'N',
-        authType: verificationData.authtype,
+      // FormData로 파일 포함하여 전송
+      const formData = new FormData();
+      formData.append('web_id', email);
+      formData.append('email', email);
+      formData.append('member_pwd', password);
+      formData.append('marketing', marketing || 'N');
+      formData.append('authType', verificationData.authtype);
+      formData.append('name', verificationData.name);
+      formData.append('birthDate', verificationData.birthdate);
+      formData.append('gender', verificationData.gender);
+      formData.append('mobile', verificationData.mobile);
+      formData.append('nationalInfo', verificationData.nationalInfo);
+      formData.append('di', verificationData.di);
+      formData.append('ci', verificationData.ci);
+      formData.append('join_root', finalJoinRoot);
+      formData.append('zipcode', zipcode);
+      formData.append('address1', address1);
+      formData.append('address2', address2);
+      formData.append('jobCode', jobCode);
+
+      // 파일 추가
+      selectedFiles.forEach((file, index) => {
+        formData.append(`file${index}`, {
+          uri: file.uri,
+          type: file.type || 'application/octet-stream',
+          name: file.name,
+        });
+      });
+
+      console.log('📤 회원가입 요청 데이터 (FormData):', {
+        email,
         name: verificationData.name,
-        birthDate: verificationData.birthdate,
-        gender: verificationData.gender,
-        mobile: verificationData.mobile,
-        nationalInfo: verificationData.nationalInfo,
-        di: verificationData.di,
-        ci: verificationData.ci,
-        join_root: finalJoinRoot,
-        zipcode: zipcode,
-        address1: address1,
-        address2: address2,
-        jobCode: jobCode,
-      };
+        filesCount: selectedFiles.length,
+      });
 
-      console.log('📤 회원가입 요청 데이터:', signUpData);
-
-      const response = await ApiService.api.post('/app/certJoinProcess', signUpData);
+      const response = await ApiService.api.post('/app/certJoinProcess', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       console.log('📥 회원가입 응답:', response.data);
 
@@ -210,7 +243,7 @@ const SignUpPrivateAdultScreen = () => {
         
         navigation.replace('MyCert', {
           use_tf_join: 'Y',
-          f_joinType: f_joinType || 'adult',
+          f_joinType: f_joinType || 'minor',
           member_id: member_id,
         });
       } else if (rtnvalue === '1') {
@@ -233,6 +266,30 @@ const SignUpPrivateAdultScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFileSelect = async () => {
+    try {
+      const results = await DocumentPicker.pick({
+        type: [DocumentPicker.types.allFiles],
+        allowMultiSelection: true,
+      });
+      
+      setSelectedFiles([...selectedFiles, ...results]);
+      console.log('선택된 파일:', results);
+    } catch (error) {
+      if (DocumentPicker.isCancel(error)) {
+        console.log('파일 선택 취소');
+      } else {
+        console.error('파일 선택 오류:', error);
+        Alert.alert('오류', '파일 선택 중 오류가 발생했습니다.');
+      }
+    }
+  };
+
+  const handleFileRemove = (index) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
   };
 
   const handleSubmit = async () => {
@@ -271,6 +328,12 @@ const SignUpPrivateAdultScreen = () => {
       return;
     }
 
+    // 첨부 파일 검증 (18세 미만 필수)
+    if (selectedFiles.length === 0) {
+      Alert.alert('첨부 파일', '필요 서류를 첨부해주세요.');
+      return;
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -300,18 +363,12 @@ const SignUpPrivateAdultScreen = () => {
         // okname 데이터 확인
         const oknameData = okname;
         
-        console.log('✅ okname data check:', oknameData);
-        
         if (!oknameData) {
-          console.error('❌ okname 데이터가 없습니다');
           Alert.alert('오류', '본인인증 정보를 가져올 수 없습니다.\n관리자에게 문의해주세요.');
-          setLoading(false);
           return;
         }
         
-        // okname 응답 체크
-        if (oknameData.okname === 'Y' && oknameData.rslt_cd === 'B000') {
-          // 정상: 본인인증 진행
+        if (oknameData.okname === 'Y') {
           const okname_url = oknameData.okname_url;
           const cp_cd = oknameData.cp_cd;
           const token = oknameData.token;
@@ -321,22 +378,18 @@ const SignUpPrivateAdultScreen = () => {
             tc: 'kcb.oknm.online.safehscert.popup.cmd.P931_CertChoiceCmd',
             cp_cd: cp_cd || '',
             mdl_tkn: token || '',
-            platform: 'app',
           });
           
           const fullUrl = `${okname_url}?${formParams.toString()}`;
           
-          console.log('✅ KCB 인증 URL:', fullUrl);
-          
           // 외부 브라우저로 본인인증 페이지 열기
           Alert.alert(
             '휴대전화 본인인증',
-            '본인인증을 위해 외부 브라우저로 이동합니다.\n\n본인인증 완료 후 앱으로 돌아와서 "본인인증 완료 확인" 버튼을 눌러주세요.',
+            '본인인증을 위해 외부 브라우저로 이동합니다.\n\n본인인증 완료 후 앱으로 돌아와 화면을 새로고침해주세요.',
             [
               {
                 text: '취소',
-                style: 'cancel',
-                onPress: () => setLoading(false)
+                style: 'cancel'
               },
               {
                 text: '확인',
@@ -344,36 +397,26 @@ const SignUpPrivateAdultScreen = () => {
                   try {
                     const canOpen = await Linking.canOpenURL(fullUrl);
                     if (canOpen) {
-                      // 토큰 저장 및 대기 상태로 변경
-                      setAuthToken(token);
-                      setWaitingForAuth(true);
-                      setLoading(false);
-                      
                       await Linking.openURL(fullUrl);
                     } else {
                       Alert.alert('오류', 'URL을 열 수 없습니다.');
-                      setLoading(false);
                     }
                   } catch (error) {
                     console.error('URL 열기 오류:', error);
                     Alert.alert('오류', '브라우저를 열 수 없습니다.');
-                    setLoading(false);
                   }
                 }
               }
             ]
           );
         } else {
-          // 오류: 에러 메시지 표시
-          const rslt_cd = oknameData.rslt_cd || 'ERROR';
+          const rslt_cd = oknameData.rslt_cd || '';
           const rslt_msg = oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
-          console.error('❌ 본인인증 오류:', { rslt_cd, rslt_msg, okname: oknameData.okname });
           Alert.alert('휴대전화 본인인증', `[${rslt_cd}] ${rslt_msg}`);
-          setLoading(false);
         }
       } else if (responseValue === '1' || responseValue === '2') {
         console.log('❌ 이메일 중복:', responseValue);
-        setErrors({ ...errors, email: '* 이미 사용중인 이메일입니다.' });
+        setErrors({ ...errors, email: '* 이메일 중복입니다.' });
       } else {
         console.error('❌ 알 수 없는 응답:', responseValue);
         Alert.alert('회원가입', '처리도중 오류가 발생하였습니다.');
@@ -409,7 +452,7 @@ const SignUpPrivateAdultScreen = () => {
 
       <ScrollView style={styles.content}>
         <View style={styles.subTitleBox}>
-          <Text style={styles.title}>18세 이상 회원가입</Text>
+          <Text style={styles.title}>18세 미만 회원가입</Text>
         </View>
 
         <View style={styles.formArea}>
@@ -458,9 +501,6 @@ const SignUpPrivateAdultScreen = () => {
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
-                textContentType="none"
-                autoComplete="off"
-                passwordRules=""
               />
             </View>
             <View style={styles.flexInput}>
@@ -475,9 +515,6 @@ const SignUpPrivateAdultScreen = () => {
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
-                textContentType="none"
-                autoComplete="off"
-                passwordRules=""
               />
             </View>
             <Text style={styles.starNotif}>
@@ -585,50 +622,75 @@ const SignUpPrivateAdultScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* 필요 서류 */}
+          <View style={styles.inputGroup}>
+            <View style={styles.flexTit}>
+              <Text style={styles.tit}>필요 서류</Text>
+            </View>
+            <View style={styles.documentInfo}>
+              <Text style={styles.documentText}>* 가족관계증명서</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('/resources/미성년자의 법정대리인 투자동의서_(회원명).docx')}>
+                <Text style={styles.documentText}>
+                  * <Text style={styles.documentLink}>법정대리인 동의서</Text>(양식)
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.documentText}>* 법정대리인 신분증</Text>
+            </View>
+          </View>
+
+          {/* 첨부 파일 */}
+          <View style={styles.inputGroup}>
+            <View style={styles.flexTit}>
+              <Text style={styles.tit}>첨부 파일</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.fileUploadBox}
+              onPress={handleFileSelect}
+            >
+              <Text style={styles.fileUploadIcon}>📎</Text>
+              <Text style={styles.fileUploadText}>파일추가</Text>
+            </TouchableOpacity>
+
+            {/* 파일 목록 */}
+            {selectedFiles.length > 0 && (
+              <View style={styles.fileList}>
+                {selectedFiles.map((file, index) => (
+                  <View key={index} style={styles.fileItem}>
+                    <Text style={styles.fileName} numberOfLines={1}>
+                      {file.name}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => handleFileRemove(index)}
+                      style={styles.fileRemoveBtn}
+                    >
+                      <Text style={styles.fileRemoveText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.mb40} />
-        {waitingForAuth && !verificationCompleted && <View style={{ height: 150 }} />}
       </ScrollView>
 
       {/* 하단 버튼 */}
       <View style={styles.fixBtnWrap}>
-        {waitingForAuth && !verificationCompleted && (
-          <View style={styles.authNotice}>
-            <Text style={styles.authNoticeTitle}>📱 본인인증을 진행해주세요</Text>
-            <Text style={styles.authNoticeText}>
-              외부 브라우저에서 본인인증을 완료한 후{'\n'}
-              아래 버튼을 눌러 인증을 확인해주세요.
-            </Text>
-          </View>
-        )}
         <View style={styles.btnBox}>
           {!verificationCompleted ? (
-            waitingForAuth ? (
-              <TouchableOpacity
-                style={[styles.submitButton, styles.submitButtonCheck, loading && styles.submitButtonDisabled]}
-                onPress={handleCheckAuthResult}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitButtonText}>본인인증 완료 확인</Text>
-                )}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitButtonText}>휴대전화 본인인증</Text>
-                )}
-              </TouchableOpacity>
-            )
+            <TouchableOpacity
+              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>휴대전화 본인인증</Text>
+              )}
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[styles.submitButton, styles.submitButtonSuccess, loading && styles.submitButtonDisabled]}
@@ -638,7 +700,7 @@ const SignUpPrivateAdultScreen = () => {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitButtonText}>회원가입 계속 진행</Text>
+                <Text style={styles.submitButtonText}>회원가입 완료</Text>
               )}
             </TouchableOpacity>
           )}
@@ -912,6 +974,70 @@ const styles = StyleSheet.create({
   txtDtErr: {
     color: '#ff5042',
   },
+  documentInfo: {
+    marginTop: 12,
+  },
+  documentText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#a3a7ab',
+    marginBottom: 4,
+  },
+  documentLink: {
+    color: '#2c3db8',
+    textDecorationLine: 'underline',
+  },
+  fileUploadBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    marginTop: 8,
+  },
+  fileUploadIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  fileUploadText: {
+    fontSize: 15,
+    lineHeight: 21,
+    color: '#393f44',
+    fontWeight: '600',
+  },
+  fileList: {
+    marginTop: 20,
+  },
+  fileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  fileName: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#222',
+    marginRight: 12,
+  },
+  fileRemoveBtn: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fileRemoveText: {
+    fontSize: 18,
+    color: '#666',
+  },
   selectWide: {
     flex: 1,
     height: 48,
@@ -922,7 +1048,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#fbfbfb',
   },
   selectText: {
     fontSize: 15,
@@ -944,6 +1070,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e1e2',
     marginBottom: 20,
   },
   btnBox: {
@@ -963,34 +1091,10 @@ const styles = StyleSheet.create({
   submitButtonSuccess: {
     backgroundColor: '#28a745',
   },
-  submitButtonCheck: {
-    backgroundColor: '#ff9800',
-  },
   submitButtonText: {
     fontSize: 20,
     fontWeight: '700',
     color: '#fff',
-  },
-  authNotice: {
-    padding: 16,
-    backgroundColor: '#fff3e0',
-    borderRadius: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#ffb74d',
-  },
-  authNoticeTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#e65100',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  authNoticeText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#5d4037',
-    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -1056,4 +1160,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SignUpPrivateAdultScreen;
+export default SignUpPrivateMinorScreen;
+

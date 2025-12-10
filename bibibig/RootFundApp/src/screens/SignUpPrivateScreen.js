@@ -26,7 +26,8 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
     marketing: false,
   });
   const [errorMsg, setErrorMsg] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [termsLoading, setTermsLoading] = useState(true);
   const [termsData, setTermsData] = useState(null);
   
   // 모달 상태
@@ -42,7 +43,7 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
 
   const loadTermsData = async () => {
     try {
-      setLoading(true);
+      setTermsLoading(true);
       const response = await ApiService.api.get('/app/join/private', {
         params: {
           f_joinType: joinType,
@@ -58,7 +59,7 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
     } catch (error) {
       console.error('Failed to load terms data:', error);
     } finally {
-      setLoading(false);
+      setTermsLoading(false);
     }
   };
 
@@ -107,11 +108,22 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
       setLoading(true);
       const marketing = checks.marketing ? 'Y' : 'N';
       
-      // API 호출
-      const response = await ApiService.api.post('/app/join/privateAgree', {
-        marketing: marketing,
+      console.log('Calling privateAgree API with:', {
+        marketing,
         f_joinType: joinType,
         kakaoCi: '0',
+      });
+      
+      // API 호출 - FormData 형식으로 전송
+      const formData = new FormData();
+      formData.append('marketing', marketing);
+      formData.append('f_joinType', joinType);
+      formData.append('kakaoCi', '0');
+      
+      const response = await ApiService.api.post('/app/join/privateAgree', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       console.log('privateAgree response:', response.data);
@@ -139,9 +151,12 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
         }
       } else if (response.data.redirect) {
         navigation.replace(response.data.redirectUrl);
+      } else {
+        setErrorMsg('* 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
     } catch (error) {
       console.error('Failed to proceed to next step:', error);
+      console.error('Error details:', error.response?.data);
       setErrorMsg('* 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
@@ -254,7 +269,7 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
     </Modal>
   );
 
-  if (loading) {
+  if (termsLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2c3db8" />
@@ -413,8 +428,16 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
       {/* 다음 버튼 */}
       <View style={styles.fixBtnWrap}>
         <View style={styles.btnBox}>
-          <TouchableOpacity style={styles.btnNext} onPress={handleNext}>
-            <Text style={styles.btnNextText}>다음</Text>
+          <TouchableOpacity 
+            style={[styles.btnNext, loading && styles.btnNextDisabled]} 
+            onPress={handleNext}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnNextText}>다음</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -583,7 +606,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingBottom: 10,
     backgroundColor: '#fff',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   btnBox: {
     flexDirection: 'row',
@@ -595,6 +618,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#2c3db8',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  btnNextDisabled: {
+    backgroundColor: '#bfc3c7',
   },
   btnNextText: {
     fontSize: 20,

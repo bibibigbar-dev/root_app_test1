@@ -43,6 +43,17 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
       
       console.log('자산 정보 응답:', response.data);
       
+      // 투자자 여부 확인 (useBalancePage)
+      if (response.data && response.data.useBalancePage === false) {
+        // 투자자가 아니면 인증 페이지로 리다이렉트
+        console.log('⚠️ 투자자가 아님 - MyCert 화면으로 리다이렉트');
+        setLoading(false);
+        navigation.replace('MyCert', {
+          member_id: memberId,
+        });
+        return;
+      }
+      
       if (response.data) {
         setAssetData(response.data);
         setBalance(response.data.balance || user?.session?.balance || '0');

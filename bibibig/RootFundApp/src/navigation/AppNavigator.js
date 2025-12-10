@@ -18,6 +18,8 @@ import SignUpTypeScreen from '../screens/SignUpTypeScreen';
 import SignUpPrivateSelectScreen from '../screens/SignUpPrivateSelectScreen';
 import SignUpPrivateScreen from '../screens/SignUpPrivateScreen';
 import SignUpPrivateAdultScreen from '../screens/SignUpPrivateAdultScreen';
+import SignUpPrivateMinorScreen from '../screens/SignUpPrivateMinorScreen';
+import SignUpPrivateForeignerScreen from '../screens/SignUpPrivateForeignerScreen';
 import SignUpCorpScreen from '../screens/SignUpCorpScreen';
 import CorporateInvestmentScreen from '../screens/CorporateInvestmentScreen';
 import ProductListScreen from '../screens/ProductListScreen';
@@ -53,6 +55,7 @@ import WithdrawalDoneScreen from '../screens/WithdrawalDoneScreen';
 import RecruitScreen from '../screens/RecruitScreen';
 import TermsScreen from '../screens/TermsScreen';
 import InvestReceiptScreen from '../screens/InvestReceiptScreen';
+import MyCertScreen from '../screens/MyCertScreen';
 
 const Stack = createStackNavigator();
 
@@ -215,6 +218,8 @@ const AppNavigator = () => {
           <Stack.Screen name="SignUpPrivateSelect" component={SignUpPrivateSelectScreen} />
           <Stack.Screen name="SignUpPrivate" component={SignUpPrivateScreen} />
           <Stack.Screen name="SignUpPrivateAdult" component={SignUpPrivateAdultScreen} />
+          <Stack.Screen name="SignUpPrivateMinor" component={SignUpPrivateMinorScreen} />
+          <Stack.Screen name="SignUpPrivateForeigner" component={SignUpPrivateForeignerScreen} />
           <Stack.Screen name="SignUpCorp" component={SignUpCorpScreen} />
           <Stack.Screen name="CorporateInvestment" component={CorporateInvestmentScreen} />
           <Stack.Screen name="ProductList" component={ProductListScreen} />
@@ -250,6 +255,7 @@ const AppNavigator = () => {
           <Stack.Screen name="Recruit" component={RecruitScreen} />
           <Stack.Screen name="Terms" component={TermsScreen} />
           <Stack.Screen name="InvestReceipt" component={InvestReceiptScreen} />
+          <Stack.Screen name="MyCert" component={MyCertScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </View>

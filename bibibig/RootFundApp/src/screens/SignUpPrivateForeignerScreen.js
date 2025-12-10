@@ -16,41 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import ApiService from '../services/api';
 
-const joinRootOptions = [
-  '선택해주세요',
-  '지인소개',
-  '인터넷 검색',
-  '구글 광고',
-  '네이버 광고',
-  'SNS(페이스북/인스타그램) 광고',
-  '뉴스/기사',
-  '인터넷 커뮤니티',
-  '세미나/교육/포럼',
-  '광고지/우편물',
-  'ETC',
-];
-
-const jobOptions = [
-  { value: '00', label: '선택해주세요' },
-  { value: '01', label: '회사원' },
-  { value: '02', label: '자영업자' },
-  { value: '03', label: '무직' },
-  { value: '04', label: '학생' },
-  { value: '05', label: '군인' },
-  { value: '06', label: '주부' },
-  { value: '07', label: '연금소득자' },
-  { value: '08', label: '프리랜서' },
-  { value: '09', label: '변호사' },
-  { value: '10', label: '의사' },
-  { value: '11', label: '회계사' },
-  { value: '12', label: '세무사' },
-  { value: '13', label: '법무사' },
-  { value: '15', label: '기타 전문직' },
-  { value: '16', label: '부동산중개업자' },
-  { value: '18', label: '대부업 종사자' },
-];
-
-const SignUpPrivateAdultScreen = () => {
+const SignUpPrivateForeignerScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { okname, kakaoCi, bc5jsencpublickey, marketing, f_joinType } = route.params || {};
@@ -58,8 +24,6 @@ const SignUpPrivateAdultScreen = () => {
   const [loading, setLoading] = useState(false);
   const [verificationCompleted, setVerificationCompleted] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
-  const [authToken, setAuthToken] = useState(null);
-  const [waitingForAuth, setWaitingForAuth] = useState(false);
   
   // 폼 데이터
   const [email, setEmail] = useState('');
@@ -71,80 +35,127 @@ const SignUpPrivateAdultScreen = () => {
   const [joinRoot, setJoinRoot] = useState('선택해주세요');
   const [joinRootEtc, setJoinRootEtc] = useState('');
   const [jobCode, setJobCode] = useState('00');
+  const [foreignerUseCode, setForeignerUseCode] = useState('');
   
   // 에러 메시지
   const [errors, setErrors] = useState({});
 
   // 모달
   const [showJobModal, setShowJobModal] = useState(false);
+  const [showForeignerModal, setShowForeignerModal] = useState(false);
   const [showJoinRootModal, setShowJoinRootModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
 
+  const joinRootOptions = [
+    '선택해주세요',
+    '지인소개',
+    '인터넷 검색',
+    '구글 광고',
+    '네이버 광고',
+    'SNS(페이스북/인스타그램) 광고',
+    '뉴스/기사',
+    '인터넷 커뮤니티',
+    '세미나/교육/포럼',
+    '광고지/우편물',
+    'ETC',
+  ];
+
+  const jobOptions = [
+    { value: '00', label: '선택해주세요' },
+    { value: '01', label: '회사원' },
+    { value: '02', label: '자영업자' },
+    { value: '03', label: '무직' },
+    { value: '04', label: '학생' },
+    { value: '05', label: '군인' },
+    { value: '06', label: '주부' },
+    { value: '07', label: '연금소득자' },
+    { value: '08', label: '프리랜서' },
+    { value: '09', label: '변호사' },
+    { value: '10', label: '의사' },
+    { value: '11', label: '회계사' },
+    { value: '12', label: '세무사' },
+    { value: '13', label: '법무사' },
+    { value: '15', label: '기타 전문직' },
+    { value: '16', label: '부동산중개업자' },
+    { value: '18', label: '대부업 종사자' },
+  ];
+
+  const foreignerOptions = [
+    { value: '', label: '선택해주세요' },
+    { value: '122', label: '재외국민등록증 소유자' },
+    { value: '131', label: '외국인등록증 소유자' },
+    { value: '123', label: '주민등록증(재외국인) 소유자' },
+    { value: '141', label: '국내거소신고증 소유자' },
+    { value: '121', label: '기타' },
+  ];
+
   useEffect(() => {
-    console.log('SignUpPrivateAdult params:', route.params);
-  }, [route.params]);
+    console.log('SignUpPrivateForeigner params:', route.params);
 
-  // 본인인증 완료 확인
-  const handleCheckAuthResult = async () => {
-    if (!authToken) {
-      Alert.alert('오류', '인증 토큰이 없습니다.');
-      return;
-    }
+    // Deep Link 처리 (KCB 본인인증 콜백)
+    const handleDeepLink = ({ url }) => {
+      console.log('📱 Deep Link received:', url);
+      
+      if (url && url.includes('kcb-callback')) {
+        try {
+          const params = new URLSearchParams(url.split('?')[1]);
+          const rtnvalue = params.get('rtnvalue');
+          const rtnmessage = params.get('rtnmessage');
+          const authtype = params.get('authtype');
+          const name = params.get('name');
+          const birthdate = params.get('birthdate');
+          const gender = params.get('gender');
+          const mobile = params.get('mobile');
+          const nationalInfo = params.get('nationalInfo');
+          const di = params.get('di');
+          const ci = params.get('ci');
 
-    try {
-      setLoading(true);
-      console.log('🔍 인증 결과 조회 중... token:', authToken);
-      
-      const response = await ApiService.api.get('/app/kcb/auth/result', {
-        params: { token: authToken }
-      });
-      
-      console.log('📥 인증 결과 응답:', JSON.stringify(response.data, null, 2));
-      
-      if (response.data.status === 'success') {
-        const authData = response.data.data;
-        
-        console.log('✅ 파싱된 인증 데이터:', authData);
-        
-        if (authData.rtnvalue === '0') {
-          setVerificationData({
-            authtype: authData.authtype,
-            name: authData.name,
-            birthdate: authData.birthdate,
-            gender: authData.gender,
-            mobile: authData.mobile,
-            nationalInfo: authData.nationalInfo,
-            di: authData.di,
-            ci: authData.ci,
-          });
-          setVerificationCompleted(true);
-          setWaitingForAuth(false);
-          Alert.alert('본인인증 완료', '본인인증이 완료되었습니다.\n회원가입을 계속 진행해주세요.');
-        } else {
-          Alert.alert('본인인증 실패', authData.rtnmessage || '본인인증에 실패했습니다.');
+          console.log('✅ KCB 콜백 데이터:', { rtnvalue, name, mobile });
+
+          if (rtnvalue === '0') {
+            setVerificationData({
+              authtype,
+              name,
+              birthdate,
+              gender,
+              mobile,
+              nationalInfo,
+              di,
+              ci,
+            });
+            setVerificationCompleted(true);
+            Alert.alert('본인인증 완료', '본인인증이 완료되었습니다.\n회원가입을 계속 진행해주세요.');
+          } else {
+            Alert.alert('본인인증 실패', rtnmessage || '본인인증에 실패했습니다.');
+          }
+        } catch (error) {
+          console.error('❌ Deep Link 파싱 오류:', error);
         }
-      } else {
-        Alert.alert(
-          '본인인증 대기 중',
-          '아직 본인인증이 완료되지 않았습니다.\n외부 브라우저에서 본인인증을 완료한 후 다시 확인해주세요.'
-        );
       }
-    } catch (error) {
-      console.error('❌ 인증 결과 조회 오류:', error);
-      Alert.alert('오류', '인증 결과를 확인하는 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // 앱이 닫힌 상태에서 딥링크로 열린 경우
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
   const validatePassword = (password) => {
     // 영문, 숫자, 특수문자 최소 10자리 이상
-    const passwordRegex = /^(?=.*[0-9])(?=.*[a-z])(?=.*[!@#$%^&*])[a-z\d!@#$%^&*]{10,20}$/i;
+    const passwordRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])[a-z\d!@#$%^&*]{10,20}$/i;
     return passwordRegex.test(password);
   };
 
@@ -171,6 +182,12 @@ const SignUpPrivateAdultScreen = () => {
       return;
     }
 
+    // 외국인 구분 검증
+    if (!foreignerUseCode) {
+      Alert.alert('외국인 구분', '외국인 구분을 선택해주세요.');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -194,6 +211,7 @@ const SignUpPrivateAdultScreen = () => {
         address1: address1,
         address2: address2,
         jobCode: jobCode,
+        foreigner_use_code: foreignerUseCode,
       };
 
       console.log('📤 회원가입 요청 데이터:', signUpData);
@@ -210,7 +228,7 @@ const SignUpPrivateAdultScreen = () => {
         
         navigation.replace('MyCert', {
           use_tf_join: 'Y',
-          f_joinType: f_joinType || 'adult',
+          f_joinType: f_joinType || 'foreigner',
           member_id: member_id,
         });
       } else if (rtnvalue === '1') {
@@ -271,6 +289,12 @@ const SignUpPrivateAdultScreen = () => {
       return;
     }
 
+    // 외국인 실지 명의 구분 검증
+    if (!foreignerUseCode) {
+      Alert.alert('외국인 실지 명의 구분', '외국인 실지 명의 구분을 선택해주세요.');
+      return;
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -300,18 +324,12 @@ const SignUpPrivateAdultScreen = () => {
         // okname 데이터 확인
         const oknameData = okname;
         
-        console.log('✅ okname data check:', oknameData);
-        
         if (!oknameData) {
-          console.error('❌ okname 데이터가 없습니다');
           Alert.alert('오류', '본인인증 정보를 가져올 수 없습니다.\n관리자에게 문의해주세요.');
-          setLoading(false);
           return;
         }
         
-        // okname 응답 체크
-        if (oknameData.okname === 'Y' && oknameData.rslt_cd === 'B000') {
-          // 정상: 본인인증 진행
+        if (oknameData.okname === 'Y') {
           const okname_url = oknameData.okname_url;
           const cp_cd = oknameData.cp_cd;
           const token = oknameData.token;
@@ -321,22 +339,18 @@ const SignUpPrivateAdultScreen = () => {
             tc: 'kcb.oknm.online.safehscert.popup.cmd.P931_CertChoiceCmd',
             cp_cd: cp_cd || '',
             mdl_tkn: token || '',
-            platform: 'app',
           });
           
           const fullUrl = `${okname_url}?${formParams.toString()}`;
           
-          console.log('✅ KCB 인증 URL:', fullUrl);
-          
           // 외부 브라우저로 본인인증 페이지 열기
           Alert.alert(
             '휴대전화 본인인증',
-            '본인인증을 위해 외부 브라우저로 이동합니다.\n\n본인인증 완료 후 앱으로 돌아와서 "본인인증 완료 확인" 버튼을 눌러주세요.',
+            '본인인증을 위해 외부 브라우저로 이동합니다.\n\n본인인증 완료 후 앱으로 돌아와 화면을 새로고침해주세요.',
             [
               {
                 text: '취소',
-                style: 'cancel',
-                onPress: () => setLoading(false)
+                style: 'cancel'
               },
               {
                 text: '확인',
@@ -344,32 +358,22 @@ const SignUpPrivateAdultScreen = () => {
                   try {
                     const canOpen = await Linking.canOpenURL(fullUrl);
                     if (canOpen) {
-                      // 토큰 저장 및 대기 상태로 변경
-                      setAuthToken(token);
-                      setWaitingForAuth(true);
-                      setLoading(false);
-                      
                       await Linking.openURL(fullUrl);
                     } else {
                       Alert.alert('오류', 'URL을 열 수 없습니다.');
-                      setLoading(false);
                     }
                   } catch (error) {
                     console.error('URL 열기 오류:', error);
                     Alert.alert('오류', '브라우저를 열 수 없습니다.');
-                    setLoading(false);
                   }
                 }
               }
             ]
           );
         } else {
-          // 오류: 에러 메시지 표시
-          const rslt_cd = oknameData.rslt_cd || 'ERROR';
+          const rslt_cd = oknameData.rslt_cd || '';
           const rslt_msg = oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
-          console.error('❌ 본인인증 오류:', { rslt_cd, rslt_msg, okname: oknameData.okname });
           Alert.alert('휴대전화 본인인증', `[${rslt_cd}] ${rslt_msg}`);
-          setLoading(false);
         }
       } else if (responseValue === '1' || responseValue === '2') {
         console.log('❌ 이메일 중복:', responseValue);
@@ -391,6 +395,11 @@ const SignUpPrivateAdultScreen = () => {
     return job ? job.label : '선택해주세요';
   };
 
+  const getForeignerLabel = () => {
+    const foreigner = foreignerOptions.find(f => f.value === foreignerUseCode);
+    return foreigner ? foreigner.label : '선택해주세요';
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -409,226 +418,176 @@ const SignUpPrivateAdultScreen = () => {
 
       <ScrollView style={styles.content}>
         <View style={styles.subTitleBox}>
-          <Text style={styles.title}>18세 이상 회원가입</Text>
+          <Text style={styles.title}>외국인 회원가입</Text>
         </View>
 
         <View style={styles.formArea}>
           {/* 이메일 */}
           <View style={styles.inputGroup}>
-            <View style={styles.flexTit}>
-              <Text style={styles.tit}>이메일 (로그인 아이디)</Text>
-            </View>
-            <View style={styles.flexInput}>
-              <TextInput
-                style={[styles.text, errors.email && styles.textError]}
-                placeholder="이메일 입력"
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  setErrors({ ...errors, email: '' });
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-            <Text style={styles.starNotif}>* 이메일 주소는 변경이 불가합니다.</Text>
-            <Text style={styles.starNotif}>* 실사용 이메일 주소로 기입해주시기 바랍니다.</Text>
+            <Text style={styles.label}>이메일 (로그인 아이디)</Text>
+            <TextInput
+              style={[styles.input, errors.email && styles.inputError]}
+              placeholder="이메일 입력"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setErrors({ ...errors, email: '' });
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Text style={styles.notif}>* 이메일 주소는 변경이 불가합니다.</Text>
+            <Text style={styles.notif}>* 실사용 이메일 주소로 기입해주시기 바랍니다.</Text>
             {errors.email ? (
-              <Text style={styles.starNotif}>
-                <Text style={styles.txtDtErr}>{errors.email}</Text>
-              </Text>
+              <Text style={styles.errorText}>{errors.email}</Text>
             ) : null}
           </View>
 
           {/* 비밀번호 */}
           <View style={styles.inputGroup}>
-            <View style={styles.flexTit}>
-              <Text style={styles.tit}>비밀번호</Text>
-            </View>
-            <View style={styles.flexInput}>
-              <TextInput
-                style={[styles.text, errors.password && styles.textError]}
-                placeholder="비밀번호 입력"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  setErrors({ ...errors, password: '' });
-                }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="none"
-                autoComplete="off"
-                passwordRules=""
-              />
-            </View>
-            <View style={styles.flexInput}>
-              <TextInput
-                style={[styles.text, errors.passwordConfirm && styles.textError]}
-                placeholder="비밀번호 재입력"
-                value={passwordConfirm}
-                onChangeText={(text) => {
-                  setPasswordConfirm(text);
-                  setErrors({ ...errors, passwordConfirm: '' });
-                }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="none"
-                autoComplete="off"
-                passwordRules=""
-              />
-            </View>
-            <Text style={styles.starNotif}>
+            <Text style={styles.label}>비밀번호</Text>
+            <TextInput
+              style={[styles.input, errors.password && styles.inputError]}
+              placeholder="비밀번호 입력"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setErrors({ ...errors, password: '' });
+              }}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TextInput
+              style={[styles.input, styles.mt8, errors.passwordConfirm && styles.inputError]}
+              placeholder="비밀번호 재입력"
+              value={passwordConfirm}
+              onChangeText={(text) => {
+                setPasswordConfirm(text);
+                setErrors({ ...errors, passwordConfirm: '' });
+              }}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Text style={styles.notif}>
               * 영문, 숫자, 특수문자(숫자키 상단 특수문자만 가능) 최소 10자리 이상으로 입력해 주셔야 합니다.
             </Text>
             {errors.password ? (
-              <Text style={styles.starNotif}>
-                <Text style={styles.txtDtErr}>{errors.password}</Text>
-              </Text>
+              <Text style={styles.errorText}>{errors.password}</Text>
             ) : null}
             {errors.passwordConfirm ? (
-              <Text style={styles.starNotif}>
-                <Text style={styles.txtDtErr}>{errors.passwordConfirm}</Text>
-              </Text>
+              <Text style={styles.errorText}>{errors.passwordConfirm}</Text>
             ) : null}
           </View>
 
           {/* 주소 */}
           <View style={styles.inputGroup}>
-            <View style={styles.flexTit}>
-              <Text style={styles.tit}>주소</Text>
-            </View>
-            <View style={styles.flexInput}>
+            <Text style={styles.label}>주소</Text>
+            <View style={styles.addressRow}>
               <TextInput
-                style={[styles.text, styles.flexText, errors.address && styles.textError]}
+                style={[styles.addressInput, errors.address && styles.inputError]}
                 placeholder="우편번호"
                 value={zipcode}
                 onChangeText={setZipcode}
                 editable={true}
               />
               <TouchableOpacity
-                style={styles.btnStyle}
+                style={styles.addressButton}
                 onPress={handleAddressSearch}
               >
-                <Text style={styles.btnText}>주소찾기</Text>
+                <Text style={styles.addressButtonText}>주소찾기</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.flexInput}>
-              <TextInput
-                style={[styles.text, errors.address && styles.textError]}
-                placeholder="기본주소"
-                value={address1}
-                onChangeText={setAddress1}
-                editable={true}
-              />
-            </View>
-            <View style={styles.flexInput}>
-              <TextInput
-                style={styles.text}
-                placeholder="상세주소"
-                value={address2}
-                onChangeText={(text) => {
-                  setAddress2(text);
-                  setErrors({ ...errors, address: '' });
-                }}
-              />
-            </View>
-            <Text style={styles.starNotif}>* 이웃 우대 금리를 신청하시려면 등본상 주소를 입력하세요.</Text>
-            <Text style={styles.starNotif}>* 인근지역 상품 오픈 시 이웃등록 사전등록 혜택을 알려드립니다.</Text>
+            <TextInput
+              style={[styles.input, styles.mt8, errors.address && styles.inputError]}
+              placeholder="기본주소"
+              value={address1}
+              onChangeText={setAddress1}
+              editable={true}
+            />
+            <TextInput
+              style={[styles.input, styles.mt8]}
+              placeholder="상세주소"
+              value={address2}
+              onChangeText={(text) => {
+                setAddress2(text);
+                setErrors({ ...errors, address: '' });
+              }}
+            />
+            <Text style={styles.notif}>* 이웃 우대 금리를 신청하시려면 등본상 주소를 입력하세요.</Text>
+            <Text style={styles.notif}>* 인근지역 상품 오픈 시 이웃등록 사전등록 혜택을 알려드립니다.</Text>
             {errors.address ? (
-              <Text style={styles.starNotif}>
-                <Text style={styles.txtDtErr}>{errors.address}</Text>
-              </Text>
+              <Text style={styles.errorText}>{errors.address}</Text>
             ) : null}
           </View>
 
           {/* 가입 경로 */}
           <View style={styles.inputGroup}>
-            <View style={styles.flexTit}>
-              <Text style={styles.tit}>가입 경로 (선택)</Text>
-            </View>
-            <View style={styles.flexInput}>
-              <TouchableOpacity
-                style={styles.selectWide}
-                onPress={() => setShowJoinRootModal(true)}
-              >
-                <Text style={styles.selectText}>{joinRoot}</Text>
-                <Text style={styles.selectArrow}>▼</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.label}>가입 경로 (선택)</Text>
+            <TouchableOpacity
+              style={styles.selectBox}
+              onPress={() => setShowJoinRootModal(true)}
+            >
+              <Text style={styles.selectText}>{joinRoot}</Text>
+              <Text style={styles.selectArrowText}>▼</Text>
+            </TouchableOpacity>
             {joinRoot === 'ETC' && (
-              <View style={styles.flexInput}>
-                <TextInput
-                  style={styles.text}
-                  placeholder="기타입력"
-                  value={joinRootEtc}
-                  onChangeText={setJoinRootEtc}
-                />
-              </View>
+              <TextInput
+                style={[styles.input, styles.mt8]}
+                placeholder="기타입력"
+                value={joinRootEtc}
+                onChangeText={setJoinRootEtc}
+              />
             )}
           </View>
 
           {/* 직업 */}
           <View style={styles.inputGroup}>
-            <View style={styles.flexTit}>
-              <Text style={styles.tit}>직업(필수)</Text>
-            </View>
-            <View style={styles.flexInput}>
-              <TouchableOpacity
-                style={styles.selectWide}
-                onPress={() => setShowJobModal(true)}
-              >
-                <Text style={styles.selectText}>{getJobLabel()}</Text>
-                <Text style={styles.selectArrow}>▼</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.label}>
+              직업 <Text style={styles.required}>*</Text>
+            </Text>
+            <TouchableOpacity
+              style={styles.selectBox}
+              onPress={() => setShowJobModal(true)}
+            >
+              <Text style={styles.selectText}>{getJobLabel()}</Text>
+              <Text style={styles.selectArrowText}>▼</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 외국인 실지 명의 구분 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              외국인 실지 명의 구분 <Text style={styles.required}>*</Text>
+            </Text>
+            <TouchableOpacity
+              style={styles.selectBox}
+              onPress={() => setShowForeignerModal(true)}
+            >
+              <Text style={styles.selectText}>{getForeignerLabel()}</Text>
+              <Text style={styles.selectArrowText}>▼</Text>
+            </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.mb40} />
-        {waitingForAuth && !verificationCompleted && <View style={{ height: 150 }} />}
       </ScrollView>
 
       {/* 하단 버튼 */}
       <View style={styles.fixBtnWrap}>
-        {waitingForAuth && !verificationCompleted && (
-          <View style={styles.authNotice}>
-            <Text style={styles.authNoticeTitle}>📱 본인인증을 진행해주세요</Text>
-            <Text style={styles.authNoticeText}>
-              외부 브라우저에서 본인인증을 완료한 후{'\n'}
-              아래 버튼을 눌러 인증을 확인해주세요.
-            </Text>
-          </View>
-        )}
         <View style={styles.btnBox}>
           {!verificationCompleted ? (
-            waitingForAuth ? (
-              <TouchableOpacity
-                style={[styles.submitButton, styles.submitButtonCheck, loading && styles.submitButtonDisabled]}
-                onPress={handleCheckAuthResult}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitButtonText}>본인인증 완료 확인</Text>
-                )}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitButtonText}>휴대전화 본인인증</Text>
-                )}
-              </TouchableOpacity>
-            )
+            <TouchableOpacity
+              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>휴대전화 본인인증</Text>
+              )}
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[styles.submitButton, styles.submitButtonSuccess, loading && styles.submitButtonDisabled]}
@@ -638,7 +597,7 @@ const SignUpPrivateAdultScreen = () => {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitButtonText}>회원가입 계속 진행</Text>
+                <Text style={styles.submitButtonText}>회원가입 완료</Text>
               )}
             </TouchableOpacity>
           )}
@@ -672,6 +631,41 @@ const SignUpPrivateAdultScreen = () => {
                 >
                   <Text style={[styles.modalItemText, jobCode === job.value && styles.modalItemTextSelected]}>
                     {job.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 외국인 실지 명의 구분 선택 모달 */}
+      <Modal
+        visible={showForeignerModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowForeignerModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>외국인 실지 명의 구분</Text>
+              <TouchableOpacity onPress={() => setShowForeignerModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              {foreignerOptions.map((foreigner) => (
+                <TouchableOpacity
+                  key={foreigner.value}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setForeignerUseCode(foreigner.value);
+                    setShowForeignerModal(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, foreignerUseCode === foreigner.value && styles.modalItemTextSelected]}>
+                    {foreigner.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -851,28 +845,23 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   formArea: {
-    marginTop: 10,
     paddingHorizontal: 20,
+    paddingBottom: 100,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  flexTit: {
-    marginBottom: 8,
-  },
-  tit: {
+  label: {
     fontSize: 15,
     lineHeight: 21,
     fontWeight: '600',
     color: '#393f44',
-  },
-  flexInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 8,
   },
-  text: {
-    flex: 1,
+  required: {
+    color: '#ff5042',
+  },
+  input: {
     height: 48,
     borderWidth: 1,
     borderColor: '#e0e1e2',
@@ -883,37 +872,55 @@ const styles = StyleSheet.create({
     color: '#222',
     backgroundColor: '#fbfbfb',
   },
-  textError: {
+  inputError: {
     borderColor: '#ff5042',
   },
-  flexText: {
-    flex: 1,
-    marginRight: 8,
+  notif: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#a3a7ab',
+    marginTop: 4,
   },
-  btnStyle: {
+  errorText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#ff5042',
+    marginTop: 4,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addressInput: {
+    flex: 1,
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    lineHeight: 21,
+    color: '#222',
+    backgroundColor: '#f9f9f9',
+  },
+  addressButton: {
     height: 48,
     paddingHorizontal: 16,
     backgroundColor: '#e0e1e2',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
   },
-  btnText: {
+  addressButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#393f44',
   },
-  starNotif: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: '#a3a7ab',
-    marginTop: 4,
+  mt8: {
+    marginTop: 8,
   },
-  txtDtErr: {
-    color: '#ff5042',
-  },
-  selectWide: {
-    flex: 1,
+  selectBox: {
     height: 48,
     borderWidth: 1,
     borderColor: '#e0e1e2',
@@ -929,12 +936,9 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: '#222',
   },
-  selectArrow: {
+  selectArrowText: {
     fontSize: 12,
     color: '#666',
-  },
-  mb40: {
-    marginBottom: 100,
   },
   fixBtnWrap: {
     position: 'absolute',
@@ -963,34 +967,10 @@ const styles = StyleSheet.create({
   submitButtonSuccess: {
     backgroundColor: '#28a745',
   },
-  submitButtonCheck: {
-    backgroundColor: '#ff9800',
-  },
   submitButtonText: {
     fontSize: 20,
     fontWeight: '700',
     color: '#fff',
-  },
-  authNotice: {
-    padding: 16,
-    backgroundColor: '#fff3e0',
-    borderRadius: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#ffb74d',
-  },
-  authNoticeTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#e65100',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  authNoticeText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#5d4037',
-    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -1056,4 +1036,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SignUpPrivateAdultScreen;
+export default SignUpPrivateForeignerScreen;
+
