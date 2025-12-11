@@ -312,7 +312,7 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
                   style={styles.loginJoinItem}
                   onPress={() => {
                     setMenuVisible(false);
-                    navigation.navigate('SignUp');
+                    navigation.navigate('SignUpType');
                   }}
                 >
                   <View style={styles.signupTip}>

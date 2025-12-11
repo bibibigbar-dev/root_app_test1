@@ -362,7 +362,10 @@ const InvestRequestScreen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
         <Text style={styles.title}></Text>
       </View>
@@ -1047,15 +1050,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   backButton: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 24,
-    color: '#333',
-    fontWeight: '300',
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   title: {
     marginLeft: 12,

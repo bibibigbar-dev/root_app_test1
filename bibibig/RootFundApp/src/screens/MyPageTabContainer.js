@@ -143,8 +143,7 @@ const MyPageTabContainer = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content}>
-        {/* Back 버튼 */}
+      {/* Back 버튼 - 고정 */}
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -154,6 +153,8 @@ const MyPageTabContainer = ({ navigation, route }) => {
             style={styles.backIcon}
           />
         </TouchableOpacity>
+      
+      <ScrollView style={styles.content}>
 
         {/* 헤더 */}
         <View style={styles.mypageHead}>

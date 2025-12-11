@@ -495,8 +495,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   backButton: {
-    width: 24,
-    height: 24,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -554,12 +554,12 @@ const styles = StyleSheet.create({
   },
   termsList: {
     marginTop: 16,
-    marginLeft: 16,
+    marginLeft: 8,
     marginRight: 8,
   },
   termsItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginTop: 15,
   },
   labelBox: {
@@ -575,12 +575,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginLeft: 8,
-    paddingRight: 30,
+    paddingRight: 20,
   },
   termsLinkText: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 24,
     color: '#222222',
   },
   colorBlue: {

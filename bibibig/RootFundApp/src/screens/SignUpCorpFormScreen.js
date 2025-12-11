@@ -100,7 +100,13 @@ const SignUpCorpFormScreen = () => {
             '휴업자 등록번호 입니다. 계속 진행하시겠습니까?',
             [
               { text: '취소', style: 'cancel' },
-              { text: '확인', onPress: () => completeCorpNoCheck() }
+              { 
+                text: '확인', 
+                onPress: () => {
+                  setCorpNo(corpNoTemp);
+                  setCorpNoVerified(true);
+                }
+              }
             ]
           );
           return;
@@ -111,7 +117,13 @@ const SignUpCorpFormScreen = () => {
             '폐업자 등록번호 입니다. 계속 진행하시겠습니까?',
             [
               { text: '취소', style: 'cancel' },
-              { text: '확인', onPress: () => completeCorpNoCheck() }
+              { 
+                text: '확인', 
+                onPress: () => {
+                  setCorpNo(corpNoTemp);
+                  setCorpNoVerified(true);
+                }
+              }
             ]
           );
           return;
@@ -123,64 +135,46 @@ const SignUpCorpFormScreen = () => {
             `사업자 상태: ${bizData.b_stt || '알 수 없음'}\n계속 진행하시겠습니까?`,
             [
               { text: '취소', style: 'cancel' },
-              { text: '확인', onPress: () => completeCorpNoCheck() }
+              { 
+                text: '확인', 
+                onPress: () => {
+                  setCorpNo(corpNoTemp);
+                  setCorpNoVerified(true);
+                }
+              }
             ]
           );
           return;
         }
         
         if (checkNextStep) {
-          completeCorpNoCheck();
+          setCorpNo(corpNoTemp);
+          setCorpNoVerified(true);
         }
       } else if (result.status_code === 'NO_DATA') {
         // 데이터 없음
         console.warn('⚠️ 사업자번호 조회 결과 없음');
         Alert.alert(
           '사업자번호 조회',
-          '등록되지 않은 사업자번호입니다.\n\n개발 환경에서는 "임시 승인"을 선택하여 계속 진행할 수 있습니다.',
-          [
-            { text: '취소', style: 'cancel' },
-            { text: '임시 승인 (개발용)', onPress: () => completeCorpNoCheck() }
-          ]
+          '등록되지 않은 사업자번호입니다.'
         );
       } else {
         // 기타 오류
         console.error('❌ API 응답 오류:', result);
         Alert.alert(
           '사업자번호 조회',
-          `확인할 수 없습니다. (${result.status_code || 'UNKNOWN'})\n사업자번호를 확인하여 주세요.\n\n개발 환경에서는 "임시 승인"을 선택하여 계속 진행할 수 있습니다.`,
-          [
-            { text: '취소', style: 'cancel' },
-            { text: '임시 승인 (개발용)', onPress: () => completeCorpNoCheck() }
-          ]
+          `확인할 수 없습니다. (${result.status_code || 'UNKNOWN'})\n사업자번호를 확인하여 주세요.`
         );
       }
     } catch (error) {
       console.error('❌ 사업자번호 조회 오류:', error);
-      
-      // 개발 환경용 임시 승인 옵션
       Alert.alert(
         '사업자번호 조회',
-        error.message || '처리도중 오류가 발생하였습니다.\n\n개발 환경에서는 "임시 승인"을 선택하여 계속 진행할 수 있습니다.',
-        [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '임시 승인 (개발용)',
-            onPress: () => {
-              console.log('⚠️ 개발용 임시 승인 - 사업자번호:', corpNoTemp);
-              completeCorpNoCheck();
-            }
-          }
-        ]
+        error.message || '처리도중 오류가 발생하였습니다.'
       );
     } finally {
       setCheckingCorpNo(false);
     }
-  };
-
-  const completeCorpNoCheck = () => {
-    setCorpNo(corpNoTemp);
-    setCorpNoVerified(true);
   };
 
   const handleChangeCorpNo = () => {
@@ -637,7 +631,7 @@ const styles = StyleSheet.create({
     color: '#393f44',
   },
   noticeText: {
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 16,
     color: '#a3a7ab',
     marginBottom: 4,

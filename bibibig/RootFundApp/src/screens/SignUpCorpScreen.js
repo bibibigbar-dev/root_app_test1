@@ -290,128 +290,98 @@ const SignUpCorpScreen = () => {
 
           <View style={styles.termsList}>
             {/* 서비스 이용약관 */}
-            <View style={styles.termsListItem}>
-              <TouchableOpacity
-                style={styles.labelBox}
-                onPress={() => handleTermCheck('service')}
-              >
+            <View style={styles.termsItem}>
+              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('service')}>
                 <Image
                   source={
                     checkedTerms.service
                       ? require('../assets/images/checkbox_on.png')
                       : require('../assets/images/checkbox_off.png')
                   }
-                  style={styles.checkboxIcon}
+                  style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowServiceModal(true)}
-                style={styles.termsLink}
-              >
+              <TouchableOpacity style={styles.termsLink} onPress={() => setShowServiceModal(true)}>
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.requiredText}>(필수)</Text> 서비스 이용약관
+                  <Text style={styles.colorBlue}>(필수)</Text> 서비스 이용약관
                 </Text>
                 <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
             {/* 개인정보처리방침 */}
-            <View style={styles.termsListItem}>
-              <TouchableOpacity
-                style={styles.labelBox}
-                onPress={() => handleTermCheck('privateAgree')}
-              >
+            <View style={styles.termsItem}>
+              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('privateAgree')}>
                 <Image
                   source={
                     checkedTerms.privateAgree
                       ? require('../assets/images/checkbox_on.png')
                       : require('../assets/images/checkbox_off.png')
                   }
-                  style={styles.checkboxIcon}
+                  style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowPrivateAgreeModal(true)}
-                style={styles.termsLink}
-              >
+              <TouchableOpacity style={styles.termsLink} onPress={() => setShowPrivateAgreeModal(true)}>
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.requiredText}>(필수)</Text> 개인정보처리방침
+                  <Text style={styles.colorBlue}>(필수)</Text> 개인정보처리방침
                 </Text>
                 <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
             {/* 개인(신용)정보 제3자(P2P자금관리) 제공 동의 */}
-            <View style={styles.termsListItem}>
-              <TouchableOpacity
-                style={styles.labelBox}
-                onPress={() => handleTermCheck('priv2')}
-              >
+            <View style={styles.termsItem}>
+              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('priv2')}>
                 <Image
                   source={
                     checkedTerms.priv2
                       ? require('../assets/images/checkbox_on.png')
                       : require('../assets/images/checkbox_off.png')
                   }
-                  style={styles.checkboxIcon}
+                  style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowPriv2Modal(true)}
-                style={styles.termsLink}
-              >
+              <TouchableOpacity style={styles.termsLink} onPress={() => setShowPriv2Modal(true)}>
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.requiredText}>(필수)</Text> 개인(신용)정보 제3자(P2P자금관리) 제공 동의
+                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보 제3자(P2P자금관리) 제공 동의
                 </Text>
                 <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
             {/* 개인(신용)정보 제3자(투자금예치은행) 제공 동의 */}
-            <View style={styles.termsListItem}>
-              <TouchableOpacity
-                style={styles.labelBox}
-                onPress={() => handleTermCheck('nhapi')}
-              >
+            <View style={styles.termsItem}>
+              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('nhapi')}>
                 <Image
                   source={
                     checkedTerms.nhapi
                       ? require('../assets/images/checkbox_on.png')
                       : require('../assets/images/checkbox_off.png')
                   }
-                  style={styles.checkboxIcon}
+                  style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowNhapiModal(true)}
-                style={styles.termsLink}
-              >
+              <TouchableOpacity style={styles.termsLink} onPress={() => setShowNhapiModal(true)}>
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.requiredText}>(필수)</Text> 개인(신용)정보 제3자(투자금예치은행) 제공 동의
+                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보 제3자(투자금예치은행) 제공 동의
                 </Text>
                 <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
             {/* 마케팅 정보 수집 및 활용 동의 */}
-            <View style={styles.termsListItem}>
-              <TouchableOpacity
-                style={styles.labelBox}
-                onPress={() => handleTermCheck('marketing')}
-              >
+            <View style={styles.termsItem}>
+              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('marketing')}>
                 <Image
                   source={
                     checkedTerms.marketing
                       ? require('../assets/images/checkbox_on.png')
                       : require('../assets/images/checkbox_off.png')
                   }
-                  style={styles.checkboxIcon}
+                  style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowMarketingModal(true)}
-                style={styles.termsLink}
-              >
+              <TouchableOpacity style={styles.termsLink} onPress={() => setShowMarketingModal(true)}>
                 <Text style={styles.termsLinkText}>
                   (선택) 마케팅 정보 수집 및 활용 동의
                 </Text>
@@ -421,7 +391,7 @@ const SignUpCorpScreen = () => {
 
             {termError ? (
               <View style={styles.errorContainer}>
-                <Text style={styles.termErrorMessage}>{termError}</Text>
+                <Text style={styles.errorText}>{termError}</Text>
               </View>
             ) : null}
           </View>
@@ -557,16 +527,20 @@ const styles = StyleSheet.create({
   },
   termsList: {
     marginTop: 16,
-    marginLeft: 16,
+    marginLeft: 8,
     marginRight: 8,
   },
-  termsListItem: {
+  termsItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginTop: 15,
   },
   labelBox: {
     padding: 4,
+  },
+  checkboxImageSmall: {
+    width: 21,
+    height: 21,
   },
   termsLink: {
     flex: 1,
@@ -574,19 +548,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginLeft: 8,
-    paddingRight: 30,
+    paddingRight: 20,
   },
   termsLinkText: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 24,
     color: '#222222',
   },
-  requiredText: {
+  colorBlue: {
     color: '#2c3db8',
-  },
-  optionalText: {
-    color: '#666',
   },
   arrowIcon: {
     width: 14,
@@ -599,7 +570,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 4,
   },
-  termErrorMessage: {
+  errorText: {
     color: '#ff5042',
     fontSize: 11,
     lineHeight: 14,

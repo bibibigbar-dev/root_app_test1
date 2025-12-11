@@ -47,17 +47,16 @@ const SignUpPrivateForeignerScreen = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
 
   const joinRootOptions = [
-    '선택해주세요',
-    '지인소개',
-    '인터넷 검색',
-    '구글 광고',
-    '네이버 광고',
-    'SNS(페이스북/인스타그램) 광고',
-    '뉴스/기사',
-    '인터넷 커뮤니티',
-    '세미나/교육/포럼',
-    '광고지/우편물',
-    'ETC',
+    { value: '지인소개', label: '지인소개' },
+    { value: '인터넷 검색', label: '인터넷 검색' },
+    { value: '구글 광고', label: '구글 광고' },
+    { value: '네이버 광고', label: '네이버 광고' },
+    { value: 'SNS(페이스북/인스타그램) 광고', label: 'SNS(페이스북/인스타그램) 광고' },
+    { value: '뉴스/기사', label: '뉴스/기사' },
+    { value: '인터넷 커뮤니티', label: '인터넷 커뮤니티' },
+    { value: '세미나/교육/포럼', label: '세미나/교육/포럼' },
+    { value: '광고지/우편물', label: '광고지/우편물' },
+    { value: 'ETC', label: '기타' },
   ];
 
   const jobOptions = [
@@ -400,6 +399,11 @@ const SignUpPrivateForeignerScreen = () => {
     return foreigner ? foreigner.label : '선택해주세요';
   };
 
+  const getJoinRootLabel = () => {
+    const option = joinRootOptions.find(o => o.value === joinRoot);
+    return option ? option.label : '선택해주세요';
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -530,7 +534,7 @@ const SignUpPrivateForeignerScreen = () => {
               style={styles.selectBox}
               onPress={() => setShowJoinRootModal(true)}
             >
-              <Text style={styles.selectText}>{joinRoot}</Text>
+              <Text style={styles.selectText}>{getJoinRootLabel()}</Text>
               <Text style={styles.selectArrowText}>▼</Text>
             </TouchableOpacity>
             {joinRoot === 'ETC' && (
@@ -620,7 +624,7 @@ const SignUpPrivateForeignerScreen = () => {
               </TouchableOpacity>
             </View>
             <ScrollView>
-              {jobOptions.map((job) => (
+              {jobOptions.filter(job => job.value !== '00').map((job) => (
                 <TouchableOpacity
                   key={job.value}
                   style={styles.modalItem}
@@ -655,7 +659,7 @@ const SignUpPrivateForeignerScreen = () => {
               </TouchableOpacity>
             </View>
             <ScrollView>
-              {foreignerOptions.map((foreigner) => (
+              {foreignerOptions.filter(foreigner => foreigner.value !== '').map((foreigner) => (
                 <TouchableOpacity
                   key={foreigner.value}
                   style={styles.modalItem}
@@ -695,12 +699,12 @@ const SignUpPrivateForeignerScreen = () => {
                   key={index}
                   style={styles.modalItem}
                   onPress={() => {
-                    setJoinRoot(option);
+                    setJoinRoot(option.value);
                     setShowJoinRootModal(false);
                   }}
                 >
-                  <Text style={[styles.modalItemText, joinRoot === option && styles.modalItemTextSelected]}>
-                    {option}
+                  <Text style={[styles.modalItemText, joinRoot === option.value && styles.modalItemTextSelected]}>
+                    {option.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -876,7 +880,7 @@ const styles = StyleSheet.create({
     borderColor: '#ff5042',
   },
   notif: {
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 17,
     color: '#a3a7ab',
     marginTop: 4,

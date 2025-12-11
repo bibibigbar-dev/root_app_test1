@@ -107,10 +107,8 @@ const MainScreen = ({ navigation }) => {
   };
 
   const handleBannerPress = () => {
-    const url = 'https://rootenergy.co.kr/mobile/product/list';
-    Linking.openURL(url).catch((err) =>
-      console.error('배너 링크 열기 실패:', err)
-    );
+    // Header.js의 투자하기 메뉴와 동일하게 ProductList로 이동
+    navigation.navigate('ProductList', { user });
   };
 
   const checkAndShowPopup = async () => {
@@ -498,17 +496,16 @@ const MainScreen = ({ navigation }) => {
       }
     });
     
-    // 고정 배너 추가 (법인투자)
+    // 고정 배너 추가 (법인투자 상담 신청)
     bannerData.push({
       type: 'fixed',
       data: {
         title: '녹색 금융,\n법인투자자와 함께 합니다',
         subtitle: '가입부터 투자까지 1:1 상담 진행',
-        url: 'https://rootenergy.co.kr/guide/corpForm',
         btnText: '상담 신청하기',
         btnStyle: styles.btnGoBlack,
         bgColor: '#F5F5F5',
-        navigateTo: 'ConsultationRequest', // 특별 처리: 상담 신청 화면으로 이동
+        navigateTo: 'ConsultationRequest', // 1:1 상담 신청 페이지로 이동
       }
     });
     

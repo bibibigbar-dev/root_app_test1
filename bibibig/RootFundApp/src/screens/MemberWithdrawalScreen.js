@@ -123,17 +123,21 @@ const MemberWithdrawalScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Back 버튼 헤더 */}
+      {/* Back 버튼 헤더 - 고정 */}
         <View style={styles.headerContainer}>
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backButtonText}>←</Text>
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon}
+          />
           </TouchableOpacity>
           <Text style={styles.headerTitle}></Text>
         </View>
+      
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
 
         {/* 성공 아이콘 및 메시지 */}
         <View style={styles.successContainer}>
@@ -276,14 +280,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f7fa',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 24,
-    color: '#222',
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   headerTitle: {
     flex: 1,
@@ -416,7 +420,7 @@ const styles = StyleSheet.create({
   },
   btnBox: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   btnStyle: {
     height: 48,

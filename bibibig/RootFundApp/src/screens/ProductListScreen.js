@@ -244,17 +244,20 @@ const ProductListScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Back 버튼 */}
-        <View style={styles.backButtonContainer}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Back 버튼 - 고정 */}
+      <View style={styles.backButtonContainer}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon}
+          />
+        </TouchableOpacity>
+      </View>
 
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 탭 메뉴 */}
         <View style={styles.tabSwiper}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContent}>
@@ -451,7 +454,7 @@ const ProductListScreen = ({ navigation, route }) => {
               </View>
             ) : (
               <>
-                <View style={[styles.productList, styles.mt20, styles.mb40]}>
+                <View style={[styles.productList, styles.mt20, styles.mb20]}>
                   {getCompleteList().slice(0, completePage * completeItemsPerPage).map((item) => (
                     <TouchableOpacity 
                       key={item.idx}
@@ -1101,7 +1104,7 @@ const styles = StyleSheet.create({
   productList: {
     paddingHorizontal: 20,
     paddingTop: 0,
-    marginBottom: 15,
+    marginBottom: 10,
   },
   productItem: {
     flexDirection: 'row',
@@ -1377,15 +1380,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   backButton: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 24,
-    color: '#333',
-    fontWeight: '300',
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   loadingWrapperProduct: {
     display: 'flex',
@@ -1417,7 +1419,7 @@ const styles = StyleSheet.create({
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 10,
     marginBottom: 40,
   },
   loadMoreButton: {

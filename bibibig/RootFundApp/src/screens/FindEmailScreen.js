@@ -157,7 +157,7 @@ const FindEmailScreen = ({ navigation }) => {
               <View style={styles.rightBtn}>
                 <TouchableOpacity
                   style={styles.btnJoin}
-                  onPress={() => navigation.navigate('SignUp')}
+                  onPress={() => navigation.navigate('SignUpType')}
                 >
                   <Text style={styles.btnJoinText}>
                     <Text style={styles.btnJoinEmphasis}>회원가입</Text> 바로가기

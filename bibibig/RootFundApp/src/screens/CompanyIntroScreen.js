@@ -57,13 +57,6 @@ const CompanyIntroScreen = ({ navigation }) => {
       >
         {/* 비주얼 섹션 */}
         <View style={styles.subBusinessVisual}>
-          {/* Back 버튼 */}
-          <TouchableOpacity 
-            style={styles.backButtonContainer}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
           <ImageBackground 
             source={require('../assets/images/bg_corp_intro.png')} 
             style={styles.imgbox}

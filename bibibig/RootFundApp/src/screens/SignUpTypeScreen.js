@@ -33,7 +33,10 @@ const SignUpTypeScreen = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
       </View>
 
@@ -125,14 +128,14 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 28,
-    color: '#1a1a1a',
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   content: {
     flex: 1,

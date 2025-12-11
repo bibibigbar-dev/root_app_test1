@@ -12,10 +12,12 @@ import {
   Modal,
   Linking,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import DocumentPicker from 'react-native-document-picker';
+import RNFS from 'react-native-fs';
 import ApiService from '../services/api';
 
 const joinRootOptions = [
@@ -174,6 +176,72 @@ const SignUpPrivateMinorScreen = () => {
     }
   };
 
+  // 파일 업로드 함수 (회원가입 성공 후 호출)
+  const uploadMinorFiles = async (member_id) => {
+    try {
+      console.log('📤 파일 업로드 시작, member_id:', member_id);
+
+      const fileFormData = new FormData();
+      fileFormData.append('member_id_minor', member_id);
+
+      // 파일 추가 (백엔드에서 "files" 필드명으로 여러 파일 처리)
+      selectedFiles.forEach((file) => {
+        fileFormData.append('files', {
+          uri: file.uri,
+          type: file.type || 'application/octet-stream',
+          name: file.name,
+        });
+      });
+
+      console.log('📤 파일 업로드 데이터:', {
+        member_id,
+        filesCount: selectedFiles.length,
+      });
+
+      const fileResponse = await ApiService.api.post(
+        '/app/management/member/proc/memberMinorFileUpload',
+        fileFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      console.log('📥 파일 업로드 응답:', fileResponse.data);
+
+      if (fileResponse.data === '0') {
+        // 파일 업로드 성공 - 서비스 이용신청 화면으로 이동
+        navigation.replace('MyCert', {
+          use_tf_join: 'Y',
+          f_joinType: f_joinType || 'minor',
+          member_id: member_id,
+        });
+      } else {
+        Alert.alert('회원가입', '파일 업로드 중 오류가 발생하였습니다.', [
+          {
+            text: '확인',
+            onPress: () => {
+              // 회원가입은 성공했으므로 로그인 화면으로 이동
+              navigation.replace('Login');
+            },
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('❌ 파일 업로드 오류:', error);
+      Alert.alert('회원가입', '파일 업로드 중 오류가 발생하였습니다.', [
+        {
+          text: '확인',
+          onPress: () => {
+            // 회원가입은 성공했으므로 로그인 화면으로 이동
+            navigation.replace('Login');
+          },
+        },
+      ]);
+    }
+  };
+
   // 회원가입 완료 처리 (본인인증 완료 후)
   const handleCompleteSignUp = async () => {
     if (!verificationCompleted || !verificationData) {
@@ -192,7 +260,7 @@ const SignUpPrivateMinorScreen = () => {
 
       const finalJoinRoot = joinRoot === 'ETC' ? joinRootEtc : joinRoot;
 
-      // FormData로 파일 포함하여 전송
+      // 1단계: 회원가입 정보만 전송 (파일 제외)
       const formData = new FormData();
       formData.append('web_id', email);
       formData.append('email', email);
@@ -212,19 +280,9 @@ const SignUpPrivateMinorScreen = () => {
       formData.append('address2', address2);
       formData.append('jobCode', jobCode);
 
-      // 파일 추가
-      selectedFiles.forEach((file, index) => {
-        formData.append(`file${index}`, {
-          uri: file.uri,
-          type: file.type || 'application/octet-stream',
-          name: file.name,
-        });
-      });
-
-      console.log('📤 회원가입 요청 데이터 (FormData):', {
+      console.log('📤 회원가입 요청 데이터:', {
         email,
         name: verificationData.name,
-        filesCount: selectedFiles.length,
       });
 
       const response = await ApiService.api.post('/app/certJoinProcess', formData, {
@@ -238,14 +296,9 @@ const SignUpPrivateMinorScreen = () => {
       const rtnvalue = String(response.data.rtnvalue).trim();
 
       if (rtnvalue === '0') {
-        // 회원가입 성공 - 서비스 이용신청 화면으로 이동
+        // 회원가입 성공 - 2단계: 파일 업로드 진행
         const member_id = response.data.member_id || '';
-        
-        navigation.replace('MyCert', {
-          use_tf_join: 'Y',
-          f_joinType: f_joinType || 'minor',
-          member_id: member_id,
-        });
+        await uploadMinorFiles(member_id);
       } else if (rtnvalue === '1') {
         Alert.alert('회원가입', '입력정보를 확인해주세요.');
       } else if (rtnvalue === '2') {
@@ -290,6 +343,80 @@ const SignUpPrivateMinorScreen = () => {
   const handleFileRemove = (index) => {
     const newFiles = selectedFiles.filter((_, i) => i !== index);
     setSelectedFiles(newFiles);
+  };
+
+  // 법정대리인 동의서 다운로드
+  const handleDownloadConsentForm = async () => {
+    try {
+      // Android 권한 요청 (Android 13 미만)
+      if (Platform.OS === 'android' && Platform.Version < 33) {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          {
+            title: '저장소 권한 요청',
+            message: '파일을 다운로드하기 위해 저장소 접근 권한이 필요합니다.',
+            buttonNeutral: '나중에',
+            buttonNegative: '취소',
+            buttonPositive: '확인',
+          }
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('권한 필요', '파일 다운로드를 위해 저장소 권한이 필요합니다.');
+          return;
+        }
+      }
+
+      // 파일명 설정
+      const fileName = '미성년자의_법정대리인_투자동의서.docx';
+      
+      // 앱 번들 내 파일 경로
+      const sourcePath = Platform.OS === 'android'
+        ? `${RNFS.MainBundlePath}/file/미성년자의 법정대리인 투자동의서_(회원명).docx`
+        : `${RNFS.MainBundlePath}/file/미성년자의 법정대리인 투자동의서_(회원명).docx`;
+
+      // 다운로드 대상 경로
+      const downloadDest = Platform.OS === 'ios'
+        ? `${RNFS.DocumentDirectoryPath}/${fileName}`
+        : `${RNFS.DownloadDirectoryPath}/${fileName}`;
+
+      console.log('파일 복사 시작:', { sourcePath, downloadDest });
+
+      // 파일 존재 확인
+      const fileExists = await RNFS.exists(sourcePath);
+      if (!fileExists) {
+        console.error('원본 파일이 존재하지 않습니다:', sourcePath);
+        Alert.alert('오류', '파일을 찾을 수 없습니다.');
+        return;
+      }
+
+      // 파일 복사
+      await RNFS.copyFile(sourcePath, downloadDest);
+
+      Alert.alert(
+        '다운로드 완료',
+        Platform.OS === 'ios'
+          ? '파일이 다운로드되었습니다.\n\n파일 앱 > 나의 iPhone > 루트펀드 폴더에서 확인하실 수 있습니다.'
+          : '파일이 다운로드되었습니다.\n\n파일 관리자 > 다운로드 폴더에서 확인하실 수 있습니다.',
+        [
+          {
+            text: '확인',
+            onPress: () => {
+              if (Platform.OS === 'ios') {
+                // iOS에서는 파일 앱으로 이동
+                Linking.openURL('shareddocuments://').catch(() => {
+                  console.log('파일 앱을 열 수 없습니다.');
+                });
+              }
+            },
+          },
+        ]
+      );
+
+      console.log('파일 다운로드 완료:', downloadDest);
+    } catch (error) {
+      console.error('파일 다운로드 오류:', error);
+      Alert.alert('오류', '파일 다운로드 중 오류가 발생했습니다.');
+    }
   };
 
   const handleSubmit = async () => {
@@ -630,7 +757,7 @@ const SignUpPrivateMinorScreen = () => {
             </View>
             <View style={styles.documentInfo}>
               <Text style={styles.documentText}>* 가족관계증명서</Text>
-              <TouchableOpacity onPress={() => Linking.openURL('/resources/미성년자의 법정대리인 투자동의서_(회원명).docx')}>
+              <TouchableOpacity onPress={handleDownloadConsentForm}>
                 <Text style={styles.documentText}>
                   * <Text style={styles.documentLink}>법정대리인 동의서</Text>(양식)
                 </Text>
@@ -648,7 +775,11 @@ const SignUpPrivateMinorScreen = () => {
               style={styles.fileUploadBox}
               onPress={handleFileSelect}
             >
-              <Text style={styles.fileUploadIcon}>📎</Text>
+              <Image 
+                source={require('../assets/images/ico_fileupload.png')} 
+                style={styles.fileUploadIcon}
+                resizeMode="contain"
+              />
               <Text style={styles.fileUploadText}>파일추가</Text>
             </TouchableOpacity>
 
@@ -889,9 +1020,10 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
   },
   backButtonImage: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 17,
@@ -966,7 +1098,7 @@ const styles = StyleSheet.create({
     color: '#393f44',
   },
   starNotif: {
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 17,
     color: '#a3a7ab',
     marginTop: 4,
@@ -975,7 +1107,7 @@ const styles = StyleSheet.create({
     color: '#ff5042',
   },
   documentInfo: {
-    marginTop: 12,
+    marginTop: 0,
   },
   documentText: {
     fontSize: 12,
@@ -999,7 +1131,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   fileUploadIcon: {
-    fontSize: 20,
+    width: 20,
+    height: 20,
     marginRight: 8,
   },
   fileUploadText: {
@@ -1070,8 +1203,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e1e2',
     marginBottom: 20,
   },
   btnBox: {

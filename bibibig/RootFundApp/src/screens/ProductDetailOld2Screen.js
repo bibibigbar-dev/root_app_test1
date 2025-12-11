@@ -541,9 +541,10 @@ const ProductDetailOld2Screen = ({ navigation, route }) => {
   };
 
   const handleShareUrl = () => {
-    const url = `https://rootenergy.co.kr/product/detail/${orderKey}`;
+    // 커스텀 스킴 사용 - 앱이 설치된 기기에서만 작동
+    const url = `rootfund://product/${orderKey}`;
     Clipboard.setString(url);
-    Alert.alert('알림', 'URL이 복사되었습니다.');
+    Alert.alert('알림', 'URL이 복사되었습니다.\n앱이 설치된 기기에서만 열립니다.');
   };
 
   const handleInvestRequest = () => {
@@ -692,7 +693,10 @@ const ProductDetailOld2Screen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -1161,15 +1165,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   backButton: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 24,
-    color: '#333',
-    fontWeight: '300',
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   shareButton: {
     width: 24,

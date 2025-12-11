@@ -40,7 +40,7 @@ const SignUpPrivateSelectScreen = ({ navigation }) => {
             onPress={() => handleTypeSelect('minor')}
             activeOpacity={0.8}
           >
-            <View style={styles.inbox}>
+            <View style={[styles.inbox, selectedType === 'minor' && styles.inboxSelected]}>
               <Text style={[styles.typeText, selectedType === 'minor' && styles.typeTextSelected]}>
                 만 18세 미만
               </Text>
@@ -64,7 +64,7 @@ const SignUpPrivateSelectScreen = ({ navigation }) => {
             onPress={() => handleTypeSelect('adult')}
             activeOpacity={0.8}
           >
-            <View style={styles.inbox}>
+            <View style={[styles.inbox, selectedType === 'adult' && styles.inboxSelected]}>
               <Text style={[styles.typeText, selectedType === 'adult' && styles.typeTextSelected]}>
                 만 18세 이상
               </Text>
@@ -88,7 +88,7 @@ const SignUpPrivateSelectScreen = ({ navigation }) => {
             onPress={() => handleTypeSelect('foreigner')}
             activeOpacity={0.8}
           >
-            <View style={styles.inbox}>
+            <View style={[styles.inbox, selectedType === 'foreigner' && styles.inboxSelected]}>
               <Text style={[styles.typeText, selectedType === 'foreigner' && styles.typeTextSelected]}>
                 외국인
               </Text>
@@ -158,6 +158,10 @@ const styles = StyleSheet.create({
     paddingTop: 24, // 2.4rem
     paddingBottom: 20,
   },
+  inboxSelected: {
+    borderColor: '#2c3db8',
+    borderWidth: 1,
+  },
   typeText: {
     color: '#a3a7ab',
     fontSize: 18, // 2rem
@@ -183,13 +187,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#a3a7ab',
-    fontSize: 13, // 1.3rem
-    lineHeight: 18.2, // 1.3
-    textAlign: 'center',
+    fontSize: 14,
+    color: '#666666',
   },
   link: {
-    color: '#666',
+    ontSize: 14,
+    color: '#2c3db8',
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
   header: {
@@ -199,8 +203,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, // 1.6rem
   },
   backButton: {
-    width: 24,
-    height: 24,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
