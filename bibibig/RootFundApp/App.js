@@ -9,13 +9,34 @@ import React, { useEffect } from 'react';
 import { StatusBar, LogBox, Text, TextInput, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
+import { getFontFamily } from './src/styles/fonts';
 
 // 전역 폰트 스타일 설정
-if (Text.defaultProps == null) Text.defaultProps = {};
-Text.defaultProps.style = { fontFamily: 'Pretendard-Regular' };
+// Text 컴포넌트의 기본 렌더링 오버라이드
+const OriginalText = Text.render;
+const OriginalTextInput = TextInput.render;
 
-if (TextInput.defaultProps == null) TextInput.defaultProps = {};
-TextInput.defaultProps.style = { fontFamily: 'Pretendard-Regular' };
+// Text 컴포넌트 래핑
+Text.render = function (props, ref) {
+  const { style, ...restProps } = props;
+  const flatStyle = StyleSheet.flatten(style);
+  const fontWeight = flatStyle?.fontWeight;
+  const fontFamily = getFontFamily(fontWeight);
+  
+  const newStyle = [{ fontFamily }, style];
+  return OriginalText.call(this, { ...restProps, style: newStyle }, ref);
+};
+
+// TextInput 컴포넌트 래핑
+TextInput.render = function (props, ref) {
+  const { style, ...restProps } = props;
+  const flatStyle = StyleSheet.flatten(style);
+  const fontWeight = flatStyle?.fontWeight;
+  const fontFamily = getFontFamily(fontWeight);
+  
+  const newStyle = [{ fontFamily }, style];
+  return OriginalTextInput.call(this, { ...restProps, style: newStyle }, ref);
+};
 
 function App() {
   useEffect(() => {

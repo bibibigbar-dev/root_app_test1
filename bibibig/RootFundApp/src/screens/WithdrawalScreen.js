@@ -223,15 +223,17 @@ const WithdrawalScreen = ({ navigation, route }) => {
           text: '로그아웃',
           onPress: async () => {
             try {
-              // 새로운 로그아웃 API 사용 (백엔드 로그아웃 + 로컬 데이터 삭제)
-              await ApiService.logout();
+              if (user) {
+                await ApiService.logout();
+              } else {
+                await ApiService.clearLoginData();
+              }
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'Login' }],
               });
             } catch (error) {
               console.error('로그아웃 오류:', error);
-              // 오류가 발생해도 로컬 데이터는 삭제하고 로그인 화면으로 이동
               await ApiService.clearLoginData();
               navigation.reset({
                 index: 0,
@@ -723,7 +725,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
   },
   customerServiceButton: {
@@ -738,7 +740,7 @@ const styles = StyleSheet.create({
   },
   customerServiceButtonText: {
     color: '#007AFF',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
   },
   notice: {
