@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
+import DocumentPicker from 'react-native-document-picker';
 import ApiService from '../services/api';
 
 const MyCertScreen = () => {
@@ -25,6 +26,16 @@ const MyCertScreen = () => {
   const [rscpnoencdata, setRscpnoencdata] = useState('');
   const [bc5jsencpublickey, setBc5jsencpublickey] = useState('');
   const [useBToken, setUseBToken] = useState('');
+  
+  // 법인 회원 관련 상태
+  const [coCpno, setCoCpno] = useState('');
+  const [epName, setEpName] = useState('');
+  const [epTel, setEpTel] = useState('');
+  const [epSeq, setEpSeq] = useState('');
+  const [employeeData, setEmployeeData] = useState([]);
+  const [filesData, setFilesData] = useState([]);
+  const [selectedIdCorpFile, setSelectedIdCorpFile] = useState(null);
+  const [selectedBankFile, setSelectedBankFile] = useState(null);
 
   useEffect(() => {
     loadMemberData();
@@ -42,6 +53,21 @@ const MyCertScreen = () => {
         setMemberData(response.data.member);
         setBc5jsencpublickey(response.data.bc5jsencpublickey || '');
         setUseBToken(response.data.useBToken || '');
+        
+        // 법인 회원 데이터
+        if (response.data.employee) {
+          setEmployeeData(response.data.employee);
+          // 마지막 담당자 정보 설정
+          const lastEmployee = response.data.employee[response.data.employee.length - 1];
+          if (lastEmployee) {
+            setEpSeq(lastEmployee.seq || '');
+            setEpName(lastEmployee.ep_name || '');
+            setEpTel(lastEmployee.ep_tel || '');
+          }
+        }
+        if (response.data.files) {
+          setFilesData(response.data.files);
+        }
       }
     } catch (error) {
       console.error('❌ 회원 데이터 로드 오류:', error);
@@ -111,6 +137,302 @@ const MyCertScreen = () => {
     } catch (error) {
       console.error('❌ 주민번호 암호화 오류:', error);
       Alert.alert('오류', '주민번호 암호화 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 법인등록번호 저장
+  const handleSaveCoCpno = async () => {
+    if (!coCpno || coCpno.length !== 13) {
+      Alert.alert('법인정보 저장하기', '잘못된 법인등록번호 입니다.\n다시 확인하여 주세요.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await ApiService.api.post('/app/member/update/co_cpno', {
+        member_id: member_id,
+        r_name: memberData.member_name || '',
+        co_cpno: coCpno,
+        v_bank_cd: '011',
+        v_bank_nm: '농협중앙회',
+      });
+
+      const rtnvalue = String(response.data).trim();
+
+      if (rtnvalue === '0') {
+        Alert.alert('성공', '법인정보가 저장되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => loadMemberData(),
+          },
+        ]);
+      } else if (rtnvalue === '1') {
+        Alert.alert('법인정보 저장하기', '로그인이 필요합니다.');
+        navigation.navigate('Login');
+      } else if (rtnvalue === '2') {
+        Alert.alert('법인정보 저장하기', '법인등록번호를 확인해주세요.');
+      } else if (rtnvalue === '3') {
+        Alert.alert('법인정보 저장하기', '법인등록번호를 저장할 수 없습니다(기존정보 존재).');
+      } else {
+        Alert.alert('법인정보 저장하기', '처리도중 오류가 발생하였습니다.');
+      }
+    } catch (error) {
+      console.error('❌ 법인정보 저장 오류:', error);
+      Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 담당자 정보 저장
+  const handleSaveEmployee = async () => {
+    if (!epName.trim()) {
+      Alert.alert('알림', '담당자명을 입력해주세요.');
+      return;
+    }
+    if (!epTel.trim()) {
+      Alert.alert('알림', '담당자 연락처를 입력해주세요.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await ApiService.api.post('/app/member/update/co_employee', {
+        member_id: member_id,
+        seq: epSeq,
+        ep_name: epName,
+        ep_tel: epTel,
+      });
+
+      const rtnvalue = String(response.data).trim();
+
+      if (rtnvalue === '0') {
+        Alert.alert('성공', '담당자 정보가 저장되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => loadMemberData(),
+          },
+        ]);
+      } else if (rtnvalue === '1') {
+        Alert.alert('담당자 정보등록', '로그인이 필요합니다.');
+        navigation.navigate('Login');
+      } else {
+        Alert.alert('담당자 정보등록', '처리도중 오류가 발생하였습니다.');
+      }
+    } catch (error) {
+      console.error('❌ 담당자 정보 저장 오류:', error);
+      Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 파일 선택 핸들러
+  const handleIdCorpFileSelect = async () => {
+    try {
+      const result = await DocumentPicker.pick({
+        type: [DocumentPicker.types.allFiles],
+      });
+      
+      if (result && result.length > 0) {
+        const file = result[0];
+        console.log('📎 사업자등록증 파일 선택:', file);
+        setSelectedIdCorpFile({
+          id: Date.now().toString(),
+          name: file.name,
+          uri: file.uri,
+          type: file.type,
+          size: file.size,
+        });
+      }
+    } catch (error) {
+      if (DocumentPicker.isCancel(error)) {
+        console.log('파일 선택 취소');
+      } else {
+        console.error('❌ 파일 선택 오류:', error);
+        Alert.alert('오류', '파일 선택 중 오류가 발생했습니다.');
+      }
+    }
+  };
+
+  const handleBankFileSelect = async () => {
+    try {
+      const result = await DocumentPicker.pick({
+        type: [DocumentPicker.types.allFiles],
+      });
+      
+      if (result && result.length > 0) {
+        const file = result[0];
+        console.log('📎 법인통장사본 파일 선택:', file);
+        setSelectedBankFile({
+          id: Date.now().toString(),
+          name: file.name,
+          uri: file.uri,
+          type: file.type,
+          size: file.size,
+        });
+      }
+    } catch (error) {
+      if (DocumentPicker.isCancel(error)) {
+        console.log('파일 선택 취소');
+      } else {
+        console.error('❌ 파일 선택 오류:', error);
+        Alert.alert('오류', '파일 선택 중 오류가 발생했습니다.');
+      }
+    }
+  };
+
+  const handleIdCorpFileRemove = () => {
+    setSelectedIdCorpFile(null);
+  };
+
+  const handleBankFileRemove = () => {
+    setSelectedBankFile(null);
+  };
+
+  // 법인 서류 제출 (선택사항)
+  const handleCorpFileSubmit = async () => {
+    try {
+      setLoading(true);
+
+      // 파일이 선택된 경우에만 업로드
+      if (selectedIdCorpFile || selectedBankFile) {
+        // FormData 생성
+        const formData = new FormData();
+        formData.append('member_id', member_id);
+        formData.append('memo', '');
+
+        // 파일 추가 (순서대로: 사업자등록증 -> 법인통장사본)
+        if (selectedIdCorpFile) {
+          formData.append('files', {
+            uri: selectedIdCorpFile.uri,
+            type: selectedIdCorpFile.type || 'application/octet-stream',
+            name: selectedIdCorpFile.name,
+          });
+          formData.append('categories', '사업자(법인)등록증');
+        }
+
+        if (selectedBankFile) {
+          formData.append('files', {
+            uri: selectedBankFile.uri,
+            type: selectedBankFile.type || 'application/octet-stream',
+            name: selectedBankFile.name,
+          });
+          formData.append('categories', '법인통장사본');
+        }
+
+        console.log('📤 법인 서류 제출 요청:', {
+          member_id: member_id,
+          idCorpFile: selectedIdCorpFile?.name,
+          idCorpCategory: '사업자(법인)등록증',
+          bankFile: selectedBankFile?.name,
+          bankCategory: '법인통장사본',
+        });
+
+        const response = await ApiService.api.post('/app/file/corp', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        console.log('📥 법인 서류 제출 응답:', response.data);
+
+        const rtnvalue = String(response.data).trim();
+
+        if (rtnvalue === '0') {
+          console.log('✅ 서류 제출 성공');
+          // 파일 업로드 성공 시 완료 메시지 표시
+          Alert.alert(
+            '법인 회원 가입',
+            '회원가입 완료 했습니다. 확인 후 처리까지 1~2일 시간이 걸릴수 있습니다.',
+            [
+              {
+                text: '확인',
+                onPress: async () => {
+                  const currentUser = await ApiService.getCurrentUser();
+                  if (currentUser) {
+                    // 로그인 상태 - 마이페이지 개인정보관리로 이동
+                    navigation.reset({
+                      index: 0,
+                      routes: [
+                        { name: 'Main' },
+                        { 
+                          name: 'MyPageTabContainer', 
+                          params: { 
+                            initialTab: 'info',
+                            member_id: member_id 
+                          } 
+                        }
+                      ],
+                    });
+                  } else {
+                    // 비로그인 상태 - 메인으로 이동
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'Main' }],
+                    });
+                  }
+                }
+              }
+            ]
+          );
+          setLoading(false);
+          return;
+        } else if (rtnvalue === '9') {
+          Alert.alert('서류 제출', '파일 업로드 중 오류가 발생했습니다.');
+          setLoading(false);
+          return;
+        } else {
+          Alert.alert('서류 제출', '처리도중 오류가 발생하였습니다.');
+          setLoading(false);
+          return;
+        }
+      } else {
+        console.log('ℹ️ 첨부 파일 없이 진행');
+      }
+
+      // 파일 없이 진행 - 마이페이지로 이동
+      Alert.alert(
+        '법인 회원 가입',
+        '회원가입 완료 했습니다. 확인 후 처리까지 1~2일 시간이 걸릴수 있습니다.',
+        [
+          {
+            text: '확인',
+            onPress: async () => {
+              const currentUser = await ApiService.getCurrentUser();
+              if (currentUser) {
+                // 로그인 상태 - 마이페이지 개인정보관리로 이동
+                navigation.reset({
+                  index: 0,
+                  routes: [
+                    { name: 'Main' },
+                    { 
+                      name: 'MyPageTabContainer', 
+                      params: { 
+                        initialTab: 'info',
+                        member_id: member_id 
+                      } 
+                    }
+                  ],
+                });
+              } else {
+                // 비로그인 상태 - 메인으로 이동
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Main' }],
+                });
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('❌ 법인 서류 제출 오류:', error);
+      Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -207,7 +529,355 @@ const MyCertScreen = () => {
     );
   }
 
-  // 주민번호가 없는 경우 - 입력 화면
+  // 법인 회원 - 법인정보 등록 화면
+  if (memberData && memberData.sort === 'C') {
+    // 법인등록번호가 없는 경우
+    if (!memberData.co_cpno) {
+      return (
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            >
+              <Image
+                source={require('../assets/images/ico_back.png')}
+                style={styles.backButtonImage}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.content}>
+            <View style={styles.titleBox}>
+              <Text style={styles.title}>서비스 이용신청</Text>
+              <Text style={styles.subtitle}>
+                당사의 투자 및 대출 서비스를 이용하기 위해,{'\n'}
+                법인정보 확인 후 순차적으로 승인처리 됩니다.
+              </Text>
+            </View>
+
+            <View style={styles.corpInfoBox}>
+              <View style={styles.corpInfoRow}>
+                <Text style={styles.corpInfoLabel}>상호명</Text>
+                <Text style={styles.corpInfoValue}>{memberData.member_name}</Text>
+              </View>
+              <View style={styles.corpInfoRow}>
+                <Text style={styles.corpInfoLabel}>사업자번호</Text>
+                <Text style={styles.corpInfoValue}>{memberData.cpno_dec_full}</Text>
+              </View>
+            </View>
+
+            <View style={styles.formContainer}>
+              <View style={styles.flexTit}>
+                <Text style={styles.tit}>법인정보 등록</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.input}
+                  value={coCpno}
+                  onChangeText={setCoCpno}
+                  placeholder="법인등록번호 13자리 입력"
+                  placeholderTextColor="#bfc3c7"
+                  keyboardType="number-pad"
+                  maxLength={13}
+                />
+              </View>
+              <Text style={styles.noticeText}>
+                * 상호명(법인명)은 소유 출금계좌의 계좌주와 동일해야 합니다.
+              </Text>
+              <Text style={styles.noticeText}>
+                * 상호명과 출금계좌의 계좌주가 다를 경우 고객센터로 문의주세요.
+              </Text>
+            </View>
+
+            <View style={{ height: 100 }} />
+          </ScrollView>
+
+          <View style={styles.fixBtnWrap}>
+            <TouchableOpacity
+              style={[styles.btnStyle, loading && styles.btnDisabled]}
+              onPress={handleSaveCoCpno}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.btnText}>법인정보 저장</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+    
+    // 법인등록번호는 있지만 담당자가 없는 경우
+    if (employeeData.length === 0) {
+      return (
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            >
+              <Image
+                source={require('../assets/images/ico_back.png')}
+                style={styles.backButtonImage}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.content}>
+            <View style={styles.titleBox}>
+              <Text style={styles.title}>서비스 이용신청</Text>
+              <Text style={styles.subtitle}>
+                당사의 투자 및 대출 서비스를 이용하기 위해,{'\n'}
+                법인정보 확인 후 순차적으로 승인처리 됩니다.
+              </Text>
+            </View>
+
+            <View style={styles.corpInfoBox}>
+              <View style={styles.corpInfoRow}>
+                <Text style={styles.corpInfoLabel}>상호명</Text>
+                <Text style={styles.corpInfoValue}>{memberData.member_name}</Text>
+              </View>
+              <View style={styles.corpInfoRow}>
+                <Text style={styles.corpInfoLabel}>사업자번호</Text>
+                <Text style={styles.corpInfoValue}>{memberData.cpno_dec_full}</Text>
+              </View>
+              <View style={styles.corpInfoRow}>
+                <Text style={styles.corpInfoLabel}>법인등록번호</Text>
+                <Text style={styles.corpInfoValue}>{memberData.co_cpno}</Text>
+              </View>
+            </View>
+
+            <View style={styles.formContainer}>
+              <View style={styles.flexTit}>
+                <Text style={styles.tit}>담당자 등록</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.input}
+                  value={epName}
+                  onChangeText={setEpName}
+                  placeholder="담당자명"
+                  placeholderTextColor="#bfc3c7"
+                />
+              </View>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.input}
+                  value={epTel}
+                  onChangeText={setEpTel}
+                  placeholder="담당자 연락처"
+                  placeholderTextColor="#bfc3c7"
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </View>
+
+            <View style={{ height: 100 }} />
+          </ScrollView>
+
+          <View style={styles.fixBtnWrap}>
+            <TouchableOpacity
+              style={[styles.btnStyle, loading && styles.btnDisabled]}
+              onPress={handleSaveEmployee}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.btnText}>담당자 저장</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    // 담당자까지 등록된 경우 - 서류 제출 화면
+    const idCorpFile = filesData.find(f => f.category === '사업자(법인)등록증')?.fileName || '';
+    const bankFile = filesData.find(f => f.category === '법인통장사본')?.fileName || '';
+
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          >
+            <Image
+              source={require('../assets/images/ico_back.png')}
+              style={styles.backButtonImage}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.content}>
+          <View style={styles.titleBox}>
+            <Text style={styles.title}>서비스 이용신청</Text>
+            <Text style={styles.subtitle}>
+              당사의 투자 및 대출 서비스를 이용하기 위해,{'\n'}
+              법인정보 확인 후 순차적으로 승인처리 됩니다.
+            </Text>
+          </View>
+
+          <View style={styles.corpInfoBox}>
+            <View style={styles.corpInfoRow}>
+              <Text style={styles.corpInfoLabel}>상호명</Text>
+              <Text style={styles.corpInfoValue}>{memberData.member_name}</Text>
+            </View>
+            <View style={styles.corpInfoRow}>
+              <Text style={styles.corpInfoLabel}>사업자번호</Text>
+              <Text style={styles.corpInfoValue}>{memberData.cpno_dec_full}</Text>
+            </View>
+            <View style={styles.corpInfoRow}>
+              <Text style={styles.corpInfoLabel}>법인등록번호</Text>
+              <Text style={styles.corpInfoValue}>{memberData.co_cpno}</Text>
+            </View>
+          </View>
+
+          <View style={styles.formContainer}>
+            <View style={styles.flexTit}>
+              <Text style={styles.tit}>담당자 등록</Text>
+            </View>
+            <View style={styles.flexInput}>
+              <TextInput
+                style={styles.input}
+                value={epName}
+                onChangeText={setEpName}
+                placeholder="담당자명"
+                placeholderTextColor="#bfc3c7"
+              />
+            </View>
+            <View style={styles.flexInput}>
+              <TextInput
+                style={styles.input}
+                value={epTel}
+                onChangeText={setEpTel}
+                placeholder="담당자 연락처"
+                placeholderTextColor="#bfc3c7"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.flexTit}>
+              <Text style={styles.tit}>법인확인 서류 제출</Text>
+            </View>
+            <View style={styles.fileUploadNotice}>
+              <Text style={styles.fileUploadNoticeText}>
+                1. 사업자(법인) 등록증{'\n'}
+                2. 법인통장사본
+              </Text>
+            </View>
+
+            {/* 사업자(법인)등록증 첨부 */}
+            <TouchableOpacity 
+              style={styles.fileUploadButton}
+              onPress={handleIdCorpFileSelect}
+            >
+              <Image 
+                source={require('../assets/images/ico_fileupload.png')}
+                style={styles.fileuploadIco}
+                resizeMode="contain"
+              />
+              <Text style={styles.fileUploadButtonText}>사업자(법인)등록증 첨부</Text>
+            </TouchableOpacity>
+
+            {(selectedIdCorpFile || idCorpFile) && (
+              <View style={styles.fileListContainer}>
+                <View style={styles.filenameBox}>
+                  <Text style={styles.filename} numberOfLines={1}>
+                    {selectedIdCorpFile?.name || idCorpFile}
+                  </Text>
+                  {selectedIdCorpFile && (
+                    <TouchableOpacity
+                      style={styles.btnDel}
+                      onPress={handleIdCorpFileRemove}
+                    >
+                      <Image
+                        source={require('../assets/images/ico_del.png')}
+                        style={styles.btnDelIcon}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* 법인통장사본 첨부 */}
+            <TouchableOpacity 
+              style={styles.fileUploadButton}
+              onPress={handleBankFileSelect}
+            >
+              <Image 
+                source={require('../assets/images/ico_fileupload.png')}
+                style={styles.fileuploadIco}
+                resizeMode="contain"
+              />
+              <Text style={styles.fileUploadButtonText}>법인통장사본 첨부</Text>
+            </TouchableOpacity>
+
+            {(selectedBankFile || bankFile) && (
+              <View style={styles.fileListContainer}>
+                <View style={styles.filenameBox}>
+                  <Text style={styles.filename} numberOfLines={1}>
+                    {selectedBankFile?.name || bankFile}
+                  </Text>
+                  {selectedBankFile && (
+                    <TouchableOpacity
+                      style={styles.btnDel}
+                      onPress={handleBankFileRemove}
+                    >
+                      <Image
+                        source={require('../assets/images/ico_del.png')}
+                        style={styles.btnDelIcon}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.noticeBox}>
+              <Image
+                source={require('../assets/images/ico_notif.png')}
+                style={styles.noticeIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.noticeText}>
+                보안망으로 인하여 정상적으로 첨부가 되지 않을 경우 로그인 아이디를 포함하여 아래 고객센터 메일로 전달주시면 빠른 처리 진행하겠습니다.{'\n\n'}
+                Email: cs@rootenergy.co.kr
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        <View style={styles.fixBtnWrap}>
+          <TouchableOpacity
+            style={[styles.btnStyle, loading && styles.btnDisabled]}
+            onPress={handleCorpFileSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnText}>다음</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // 주민번호가 없는 경우 - 입력 화면 (개인 회원)
   if (memberData && !memberData.cpno) {
     const cpno1 = memberData.birthdate_yyyy 
       ? `${memberData.birthdate_yyyy.substring(2)}${memberData.birthdate_mm}${memberData.birthdate_dd}`
@@ -702,6 +1372,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   noticeBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginTop: 20,
     padding: 15,
     backgroundColor: '#f8f9fa',
@@ -761,6 +1433,105 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  // 법인 회원 스타일
+  corpInfoBox: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+  },
+  corpInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f2f2f2',
+  },
+  corpInfoLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#393f44',
+    width: 120,
+  },
+  corpInfoValue: {
+    flex: 1,
+    fontSize: 14,
+    color: '#222',
+  },
+  fileUploadNotice: {
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  fileUploadNoticeText: {
+    fontSize: 13,
+    color: '#393f44',
+    lineHeight: 20,
+  },
+  fileUploadButton: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: '#fff',
+  },
+  fileuploadIco: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+  },
+  fileUploadButtonText: {
+    fontSize: 14,
+    color: '#393f44',
+  },
+  uploadedFile: {
+    padding: 16,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  uploadedFileText: {
+    fontSize: 13,
+    color: '#2c3db8',
+  },
+  fileListContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  filenameBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  filename: {
+    flex: 1,
+    fontSize: 13,
+    color: '#393f44',
+    marginRight: 12,
+  },
+  btnDel: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnDelIcon: {
+    width: 16,
+    height: 16,
   },
 });
 

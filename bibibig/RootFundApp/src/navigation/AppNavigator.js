@@ -21,6 +21,7 @@ import SignUpPrivateAdultScreen from '../screens/SignUpPrivateAdultScreen';
 import SignUpPrivateMinorScreen from '../screens/SignUpPrivateMinorScreen';
 import SignUpPrivateForeignerScreen from '../screens/SignUpPrivateForeignerScreen';
 import SignUpCorpScreen from '../screens/SignUpCorpScreen';
+import SignUpCorpFormScreen from '../screens/SignUpCorpFormScreen';
 import CorporateInvestmentScreen from '../screens/CorporateInvestmentScreen';
 import ProductListScreen from '../screens/ProductListScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
@@ -166,7 +167,7 @@ const AppNavigator = () => {
   const isPromotionScreen = currentRoute === 'Promotion';
   
   // Back 버튼이 필요한 화면들
-  const screensWithBack = ['FindEmail', 'FindPassword', 'SignUpType', 'SignUpPrivateSelect', 'SignUpPrivate', 'SignUpCorp', 'InvestReceipt', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'ConsultationRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms', 'WebView'];
+  const screensWithBack = ['FindEmail', 'FindPassword', 'SignUpType', 'SignUpPrivateSelect', 'SignUpPrivate', 'SignUpCorp', 'SignUpCorpForm', 'InvestReceipt', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'ConsultationRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms', 'WebView'];
   const shouldShowBack = screensWithBack.includes(currentRoute);
 
   // Slightly increase offset so screens clear the fixed header/GNB
@@ -221,6 +222,7 @@ const AppNavigator = () => {
           <Stack.Screen name="SignUpPrivateMinor" component={SignUpPrivateMinorScreen} />
           <Stack.Screen name="SignUpPrivateForeigner" component={SignUpPrivateForeignerScreen} />
           <Stack.Screen name="SignUpCorp" component={SignUpCorpScreen} />
+          <Stack.Screen name="SignUpCorpForm" component={SignUpCorpFormScreen} />
           <Stack.Screen name="CorporateInvestment" component={CorporateInvestmentScreen} />
           <Stack.Screen name="ProductList" component={ProductListScreen} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />

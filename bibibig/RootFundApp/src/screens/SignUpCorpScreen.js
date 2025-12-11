@@ -8,6 +8,7 @@ import {
   ScrollView,
   Modal,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
@@ -149,7 +150,9 @@ const SignUpCorpScreen = () => {
     `;
   };
 
-  const handleNext = () => {
+  const [loading, setLoading] = useState(false);
+
+  const handleNext = async () => {
     if (!checkedTerms.service) {
       setTermError('* 서비스 이용약관에 동의하여 주십시오.');
       return;
@@ -167,31 +170,50 @@ const SignUpCorpScreen = () => {
       return;
     }
 
-    const marketing = checkedTerms.marketing ? 'Y' : 'N';
-    // TODO: 법인회원 가입 다음 단계로 이동
-    navigation.navigate('SignUpCorp', {
-      marketing: marketing,
-      kakaoCi: termsData?.kakaoCi || '0',
-    });
+    try {
+      setLoading(true);
+      const marketing = checkedTerms.marketing ? 'Y' : 'N';
+      
+      // API 호출
+      const response = await ApiService.api.post('/app/join/corpAgree', {
+        marketing: marketing,
+        kakaoCi: '0',
+      });
+
+      console.log('corpAgree response:', response.data);
+
+      if (response.data.status === 'success') {
+        // 법인회원 가입 폼 화면으로 이동
+        navigation.navigate('SignUpCorpForm', {
+          ...response.data,
+          marketing: marketing,
+        });
+      } else if (response.data.redirect) {
+        navigation.replace(response.data.redirectUrl);
+      } else {
+        setTermError('* 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
+    } catch (error) {
+      console.error('Failed to proceed to next step:', error);
+      console.error('Error details:', error.response?.data);
+      setTermError('* 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderModal = (isVisible, onClose, title, content) => (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
+        <TouchableOpacity style={styles.popMask} onPress={onClose} activeOpacity={1} />
         <View style={styles.modalWrapper}>
           <View style={styles.modalBox}>
             <Text style={styles.popTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Image
-                source={require('../assets/images/ico_close_gray02.png')}
-                style={styles.closeIcon}
-              />
-            </TouchableOpacity>
             <ScrollView 
               style={styles.popContent}
               showsVerticalScrollIndicator={true}
@@ -217,11 +239,9 @@ const SignUpCorpScreen = () => {
                 />
               )}
             </ScrollView>
-            <View style={styles.btnBox}>
-              <TouchableOpacity style={styles.confirmBtn} onPress={onClose}>
-                <Text style={styles.confirmBtnText}>확인</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.confirmBtn} onPress={onClose}>
+              <Text style={styles.confirmBtnText}>닫기</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -291,6 +311,7 @@ const SignUpCorpScreen = () => {
                 <Text style={styles.termsLinkText}>
                   <Text style={styles.requiredText}>(필수)</Text> 서비스 이용약관
                 </Text>
+                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
@@ -316,6 +337,7 @@ const SignUpCorpScreen = () => {
                 <Text style={styles.termsLinkText}>
                   <Text style={styles.requiredText}>(필수)</Text> 개인정보처리방침
                 </Text>
+                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
@@ -339,9 +361,9 @@ const SignUpCorpScreen = () => {
                 style={styles.termsLink}
               >
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.requiredText}>(필수)</Text> 개인(신용)정보
-                  제3자(P2P자금관리) 제공 동의
+                  <Text style={styles.requiredText}>(필수)</Text> 개인(신용)정보 제3자(P2P자금관리) 제공 동의
                 </Text>
+                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
@@ -365,9 +387,9 @@ const SignUpCorpScreen = () => {
                 style={styles.termsLink}
               >
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.requiredText}>(필수)</Text> 개인(신용)정보
-                  제3자(투자금예치은행) 제공 동의
+                  <Text style={styles.requiredText}>(필수)</Text> 개인(신용)정보 제3자(투자금예치은행) 제공 동의
                 </Text>
+                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
@@ -391,17 +413,21 @@ const SignUpCorpScreen = () => {
                 style={styles.termsLink}
               >
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.optionalText}>(선택)</Text> 마케팅 정보 수집 및
-                  활용 동의
+                  (선택) 마케팅 정보 수집 및 활용 동의
                 </Text>
+                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
               </TouchableOpacity>
             </View>
 
             {termError ? (
-              <Text style={styles.termErrorMessage}>{termError}</Text>
+              <View style={styles.errorContainer}>
+                <Text style={styles.termErrorMessage}>{termError}</Text>
+              </View>
             ) : null}
           </View>
         </View>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* Modals */}
@@ -438,8 +464,16 @@ const SignUpCorpScreen = () => {
 
       <View style={styles.fixBtnWrap}>
         <View style={styles.btnBox}>
-          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>다음</Text>
+          <TouchableOpacity 
+            style={[styles.nextButton, loading && styles.nextButtonDisabled]} 
+            onPress={handleNext}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.nextButtonText}>다음</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -450,22 +484,19 @@ const SignUpCorpScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     height: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
+    paddingHorizontal: 16,
   },
   backButton: {
-    position: 'absolute',
-    left: 16,
-    zIndex: 10,
-    padding: 10,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backButtonImage: {
     width: 24,
@@ -483,68 +514,67 @@ const styles = StyleSheet.create({
   subTitleBox: {
     marginTop: 24,
     paddingHorizontal: 20,
-    alignItems: 'center',
   },
   title: {
     fontSize: 25,
     lineHeight: 35,
     fontWeight: '700',
-    textAlign: 'center',
+    color: '#222222',
   },
   termsArea: {
     paddingHorizontal: 16,
-    marginTop: 30,
+    paddingTop: 24,
+    paddingBottom: 30,
   },
   termsBox: {
-    marginBottom: 16,
+    marginTop: 16,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-  },
-  checkboxIcon: {
-    width: 21,
-    height: 21,
-    resizeMode: 'contain',
-  },
-  checkboxText: {
-    marginLeft: 12,
-    fontSize: 15,
-    lineHeight: 18,
-    fontWeight: '600',
-    color: '#393f44',
-  },
-  termsList: {
-    marginTop: 16,
-  },
-  termsListItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     minHeight: 55,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: '#f2f2f2',
     borderRadius: 10,
     backgroundColor: '#fff',
-    shadowColor: '#516c89',
+    shadowColor: 'rgba(81, 108, 137, 0.05)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.8,
     shadowRadius: 8,
     elevation: 2,
-    marginBottom: 8,
-    paddingLeft: 16,
-    paddingRight: 16,
+  },
+  checkboxIcon: {
+    width: 21,
+    height: 21,
+    marginRight: 12,
+  },
+  checkboxText: {
+    fontSize: 15,
+    lineHeight: 19.5,
+    fontWeight: '600',
+    color: '#222222',
+  },
+  termsList: {
+    marginTop: 16,
+    marginLeft: 16,
+    marginRight: 8,
+  },
+  termsListItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 15,
   },
   labelBox: {
-    paddingVertical: 4,
-    marginRight: 8,
+    padding: 4,
   },
   termsLink: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 15,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginLeft: 8,
+    paddingRight: 30,
   },
   termsLinkText: {
     flex: 1,
@@ -558,22 +588,30 @@ const styles = StyleSheet.create({
   optionalText: {
     color: '#666',
   },
+  arrowIcon: {
+    width: 14,
+    height: 14,
+    resizeMode: 'contain',
+    position: 'absolute',
+    right: 0,
+  },
+  errorContainer: {
+    marginTop: 10,
+    paddingHorizontal: 4,
+  },
   termErrorMessage: {
     color: '#ff5042',
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 10,
-    textAlign: 'center',
+    fontSize: 11,
+    lineHeight: 14,
   },
   fixBtnWrap: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingBottom: 10,
     backgroundColor: '#fff',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   btnBox: {
     flexDirection: 'row',
-    marginTop: 20,
   },
   nextButton: {
     flex: 1,
@@ -583,28 +621,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  nextButtonDisabled: {
+    backgroundColor: '#bfc3c7',
+  },
   nextButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: '#FFFFFF',
   },
+  // 모달 스타일
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 16,
+    paddingVertical: 48,
+  },
+  popMask: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#222',
+    opacity: 0.7,
   },
   modalWrapper: {
     flex: 1,
     justifyContent: 'center',
-    width: '100%',
-    paddingHorizontal: 16,
   },
   modalBox: {
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 24,
-    width: '100%',
     maxHeight: '80%',
   },
   popTitle: {
@@ -612,30 +660,18 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 20,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 10,
-  },
-  closeIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
+    color: '#222222',
   },
   popContent: {
-    maxHeight: Dimensions.get('window').height * 0.6,
-    marginBottom: 20,
+    marginTop: 20,
+    maxHeight: 400,
+    paddingHorizontal: 4,
   },
   webView: {
-    flex: 1,
-    width: '100%',
     backgroundColor: 'transparent',
   },
   confirmBtn: {
-    flex: 1,
+    marginTop: 24,
     height: 48,
     borderRadius: 10,
     backgroundColor: '#2c3db8',
@@ -643,9 +679,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmBtnText: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 
