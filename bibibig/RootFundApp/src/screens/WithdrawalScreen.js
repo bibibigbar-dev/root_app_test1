@@ -67,7 +67,6 @@ const WithdrawalScreen = ({ navigation, route }) => {
     
     // 계좌 변경 후 새로고침
     if (route?.params?.refresh) {
-      console.log('🔄 계좌 변경 후 데이터 새로고침');
       // 파라미터 초기화
       navigation.setParams({ refresh: undefined });
     }
@@ -79,13 +78,8 @@ const WithdrawalScreen = ({ navigation, route }) => {
       const rawUserData = await AsyncStorage.getItem('userData');
       const rawToken = await AsyncStorage.getItem('userToken');
       
-      console.log('🔍 AsyncStorage 원본 데이터:');
-      console.log('📋 userData:', rawUserData);
-      console.log('📋 userToken:', rawToken);
-      
       // 로그인 상태 체크 - 로그인이 안 되어 있으면 WithdrawalLogin 화면으로 이동
       if (!rawUserData || !rawToken) {
-        console.log('❌ 로그인 상태 아님 - WithdrawalLogin 화면으로 이동');
         setInitialLoading(false);
         navigation.replace('WithdrawalLogin');
         return;
@@ -93,13 +87,11 @@ const WithdrawalScreen = ({ navigation, route }) => {
       
       if (rawUserData) {
         const parsedData = JSON.parse(rawUserData);
-        console.log('📋 파싱된 데이터:', JSON.stringify(parsedData, null, 2));
       }
 
       // 세션 만료 확인
       const loginCheck = await ApiService.checkLoginExpiration();
       if (loginCheck.expired) {
-        console.log('세션 만료:', loginCheck.reason);
         await ApiService.clearLoginData();
         navigation.replace('WithdrawalLogin');
         return;
@@ -112,17 +104,9 @@ const WithdrawalScreen = ({ navigation, route }) => {
         // 세션 데이터에서 r_name 사용
         setAccountHolder(sanitizeText(currentUser.session?.r_name) || sanitizeText(currentUser.name));
         
-        // 백엔드에서 받은 은행 정보 자동 설정 (member 데이터 직접 접근)
-        console.log('🏦 은행 정보 설정 시도:');
-        console.log('member 데이터:', currentUser.member);
-        console.log('member.bank_nm:', currentUser.member?.bank_nm);
-        console.log('member.account:', currentUser.member?.account);
-        
         // member 데이터에서 직접 가져오기
         setBankName(sanitizeText(currentUser.member?.bank_nm));
         setBankAccount(sanitizeText(currentUser.member?.account));
-        
-        console.log('🏦 은행 정보 설정 완료!');
         
         // 설정 후 state 값 확인
         setTimeout(() => {
@@ -131,31 +115,7 @@ const WithdrawalScreen = ({ navigation, route }) => {
           console.log('bankAccount state:', bankAccount);
           console.log('accountHolder state:', accountHolder);
         }, 100);
-        
-        console.log('✅ 사용자 데이터 로드 완료:');
-        console.log('📋 getCurrentUser 결과:', JSON.stringify(currentUser, null, 2));
-        console.log('📋 세션 데이터 존재 여부:', !!currentUser.session);
-        console.log('📋 표시될 데이터:', {
-          r_name: currentUser.session?.r_name,
-          email: currentUser.email,
-          balance: currentUser.session?.balance,
-          name: currentUser.name,
-          bank_nm: currentUser.session?.bank_nm,
-          account: currentUser.session?.account,
-          account_holder_name: currentUser.session?.account_holder_name
-        });
-        
-        // 실제 값들 개별 확인
-        console.log('🔍 개별 값 확인:');
-        console.log('r_name:', currentUser.session?.r_name);
-        console.log('balance:', currentUser.session?.balance);
-        console.log('email:', currentUser.email);
-        console.log('bank_nm:', currentUser.session?.bank_nm);
-        console.log('account:', currentUser.session?.account);
-        console.log('account_holder_name:', currentUser.session?.account_holder_name);
-        console.log('formatCurrency 테스트:', formatCurrency(currentUser.session?.balance || '0'));
       } else {
-        console.log('❌ getCurrentUser 결과가 null');
         Alert.alert('알림', '사용자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
       }
     } catch (error) {
@@ -173,11 +133,9 @@ const WithdrawalScreen = ({ navigation, route }) => {
       
       if (savedBankList) {
         const bankList = JSON.parse(savedBankList);
-        console.log('💾 저장된 은행 목록 로드:', bankList.length, '개');
         setBanks(bankList);
       } else {
         // 저장된 은행 목록이 없으면 기본 목록 사용
-        console.log('⚠️ 저장된 은행 목록 없음 - 기본 목록 사용');
         setBanks([
           { bank_cd: '001', bank_nm: 'KB국민은행' },
           { bank_cd: '002', bank_nm: '산업은행' },
@@ -329,13 +287,6 @@ const WithdrawalScreen = ({ navigation, route }) => {
 
       // 1. setReqModes 호출하여 보안 데이터 획득
       const reqModes = await ApiService.setReqModes({ reqdata: String(numericAmount) });
-      
-      console.log('💰 출금 신청 데이터:', {
-        member_id: memberId,
-        refund_price: numericAmount,
-        _bcsrmd1: reqModes.data1,
-        _bcsrmd2: reqModes.data2,
-      });
 
       // 2. /app/member/process/refund API 호출
       const refundRequestData = {
@@ -346,15 +297,12 @@ const WithdrawalScreen = ({ navigation, route }) => {
       };
       
       const formData = ApiService.convertToFormData(refundRequestData);
-      console.log('📤 출금 신청 Form-data:', formData);
       
       const response = await ApiService.api.post('/app/member/process/refund', formData, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
-
-      console.log('💰 출금 신청 응답:', response.data);
 
       const responseData = String(response.data);
 
@@ -775,7 +723,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
   },
   customerServiceButton: {

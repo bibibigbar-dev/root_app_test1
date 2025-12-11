@@ -98,14 +98,12 @@ const ProductListScreen = ({ navigation, route }) => {
       screenName = 'ProductDetailOld3';
     }
 
-    console.log(`📱 상품 상세 이동: idx=${idx}, screen=${screenName}`);
     navigation.navigate(screenName, { orderKey: item.orderKey });
   };
 
   const loadProductData = async () => {
     try {
       setLoading(true);
-      console.log('📦 상품 리스트 조회 시작 - 상태:', activeTab);
       
       if (activeTab === 'COMPLETE') {
         // 상환완료 탭: 선택된 카테고리에 따라 조회
@@ -119,15 +117,12 @@ const ProductListScreen = ({ navigation, route }) => {
             }
           });
           
-          console.log('✅ 기후펀드 응답:', response.data);
-          
           setCaseList([]);
           setListMiddle(response.data?.list || []); // 기후펀드는 list를 listMiddle에 저장
           setListLong([]);
           setListShort([]);
           setPromotionBanner([]);
-          
-          console.log('✅ 기후펀드(listMiddle):', response.data?.list?.length || 0, '개');
+
         } else {
           // 커뮤니티펀드 조회
           const response = await ApiService.api.get('/app/product/list', {
@@ -137,15 +132,12 @@ const ProductListScreen = ({ navigation, route }) => {
             }
           });
           
-          console.log('✅ 커뮤니티펀드(innovation) 응답:', response.data);
-          
           setCaseList([]);
           setListMiddle([]);
           setListLong(response.data?.comlist || []); // 커뮤니티펀드는 comlist를 listLong에 저장
           setListShort([]);
           setPromotionBanner([]);
           
-          console.log('✅ 커뮤니티펀드(listLong):', response.data?.comlist?.length || 0, '개');
         }
       } else {
         // 모집중, 상환중 탭
@@ -155,13 +147,8 @@ const ProductListScreen = ({ navigation, route }) => {
           }
         });
         
-        console.log('✅ 상품 리스트 응답:', response.data);
-        
         if (response.data) {
           const data = response.data;
-          
-          console.log('📋 case_list 데이터:', data.case_list);
-          console.log('📋 case_list 길이:', data.case_list?.length);
           
           if (activeTab === 'REPAY') {
             // 상환중 탭 - 모집중과 동일한 구조
@@ -178,11 +165,6 @@ const ProductListScreen = ({ navigation, route }) => {
             setListLong(data.listLong || []);
             setPromotionBanner(data.promotion_banner || []);
           }
-          
-          console.log('✅ caseList 설정 완료:', data.case_list?.length || 0, '개');
-          console.log('✅ listShort:', data.listShort?.length || 0, '개');
-          console.log('✅ listMiddle:', data.listMiddle?.length || 0, '개');
-          console.log('✅ listLong:', data.listLong?.length || 0, '개');
         }
       }
     } catch (error) {

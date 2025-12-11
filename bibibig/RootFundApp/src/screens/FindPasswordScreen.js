@@ -40,8 +40,6 @@ const FindPasswordScreen = ({ navigation }) => {
         }
       );
 
-      console.log('🔍 비밀번호 찾기 - 아이디 확인 응답:', checkResponse.data);
-
       const checkResult = String(checkResponse.data);
 
       if (checkResult === '0') {
@@ -71,8 +69,6 @@ const FindPasswordScreen = ({ navigation }) => {
   };
 
   const handleAuthSuccess = async (authData) => {
-    console.log('📱 본인인증 완료:', authData);
-
     if (authData.rtnvalue !== '0') {
       Alert.alert('휴대전화 본인인증', authData.rtnmessage || '인증에 실패했습니다.');
       return;
@@ -101,8 +97,6 @@ const FindPasswordScreen = ({ navigation }) => {
           },
         }
       );
-
-      console.log('🔑 비밀번호 찾기 - 처리 응답:', response.data);
 
       const result = String(response.data);
 
@@ -307,9 +301,8 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#fff',
-    fontSize: 20,
-    lineHeight: 28,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
   },
   loginLinks: {
     flexDirection: 'row',

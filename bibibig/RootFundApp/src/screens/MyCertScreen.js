@@ -47,7 +47,6 @@ const MyCertScreen = () => {
       const response = await ApiService.api.get('/app/my/cert', {
         params: { member_id: member_id }
       });
-      console.log('📥 회원 인증 데이터:', response.data);
       
       if (response.data.member) {
         setMemberData(response.data.member);
@@ -131,7 +130,6 @@ const MyCertScreen = () => {
 
         if (combineResponse.data && combineResponse.data.rsencdata) {
           setRscpnoencdata(combineResponse.data.rsencdata);
-          console.log('✅ 주민번호 암호화 완료');
         }
       }
     } catch (error) {
@@ -238,7 +236,6 @@ const MyCertScreen = () => {
       
       if (result && result.length > 0) {
         const file = result[0];
-        console.log('📎 사업자등록증 파일 선택:', file);
         setSelectedIdCorpFile({
           id: Date.now().toString(),
           name: file.name,
@@ -249,7 +246,6 @@ const MyCertScreen = () => {
       }
     } catch (error) {
       if (DocumentPicker.isCancel(error)) {
-        console.log('파일 선택 취소');
       } else {
         console.error('❌ 파일 선택 오류:', error);
         Alert.alert('오류', '파일 선택 중 오류가 발생했습니다.');
@@ -265,7 +261,6 @@ const MyCertScreen = () => {
       
       if (result && result.length > 0) {
         const file = result[0];
-        console.log('📎 법인통장사본 파일 선택:', file);
         setSelectedBankFile({
           id: Date.now().toString(),
           name: file.name,
@@ -276,7 +271,6 @@ const MyCertScreen = () => {
       }
     } catch (error) {
       if (DocumentPicker.isCancel(error)) {
-        console.log('파일 선택 취소');
       } else {
         console.error('❌ 파일 선택 오류:', error);
         Alert.alert('오류', '파일 선택 중 오류가 발생했습니다.');
@@ -323,26 +317,15 @@ const MyCertScreen = () => {
           formData.append('categories', '법인통장사본');
         }
 
-        console.log('📤 법인 서류 제출 요청:', {
-          member_id: member_id,
-          idCorpFile: selectedIdCorpFile?.name,
-          idCorpCategory: '사업자(법인)등록증',
-          bankFile: selectedBankFile?.name,
-          bankCategory: '법인통장사본',
-        });
-
         const response = await ApiService.api.post('/app/file/corp', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
 
-        console.log('📥 법인 서류 제출 응답:', response.data);
-
         const rtnvalue = String(response.data).trim();
 
         if (rtnvalue === '0') {
-          console.log('✅ 서류 제출 성공');
           // 파일 업로드 성공 시 완료 메시지 표시
           Alert.alert(
             '법인 회원 가입',
@@ -389,9 +372,7 @@ const MyCertScreen = () => {
           setLoading(false);
           return;
         }
-      } else {
-        console.log('ℹ️ 첨부 파일 없이 진행');
-      }
+      } 
 
       // 파일 없이 진행 - 마이페이지로 이동
       Alert.alert(
@@ -466,8 +447,6 @@ const MyCertScreen = () => {
         cert_name: memberData.r_name || '',
         cert_chk: 'Y',
       });
-
-      console.log('✅ 주민번호 검증 응답:', checkResponse.data);
 
       const checkResult = String(checkResponse.data).trim();
 
@@ -1042,7 +1021,6 @@ const MyCertScreen = () => {
                 const response = await ApiService.api.get('/app/my/cert', {
                   params: { member_id: '6425' }
                 });
-                console.log('📥 테스트 회원 인증 데이터:', response.data);
                 
                 if (response.data.member) {
                   setMemberData(response.data.member);
@@ -1119,8 +1097,6 @@ const MyCertScreen = () => {
                         var phone_number = "${memberData?.phone || ''}";
                         var email = "${memberData?.web_id || ''}";
 
-                        console.log('UseB KYC 초기화:', { token, name, birthday, phone_number, email });
-
                         function test(useBToken) {
                           const KYC_TARGET_ORIGIN = "https://kyc.useb.co.kr";
                           const KYC_URL = "https://kyc.useb.co.kr/auth";
@@ -1138,21 +1114,18 @@ const MyCertScreen = () => {
                             try {
                               let encodedParams = btoa(encodeURIComponent(JSON.stringify(params)));
                               kycIframe.contentWindow.postMessage(encodedParams, KYC_TARGET_ORIGIN);
-                              console.log('UseB KYC 파라미터 전송 완료');
                             } catch (error) {
                               console.error('UseB KYC 오류:', error);
                             }
                             kycIframe.onload = null;
                           };
 
-                          console.log('UseB KYC iframe 로드 시작');
                           kycIframe.src = KYC_URL;
                         }
 
                         // 인증 완료 메시지 수신
                         window.addEventListener('message', function(event) {
                           if (event.origin === 'https://kyc.useb.co.kr') {
-                            console.log('UseB KYC 메시지 수신:', event.data);
                             // React Native로 메시지 전달
                             if (window.ReactNativeWebView) {
                               window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -1172,14 +1145,11 @@ const MyCertScreen = () => {
               onMessage={async (event) => {
                 try {
                   const message = JSON.parse(event.nativeEvent.data);
-                  console.log('📥 UseB KYC 결과:', message);
                   
                   if (message.type === 'KYC_RESULT') {
                     // 로그인 상태 확인
                     const currentUser = await ApiService.getCurrentUser();
                     const isLoggedIn = !!currentUser;
-                    
-                    console.log('🔐 로그인 상태:', isLoggedIn);
                     
                     // 인증 완료 처리
                     Alert.alert('계좌인증 완료', '계좌인증이 완료되었습니다.', [
@@ -1223,7 +1193,6 @@ const MyCertScreen = () => {
                 const response = await ApiService.api.get('/app/my/cert', {
                   params: { member_id: '6425' }
                 });
-                console.log('📥 테스트 회원 인증 데이터:', response.data);
                 
                 if (response.data.member) {
                   setMemberData(response.data.member);
@@ -1430,8 +1399,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#a3a7ab',
   },
   btnText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#fff',
   },
   // 법인 회원 스타일

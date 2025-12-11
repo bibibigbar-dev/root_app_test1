@@ -59,14 +59,12 @@ const MainScreen = ({ navigation }) => {
       const userData = await AsyncStorage.getItem('userData');
 
       if (!userData) {
-        console.log('로그인 정보 없음 - Skip 모드로 진행');
         setUser(null);
         return;
       }
 
       const loginCheck = await ApiService.checkLoginExpiration();
       if (loginCheck.expired) {
-        console.log('세션 만료:', loginCheck.reason);
         await ApiService.clearLoginData();
         return;
       }
@@ -86,7 +84,6 @@ const MainScreen = ({ navigation }) => {
       // 메인 페이지 데이터 로드
       const data = await ApiService.getMainData();
       const result = data?.result ?? data;
-      console.log('메인 데이터 로드 성공:', result);
       setMainData({
         products: result?.product || [],
         siteStats: result?.site || null,
@@ -113,12 +110,6 @@ const MainScreen = ({ navigation }) => {
 
   const checkAndShowPopup = async () => {
     try {
-      console.log('팝업 체크 시작:', {
-        popup_cnt: mainData.popup_cnt,
-        popup_length: mainData.popup.length,
-        user: user ? '로그인' : '비로그인'
-      });
-
       if (mainData.popup_cnt > 0 && mainData.popup.length > 0) {
         // 24시간 동안 보지 않기 체크
         const popupHideTime = await AsyncStorage.getItem('popupHideTime');
@@ -126,7 +117,6 @@ const MainScreen = ({ navigation }) => {
           const hideTime = parseInt(popupHideTime, 10);
           const now = Date.now();
           if (now < hideTime) {
-            console.log('팝업 24시간 동안 보지 않기 설정됨');
             return;
           } else {
             // 시간이 지났으면 삭제
@@ -139,10 +129,8 @@ const MainScreen = ({ navigation }) => {
         if (!user) {
           // 비로그인 상태: member_open_yn이 없는 팝업만 표시
           popups = mainData.popup.filter(popup => !popup.member_open_yn);
-          console.log('비로그인 팝업 필터링:', popups.length);
         }
       
-        console.log('팝업 표시:', popups.length);
         if (popups.length > 0) {
           setFilteredPopups(popups);
           setShowPopup(true);
@@ -154,13 +142,10 @@ const MainScreen = ({ navigation }) => {
   };
 
   const handleClosePopup = async () => {
-    console.log('팝업 닫기');
-
     // 24시간 보지 않기 체크되어 있으면 저장
     if (dontShowFor24Hours) {
       const hideUntil = Date.now() + (24 * 60 * 60 * 1000);
       await AsyncStorage.setItem('popupHideTime', hideUntil.toString());
-      console.log('24시간 동안 보지 않기 설정됨');
     }
 
     // 팝업 완전히 닫기
@@ -172,8 +157,6 @@ const MainScreen = ({ navigation }) => {
   const handlePopupLinkPress = async (url) => {
     if (!url) return;
 
-    console.log('팝업 링크 클릭:', url);
-
     // 먼저 팝업 닫기
     setShowPopup(false);
 
@@ -183,7 +166,6 @@ const MainScreen = ({ navigation }) => {
         const match = url.match(/\/board\/promotion\/(\d+)/);
         if (match && match[1]) {
           const promotionId = match[1];
-          console.log('프로모션 상세로 이동:', promotionId);
           
           // 프로모션 상세 화면으로 이동 (idx를 promotionId로 전달)
           navigation.navigate('PromotionDetail', { 
@@ -199,12 +181,10 @@ const MainScreen = ({ navigation }) => {
         const match = url.match(/\/product\/detail\/([A-Z0-9]+)/);
         if (match && match[1]) {
           const orderKey = match[1];
-          console.log('상품 상세로 이동:', orderKey);
           
           // API 호출하여 상품 정보 가져오기
           const apiService = new ApiService();
           const response = await apiService.get(`/app/product/detail/${orderKey}`);
-          console.log('상품 데이터:', response);
           
           // idx에 따라 적절한 화면으로 이동
           const idx = response?.prod?.idx || 999;
@@ -222,14 +202,12 @@ const MainScreen = ({ navigation }) => {
             screenName = 'ProductDetailOld3';
           }
           
-          console.log(`📱 팝업에서 상품 상세 이동: idx=${idx}, screen=${screenName}`);
           navigation.navigate(screenName, { orderKey: orderKey });
           return;
         }
       }
 
       // 그 외의 경우 외부 브라우저로 열기
-      console.log('외부 링크로 열기:', url);
       Linking.openURL(url).catch((err) =>
         console.error('팝업 링크 열기 실패:', err)
       );
@@ -265,7 +243,6 @@ const MainScreen = ({ navigation }) => {
       screenName = 'ProductDetailOld3';
     }
 
-    console.log(`📱 상품 상세 이동: idx=${idx}, screen=${screenName}`);
     navigation.navigate(screenName, { orderKey: item.orderKey });
   };
 
@@ -391,7 +368,11 @@ const MainScreen = ({ navigation }) => {
       return (
         <TouchableOpacity
           style={styles.slideContainer}
-          onPress={() => console.log('프로모션:', promo.idx)}
+          onPress={() => {
+            navigation.navigate('PromotionDetail', {
+              idx: promo.idx
+            });
+          }}
           activeOpacity={0.9}
         >
           <View style={styles.slideInbox}>
@@ -1228,7 +1209,6 @@ const MainScreen = ({ navigation }) => {
                   <TouchableOpacity
                     style={styles.popupCheckbox}
                     onPress={() => {
-                      console.log('체크박스 클릭:', !dontShowFor24Hours);
                       setDontShowFor24Hours(!dontShowFor24Hours);
                     }}
                   >

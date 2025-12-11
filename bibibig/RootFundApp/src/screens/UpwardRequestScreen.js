@@ -120,10 +120,6 @@ const UpwardRequestScreen = ({ navigation, route }) => {
     try {
       const memberId = user?.session?.member_id || user?.id;
       
-      console.log('📤 상향신청 시작 - member_id:', memberId);
-      console.log('📤 선택된 등급:', selectedGrade);
-      console.log('📤 선택된 파일 개수:', selectedFiles.length);
-      
       // FormData 생성
       const formData = new FormData();
       formData.append('member_class', selectedGrade);
@@ -131,7 +127,6 @@ const UpwardRequestScreen = ({ navigation, route }) => {
 
       // 파일 추가
       selectedFiles.forEach((file, index) => {
-        console.log(`📤 파일 ${index + 1}:`, file.name, file.type);
         formData.append('files', {
           uri: file.uri,
           type: file.type || 'application/octet-stream',
@@ -139,15 +134,11 @@ const UpwardRequestScreen = ({ navigation, route }) => {
         });
       });
 
-      console.log('📤 API 호출: /app/my/process/upward');
-      
       const response = await ApiService.api.post('/app/my/process/upward', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-
-      console.log('✅ 상향신청 응답:', response.data);
 
       if (response.data === '0' || response.data === 0) {
         setIsSubmitting(false);

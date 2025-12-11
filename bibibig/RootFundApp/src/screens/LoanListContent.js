@@ -43,8 +43,6 @@ const LoanListContent = ({ navigation, route, user, member_id }) => {
         }
       });
 
-      console.log(`${activeSubTab === 'request' ? '대출신청내역' : '대출내역'} 응답:`, response.data);
-
       if (response.data) {
         // 대출신청내역일 때는 requestlist와 requestavg 사용
         if (activeSubTab === 'request') {

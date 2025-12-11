@@ -60,8 +60,6 @@ const InvestRequestScreen = ({ navigation, route }) => {
 
   const loadInvestData = async () => {
     try {
-      console.log('📱 투자하기 화면 데이터 로드 시작:', productOrderNumber);
-      
       // orderNumber 체크
       if (!productOrderNumber) {
         console.error('❌ orderNumber가 없습니다');
@@ -80,15 +78,11 @@ const InvestRequestScreen = ({ navigation, route }) => {
         return;
       }
       
-      console.log('📤 투자하기 요청 데이터:', { orderNumber: productOrderNumber, member_id: memberId });
-      
       const formData = api.convertToFormData({ 
         orderNumber: productOrderNumber.toString(),
         member_id: memberId.toString()
       });
       const response = await api.api.post('/app/product/invest', formData);
-      
-      console.log('📥 투자하기 응답:', response.data);
       
       if (response.data) {
         // 에러 체크
@@ -107,7 +101,6 @@ const InvestRequestScreen = ({ navigation, route }) => {
           return;
         }
         
-        console.log('✅ 투자하기 데이터 로드 성공');
         setProd(response.data.prod || {});
         setMember(response.data.member || {});
         setExpertopinion(response.data.expertopinion || {});
@@ -1992,9 +1985,8 @@ const styles = StyleSheet.create({
   },
   popBtnText: {
     color: '#fff',
-    fontSize: 20,
-    lineHeight: 26,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
   },
   // 약관 모달 추가 스타일
   popTermsScroll: {

@@ -57,6 +57,10 @@ import RecruitScreen from '../screens/RecruitScreen';
 import TermsScreen from '../screens/TermsScreen';
 import InvestReceiptScreen from '../screens/InvestReceiptScreen';
 import MyCertScreen from '../screens/MyCertScreen';
+import InvestCancelScreen from '../screens/InvestCancelScreen';
+import InvestCancelDoneScreen from '../screens/InvestCancelDoneScreen';
+import NeighborRequestDoneScreen from '../screens/NeighborRequestDoneScreen';
+import NeighborStatusScreen from '../screens/NeighborStatusScreen';
 
 const Stack = createStackNavigator();
 
@@ -258,6 +262,10 @@ const AppNavigator = () => {
           <Stack.Screen name="Terms" component={TermsScreen} />
           <Stack.Screen name="InvestReceipt" component={InvestReceiptScreen} />
           <Stack.Screen name="MyCert" component={MyCertScreen} />
+          <Stack.Screen name="InvestCancel" component={InvestCancelScreen} />
+          <Stack.Screen name="InvestCancelDone" component={InvestCancelDoneScreen} />
+          <Stack.Screen name="NeighborRequestDone" component={NeighborRequestDoneScreen} />
+          <Stack.Screen name="NeighborStatus" component={NeighborStatusScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </View>

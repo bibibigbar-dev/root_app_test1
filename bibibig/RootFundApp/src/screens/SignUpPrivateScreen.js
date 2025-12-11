@@ -51,8 +51,6 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
         },
       });
       
-      console.log('Terms data response:', response.data);
-      
       if (response.data.status === 'success') {
         setTermsData(response.data);
       }
@@ -108,12 +106,6 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
       setLoading(true);
       const marketing = checks.marketing ? 'Y' : 'N';
       
-      console.log('Calling privateAgree API with:', {
-        marketing,
-        f_joinType: joinType,
-        kakaoCi: '0',
-      });
-      
       // API 호출 - FormData 형식으로 전송
       const formData = new FormData();
       formData.append('marketing', marketing);
@@ -125,8 +117,6 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
           'Content-Type': 'multipart/form-data',
         },
       });
-
-      console.log('privateAgree response:', response.data);
 
       if (response.data.status === 'success') {
         // joinType에 따라 다른 화면으로 이동
@@ -254,7 +244,7 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
                         setWebViewHeight(data.height + 20);
                       }
                     } catch (e) {
-                      console.log('WebView message parse error:', e);
+                      console.error('WebView message parse error:', e);
                     }
                   }}
                 />
@@ -623,7 +613,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#bfc3c7',
   },
   btnNextText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -677,8 +667,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   popCloseBtnText: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 });

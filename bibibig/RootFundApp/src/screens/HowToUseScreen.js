@@ -217,8 +217,10 @@ const HowToUseScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={styles.btnbox}
             onPress={() => {
-              // TODO: FAQ 페이지로 이동
-              console.log('FAQ 페이지로 이동');
+              navigation.navigate('CustomerService', {
+                user: route.params?.user,
+                initialTab: 1 // 1: 자주하는질문 탭
+              });
             }}
           >
             <Text style={styles.btnboxText}>자주묻는질문 바로가기 {'>'}</Text>

@@ -86,11 +86,9 @@ const SignUpPrivateMinorScreen = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
 
   useEffect(() => {
-    console.log('SignUpPrivateMinor params:', route.params);
 
     // Deep Link 처리 (KCB 본인인증 콜백)
     const handleDeepLink = ({ url }) => {
-      console.log('📱 Deep Link received:', url);
       
       if (url && url.includes('kcb-callback')) {
         try {
@@ -106,7 +104,6 @@ const SignUpPrivateMinorScreen = () => {
           const di = params.get('di');
           const ci = params.get('ci');
 
-          console.log('✅ KCB 콜백 데이터:', { rtnvalue, name, mobile });
 
           if (rtnvalue === '0') {
             setVerificationData({
@@ -179,7 +176,6 @@ const SignUpPrivateMinorScreen = () => {
   // 파일 업로드 함수 (회원가입 성공 후 호출)
   const uploadMinorFiles = async (member_id) => {
     try {
-      console.log('📤 파일 업로드 시작, member_id:', member_id);
 
       const fileFormData = new FormData();
       fileFormData.append('member_id_minor', member_id);
@@ -193,11 +189,6 @@ const SignUpPrivateMinorScreen = () => {
         });
       });
 
-      console.log('📤 파일 업로드 데이터:', {
-        member_id,
-        filesCount: selectedFiles.length,
-      });
-
       const fileResponse = await ApiService.api.post(
         '/app/management/member/proc/memberMinorFileUpload',
         fileFormData,
@@ -208,7 +199,6 @@ const SignUpPrivateMinorScreen = () => {
         }
       );
 
-      console.log('📥 파일 업로드 응답:', fileResponse.data);
 
       if (fileResponse.data === '0') {
         // 파일 업로드 성공 - 서비스 이용신청 화면으로 이동
@@ -280,18 +270,12 @@ const SignUpPrivateMinorScreen = () => {
       formData.append('address2', address2);
       formData.append('jobCode', jobCode);
 
-      console.log('📤 회원가입 요청 데이터:', {
-        email,
-        name: verificationData.name,
-      });
-
       const response = await ApiService.api.post('/app/certJoinProcess', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      console.log('📥 회원가입 응답:', response.data);
 
       const rtnvalue = String(response.data.rtnvalue).trim();
 
@@ -329,10 +313,8 @@ const SignUpPrivateMinorScreen = () => {
       });
       
       setSelectedFiles([...selectedFiles, ...results]);
-      console.log('선택된 파일:', results);
     } catch (error) {
       if (DocumentPicker.isCancel(error)) {
-        console.log('파일 선택 취소');
       } else {
         console.error('파일 선택 오류:', error);
         Alert.alert('오류', '파일 선택 중 오류가 발생했습니다.');
@@ -379,7 +361,6 @@ const SignUpPrivateMinorScreen = () => {
         ? `${RNFS.DocumentDirectoryPath}/${fileName}`
         : `${RNFS.DownloadDirectoryPath}/${fileName}`;
 
-      console.log('파일 복사 시작:', { sourcePath, downloadDest });
 
       // 파일 존재 확인
       const fileExists = await RNFS.exists(sourcePath);
@@ -404,7 +385,6 @@ const SignUpPrivateMinorScreen = () => {
               if (Platform.OS === 'ios') {
                 // iOS에서는 파일 앱으로 이동
                 Linking.openURL('shareddocuments://').catch(() => {
-                  console.log('파일 앱을 열 수 없습니다.');
                 });
               }
             },
@@ -412,7 +392,6 @@ const SignUpPrivateMinorScreen = () => {
         ]
       );
 
-      console.log('파일 다운로드 완료:', downloadDest);
     } catch (error) {
       console.error('파일 다운로드 오류:', error);
       Alert.alert('오류', '파일 다운로드 중 오류가 발생했습니다.');
@@ -475,13 +454,9 @@ const SignUpPrivateMinorScreen = () => {
         email: email,
       });
 
-      console.log('✅ Email check response:', emailCheckResponse.data);
-      console.log('✅ Response type:', typeof emailCheckResponse.data);
-      console.log('✅ okname data:', okname);
 
       // 응답 데이터를 문자열로 변환하여 비교
       const responseValue = String(emailCheckResponse.data).trim();
-      console.log('✅ Response value (string):', responseValue);
 
       if (responseValue === '0') {
         // 이메일 사용 가능 - 본인인증 진행
@@ -542,7 +517,6 @@ const SignUpPrivateMinorScreen = () => {
           Alert.alert('휴대전화 본인인증', `[${rslt_cd}] ${rslt_msg}`);
         }
       } else if (responseValue === '1' || responseValue === '2') {
-        console.log('❌ 이메일 중복:', responseValue);
         setErrors({ ...errors, email: '* 이메일 중복입니다.' });
       } else {
         console.error('❌ 알 수 없는 응답:', responseValue);
@@ -1223,7 +1197,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#28a745',
   },
   submitButtonText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
   },

@@ -41,12 +41,9 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         params: { member_id: memberId }
       });
       
-      console.log('자산 정보 응답:', response.data);
-      
       // 투자자 여부 확인 (useBalancePage)
       if (response.data && response.data.useBalancePage === false) {
         // 투자자가 아니면 인증 페이지로 리다이렉트
-        console.log('⚠️ 투자자가 아님 - MyCert 화면으로 리다이렉트');
         setLoading(false);
         navigation.replace('MyCert', {
           member_id: memberId,
@@ -149,7 +146,6 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                 };
                 
                 const formData = ApiService.convertToFormData(refundRequestData);
-                console.log('📤 출금 신청 Form-data:', formData);
                 
                 const response = await ApiService.api.post('/app/member/process/refund', formData, {
                   headers: {

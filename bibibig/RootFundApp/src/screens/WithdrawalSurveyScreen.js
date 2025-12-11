@@ -66,8 +66,6 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
         member_id: memberId,
       });
 
-      console.log('회원탈퇴 처리 응답:', response.data);
-
       if (response.data === '0') {
         // 탈퇴 완료 - 로그인 데이터 삭제 후 완료 화면으로 이동
         await ApiService.clearLoginData();
@@ -451,8 +449,8 @@ const styles = StyleSheet.create({
     borderColor: '#2c3db8',
   },
   btnText: {
-    fontSize: 20,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#fff',
   },
   modalOverlay: {

@@ -27,12 +27,8 @@ const PhoneAuthScreen = ({ navigation, route }) => {
       setLoading(true);
       setError(null);
 
-      console.log('📱 본인인증 초기화:', { authType, webId });
-
       // 백엔드에서 KCB 본인인증 정보 요청
       const response = await ApiService.api.get('/app/find/password');
-
-      console.log('📱 본인인증 초기화 응답:', response.data);
 
       if (response.data && response.data.okname) {
         const okname = response.data.okname;
@@ -100,11 +96,8 @@ const PhoneAuthScreen = ({ navigation, route }) => {
   };
 
   const handleNavigationStateChange = (navState) => {
-    console.log('📱 WebView URL:', navState.url);
-
     // 인증 완료 후 콜백 URL 감지
     if (navState.url.includes('openkc') || navState.url.includes('P931_Result')) {
-      console.log('📱 KCB 인증 결과 페이지 감지');
       
       // URL에서 파라미터 추출 시도
       try {
@@ -127,8 +120,6 @@ const PhoneAuthScreen = ({ navigation, route }) => {
             ci: urlParams.get('ci') || '',
           };
 
-          console.log('✅ 인증 완료 데이터:', authData);
-
           // 성공 콜백 호출
           if (onAuthSuccess) {
             onAuthSuccess(authData);
@@ -148,12 +139,8 @@ const PhoneAuthScreen = ({ navigation, route }) => {
   const handleWebViewMessage = (event) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      console.log('📨 WebView Message:', data);
-
+      
       if (data.type === 'authResult') {
-        // fnKCBOkNameProcess 호출 결과
-        console.log('✅ KCB 인증 결과 수신:', data);
-        
         // rtnvalue가 "0"이면 성공
         if (data.rtnvalue === '0') {
           // 성공 콜백 호출
@@ -188,7 +175,7 @@ const PhoneAuthScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       // JSON 파싱 실패 시 문자열로 처리
-      console.log('📨 WebView Message (raw):', event.nativeEvent.data);
+      console.error('📨 WebView Message (raw):', event.nativeEvent.data);
     }
   };
 
@@ -201,10 +188,6 @@ const PhoneAuthScreen = ({ navigation, route }) => {
       
       // fnKCBOkNameProcess 함수 오버라이드 (웹에서 호출하는 함수)
       window.fnKCBOkNameProcess = function(rtnvalue, rtnmessage, authtype, name, birthdate, gender, mobile, nationalInfo, di, ci) {
-        console.log('✅ fnKCBOkNameProcess 호출됨:', {
-          rtnvalue, rtnmessage, authtype, name, birthdate, gender, mobile, nationalInfo, di, ci
-        });
-        
         const authData = {
           type: 'authResult',
           rtnvalue: String(rtnvalue),
@@ -218,8 +201,6 @@ const PhoneAuthScreen = ({ navigation, route }) => {
           di: String(di || ''),
           ci: String(ci || '')
         };
-        
-        console.log('📤 React Native로 전송:', authData);
         
         // React Native로 데이터 전송
         if (window.ReactNativeWebView) {
@@ -244,8 +225,6 @@ const PhoneAuthScreen = ({ navigation, route }) => {
       // window.open 오버라이드 (팝업 방지)
       const originalOpen = window.open;
       window.open = function(url, name, specs) {
-        console.log('🔗 window.open 호출:', url);
-        
         // 팝업으로 열리는 URL을 현재 창에서 처리
         if (url && url !== 'about:blank') {
           // KCB 관련 URL은 현재 창에서 열기
@@ -260,19 +239,12 @@ const PhoneAuthScreen = ({ navigation, route }) => {
 
       // 메시지 리스너
       window.addEventListener('message', function(event) {
-        console.log('📬 Message received:', event.data);
-        
         if (event.data && event.data.type === 'authComplete') {
           if (window.ReactNativeWebView) {
             window.ReactNativeWebView.postMessage(JSON.stringify(event.data));
           }
         }
       });
-
-      console.log('✅ PhoneAuth script setup complete');
-      console.log('- window.fnKCBOkNameProcess:', typeof window.fnKCBOkNameProcess);
-      console.log('- window.opener:', !!window.opener);
-      console.log('- window.ReactNativeWebView:', !!window.ReactNativeWebView);
     })();
     true;
   `;

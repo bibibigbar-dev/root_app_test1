@@ -89,11 +89,9 @@ const SignUpPrivateForeignerScreen = () => {
   ];
 
   useEffect(() => {
-    console.log('SignUpPrivateForeigner params:', route.params);
 
     // Deep Link 처리 (KCB 본인인증 콜백)
     const handleDeepLink = ({ url }) => {
-      console.log('📱 Deep Link received:', url);
       
       if (url && url.includes('kcb-callback')) {
         try {
@@ -109,7 +107,6 @@ const SignUpPrivateForeignerScreen = () => {
           const di = params.get('di');
           const ci = params.get('ci');
 
-          console.log('✅ KCB 콜백 데이터:', { rtnvalue, name, mobile });
 
           if (rtnvalue === '0') {
             setVerificationData({
@@ -213,11 +210,9 @@ const SignUpPrivateForeignerScreen = () => {
         foreigner_use_code: foreignerUseCode,
       };
 
-      console.log('📤 회원가입 요청 데이터:', signUpData);
 
       const response = await ApiService.api.post('/app/certJoinProcess', signUpData);
 
-      console.log('📥 회원가입 응답:', response.data);
 
       const rtnvalue = String(response.data.rtnvalue).trim();
 
@@ -308,13 +303,9 @@ const SignUpPrivateForeignerScreen = () => {
         email: email,
       });
 
-      console.log('✅ Email check response:', emailCheckResponse.data);
-      console.log('✅ Response type:', typeof emailCheckResponse.data);
-      console.log('✅ okname data:', okname);
 
       // 응답 데이터를 문자열로 변환하여 비교
       const responseValue = String(emailCheckResponse.data).trim();
-      console.log('✅ Response value (string):', responseValue);
 
       if (responseValue === '0') {
         // 이메일 사용 가능 - 본인인증 진행
@@ -375,7 +366,6 @@ const SignUpPrivateForeignerScreen = () => {
           Alert.alert('휴대전화 본인인증', `[${rslt_cd}] ${rslt_msg}`);
         }
       } else if (responseValue === '1' || responseValue === '2') {
-        console.log('❌ 이메일 중복:', responseValue);
         setErrors({ ...errors, email: '* 이미 사용중인 이메일입니다.' });
       } else {
         console.error('❌ 알 수 없는 응답:', responseValue);
@@ -972,7 +962,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#28a745',
   },
   submitButtonText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
   },

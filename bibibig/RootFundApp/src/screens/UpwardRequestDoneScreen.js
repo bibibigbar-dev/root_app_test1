@@ -111,9 +111,8 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#fff',
-    fontSize: 20,
-    lineHeight: 48,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 

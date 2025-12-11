@@ -58,8 +58,6 @@ const SignUpCorpFormScreen = () => {
     try {
       setCheckingCorpNo(true);
       
-      console.log('🔍 사업자번호 조회 시작:', corpNoTemp);
-      
       const data = {
         b_no: [corpNoTemp]
       };
@@ -79,13 +77,10 @@ const SignUpCorpFormScreen = () => {
       );
 
       const result = await response.json();
-      console.log('✅ 사업자번호 조회 결과:', JSON.stringify(result, null, 2));
 
       // status_code 확인
       if (result.status_code === 'OK' && result.data && result.data.length > 0) {
         const bizData = result.data[0];
-        console.log('📋 사업자 상태 코드:', bizData.b_stt_cd);
-        console.log('📋 사업자 상태:', bizData.b_stt);
         
         let checkNextStep = false;
         
@@ -250,31 +245,23 @@ const SignUpCorpFormScreen = () => {
         marketing: marketing || 'N',
       };
 
-      console.log('📤 법인 회원가입 요청 데이터:', signUpData);
-
       const response = await ApiService.api.post('/app/corpJoinProcess', signUpData);
-
-      console.log('📥 법인 회원가입 응답:', response.data);
 
       const rtnvalue = String(response.data.rtnvalue || response.data).trim();
       const member_id = response.data.member_id || '';
 
       if (rtnvalue === '0') {
         // 회원가입 성공
-        console.log('✅ 회원가입 성공, member_id:', member_id);
         
         // 자동 로그인 처리
         if (member_id) {
           try {
-            console.log('🔐 자동 로그인 시작...');
-            
             const loginData = {
               web_id: email,
               member_pwd: password, // 사용자가 입력한 평문 비밀번호
             };
             
             const loginResponse = await ApiService.api.post('/app/loginProcess', loginData);
-            console.log('📥 자동 로그인 응답:', loginResponse.data);
             
             if (loginResponse.data.rtnvalue === '0' && loginResponse.data.member) {
               // 로그인 성공 - 세션 저장
@@ -290,13 +277,11 @@ const SignUpCorpFormScreen = () => {
               };
               
               await AsyncStorage.setItem('userData', JSON.stringify(userData));
-              console.log('✅ 자동 로그인 완료 및 세션 저장');
             } else {
               console.warn('⚠️ 자동 로그인 실패, 수동 로그인 필요');
             }
           } catch (loginError) {
             console.error('❌ 자동 로그인 오류:', loginError);
-            console.log('⚠️ 자동 로그인 실패했지만 인증 화면으로 이동');
           }
         }
         
@@ -677,7 +662,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#bfc3c7',
   },
   submitButtonText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
   },

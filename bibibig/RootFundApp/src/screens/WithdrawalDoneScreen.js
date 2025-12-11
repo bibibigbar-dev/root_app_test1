@@ -134,8 +134,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnText: {
-    fontSize: 20,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#fff',
   },
 });

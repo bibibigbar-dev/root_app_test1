@@ -100,10 +100,7 @@ const LoginScreen = ({ navigation, route }) => {
   };
 
   const handleLogin = async (targetScreen = 'Main', targetParams = null, setLoadingState) => {
-    console.log('🚀 로그인 시작');
-    
     if (!email || !password) {
-      console.log('❌ 입력값 검증 실패:', { email: !!email, password: !!password });
       Alert.alert('로그인', '이메일과 비밀번호를 입력해주세요.');
       return;
     }
@@ -114,21 +111,12 @@ const LoginScreen = ({ navigation, route }) => {
       await saveRememberedEmail();
       
       const loginData = { email, password };
-      console.log('📤 API 호출 전 데이터:', { email, password: '***' });
-      
       const response = await ApiService.login(loginData);
-      console.log('📥 API 응답:', response);
       
       if (response.success && response.user) {
-        console.log('✅ 로그인 성공! 저장할 사용자 데이터:');
-        console.log('📋 response.user:', JSON.stringify(response.user, null, 2));
-        console.log('📋 세션 데이터:', JSON.stringify(response.user.session, null, 2));
-        
         // 로그인 성공 시 사용자 정보 저장
         await AsyncStorage.setItem('userData', JSON.stringify(response.user));
         await AsyncStorage.setItem('userToken', response.user.token);
-        
-        console.log('💾 AsyncStorage에 저장 완료');
         
         // 타겟 화면으로 이동
         if (targetParams) {
@@ -156,10 +144,8 @@ const LoginScreen = ({ navigation, route }) => {
   };
 
   const handleWithdrawalLogin = async () => {
-    console.log('🚀 출금 신청 로그인 시작');
     
     if (!email || !password) {
-      console.log('❌ 입력값 검증 실패:', { email: !!email, password: !!password });
       Alert.alert('로그인', '이메일과 비밀번호를 입력해주세요.');
       return;
     }
@@ -170,14 +156,10 @@ const LoginScreen = ({ navigation, route }) => {
       await saveRememberedEmail();
       
       const loginData = { email, password };
-      console.log('📤 출금 로그인 API 호출 전 데이터:', { email, password: '***' });
       
       const response = await ApiService.withdrawalLogin(loginData);
-      console.log('📥 출금 로그인 API 응답:', response);
       
-      if (response.success && response.user) {
-        console.log('✅ 출금 로그인 성공!');
-        
+      if (response.success && response.user) {  
         // 로그인 성공 시 사용자 정보 저장
         await AsyncStorage.setItem('userData', JSON.stringify(response.user));
         await AsyncStorage.setItem('userToken', response.user.token);
@@ -185,10 +167,7 @@ const LoginScreen = ({ navigation, route }) => {
         // 은행 목록 저장
         if (response.banks) {
           await AsyncStorage.setItem('bankList', JSON.stringify(response.banks));
-          console.log('💾 은행 목록 저장 완료:', response.banks.length, '개');
         }
-        
-        console.log('💾 AsyncStorage에 저장 완료');
         
         // 출금 화면으로 이동
         navigation.replace('Withdrawal');
@@ -212,7 +191,6 @@ const LoginScreen = ({ navigation, route }) => {
       
       if (response.data) {
         const kakaoLoginUrl = response.data;
-        console.log('📱 카카오 로그인 URL:', kakaoLoginUrl);
         
         // 카카오 로그인 URL로 이동
         const canOpen = await Linking.canOpenURL(kakaoLoginUrl);

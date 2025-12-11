@@ -24,14 +24,12 @@ export const SessionExamples = {
   // 2. 잔액 확인
   async checkBalance() {
     const balance = await ApiService.getBalance();
-    console.log('현재 잔액:', balance);
     return balance;
   },
 
   // 3. 회원 등급 확인
   async checkMemberGrade() {
     const grade = await ApiService.getMemberGrade();
-    console.log('회원 등급:', grade);
     return grade;
   },
 
@@ -45,16 +43,12 @@ export const SessionExamples = {
   // 5. 특정 세션 값 조회
   async getSpecificSessionValue(key) {
     const value = await ApiService.getSessionData(key);
-    console.log(`${key}:`, value);
     return value;
   },
 
   // 6. 세션 데이터 업데이트 (예: 잔액 변경 시)
   async updateBalance(newBalance) {
     const success = await ApiService.updateSessionData('balance', newBalance);
-    if (success) {
-      console.log('잔액 업데이트 완료:', newBalance);
-    }
     return success;
   }
 };

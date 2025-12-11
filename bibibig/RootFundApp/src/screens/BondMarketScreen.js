@@ -30,6 +30,17 @@ const BondMarketScreen = ({ navigation, route }) => {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [selectedBond, setSelectedBond] = useState(null);
   const [showAreaPicker, setShowAreaPicker] = useState(false);
+  const [showCalcModal, setShowCalcModal] = useState(false);
+  const [calcPrice, setCalcPrice] = useState('1000000');
+  const [calcResult, setCalcResult] = useState({
+    totalProfit: 0,
+    totalInterest: 0,
+    totalTax: 0,
+    totalComm: 0,
+    schedule: []
+  });
+  const [expandedSchedule, setExpandedSchedule] = useState({});
+  const [calcBondData, setCalcBondData] = useState(null);
 
   useEffect(() => {
     loadBondData();
@@ -55,13 +66,9 @@ const BondMarketScreen = ({ navigation, route }) => {
         params.member_id = memberId;
       }
       
-      console.log('채권거래소 요청 파라미터:', params);
-      
       const response = await ApiService.api.get('/app/market', {
         params: params
       });
-      
-      console.log('채권거래소 응답:', response.data);
       
       // 백엔드 응답 처리
       if (response.data) {
@@ -74,11 +81,9 @@ const BondMarketScreen = ({ navigation, route }) => {
 
         // classType: 지역 선택 목록
         if (response.data.classType && Array.isArray(response.data.classType)) {
-          console.log('classType 데이터:', response.data.classType);
           setAreaList(response.data.classType);
-        } else {
-          console.log('classType 데이터 없음 또는 배열이 아님:', response.data.classType);
-        }
+        } 
+
       } else {
         setBondList([]);
       }
@@ -124,6 +129,130 @@ const BondMarketScreen = ({ navigation, route }) => {
     return parseInt(value || 0).toLocaleString();
   };
 
+  // 날짜 계산 함수들
+  const getCurrentDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const addMonths = (dateStr, months) => {
+    const date = new Date(dateStr);
+    date.setMonth(date.getMonth() + months);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const calcDateDiff = (startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // 수익 계산
+  const calculateInterest = () => {
+    if (!calcBondData) return;
+
+    let tBal = 0;
+    let tRrp = 0;
+    let tInt = 0;
+    let tTax = 0;
+    let tComm = 0;
+
+    const sort = calcBondData.sort;
+    const rpType = calcBondData.repayType;
+    const rate = Number(calcBondData.rate);
+    const dRate = (rate / 100) / 365;
+    let price = calcPrice.replace(/,/g, '');
+    price = Number(price);
+    const period = Number(calcBondData.period);
+    const comm = Number(calcBondData.iComm1 || 0);
+    const dComm = (comm / 100) / 365;
+    const iTaxPer = Number(calcBondData.iTax || 0);
+    const rTaxPer = Number(calcBondData.rTax || 0);
+    let startDate = getCurrentDate();
+
+    tBal = price;
+    const rp1Rp = Math.floor(tBal / period);
+    const schedule = [];
+
+    for (let i = 1; i <= period; i++) {
+      let endDate;
+      
+      if (sort === 'BRIDGE' || sort === 'bridge') {
+        endDate = addMonths(startDate, 1);
+      } else if (sort === 'PF' || sort === 'pf') {
+        endDate = addMonths(startDate, 3);
+      } else {
+        // innovation 등
+        endDate = addMonths(startDate, 3);
+      }
+
+      const diffDt = calcDateDiff(startDate, endDate) - 1;
+
+      let rp = 0;
+      if (i === period) {
+        rp = tBal;
+      } else {
+        if (rpType === '1') {
+          rp = rp1Rp;
+        }
+      }
+
+      const ri = (tBal * dRate) * diffDt;
+      const rti = Math.floor((ri * (iTaxPer / 100)) / 10) * 10;
+      const rtr = Math.floor((ri * (rTaxPer / 100)) / 10) * 10;
+      const rc = (price * dComm) * diffDt;
+
+      rp = Math.floor(rp);
+      const riFloor = Math.floor(ri);
+      const rcFloor = Math.floor(rc);
+
+      const rrp = (rp + riFloor) - (rti + rtr + rcFloor);
+      const rrpFloor = Math.floor(rrp);
+
+      schedule.push({
+        round: i,
+        afterTax: rrpFloor,
+        paymentDate: endDate,
+        principal: rp,
+        interest: riFloor,
+        incomeTax: rti,
+        residentTax: rtr,
+        commission: rcFloor,
+        actualPayment: rrpFloor
+      });
+
+      startDate = endDate;
+      tRrp += rrpFloor;
+      tInt += riFloor;
+      tTax += rti + rtr;
+      tComm += rcFloor;
+      tBal = tBal - rp;
+    }
+
+    const rsInterestTotal = Number(tInt) - Number(tTax) - Number(tComm);
+
+    setCalcResult({
+      totalProfit: rsInterestTotal,
+      totalInterest: tInt,
+      totalTax: tTax,
+      totalComm: tComm,
+      schedule: schedule
+    });
+  };
+
+  const handleCalcPriceChange = (text) => {
+    const numOnly = text.replace(/[^0-9]/g, '');
+    setCalcPrice(numOnly);
+  };
+
   const handleBuyRequest = async () => {
     if (!user) {
       setShowBuyModal(false);
@@ -141,9 +270,7 @@ const BondMarketScreen = ({ navigation, route }) => {
         member_id: memberId,
         _mknum: selectedBond.seq.toString()
       });
-
-      console.log('구매 신청 응답:', response.data);
-
+      
       setShowBuyModal(false);
       setSelectedBond(null);
 
@@ -419,8 +546,9 @@ const BondMarketScreen = ({ navigation, route }) => {
                       <TouchableOpacity 
                         style={styles.btn}
                         onPress={() => {
-                          // TODO: 수익금 지급 예정표 모달
-                          console.log('수익금 지급 예정표', item.orderNumber);
+                          setCalcBondData(item);
+                          setShowCalcModal(true);
+                          setTimeout(() => calculateInterest(), 100);
                         }}
                       >
                         <Text style={styles.btnText}>수익금 지급 예정표</Text>
@@ -592,6 +720,123 @@ const BondMarketScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 수익금 계산 모달 */}
+      <Modal
+        visible={showCalcModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCalcModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calcModalContainer}>
+            <ScrollView style={styles.calcModalBox} showsVerticalScrollIndicator={false}>
+              <Text style={styles.calcModalTitle}>수익금 지급 예정표</Text>
+              
+              <View style={styles.calcInputBox}>
+                <Text style={styles.calcInputLabel}>투자금액</Text>
+                <View style={styles.flexInput}>
+                  <TextInput
+                    style={styles.textInput}
+                    value={formatNumber(calcPrice)}
+                    onChangeText={handleCalcPriceChange}
+                    keyboardType="numeric"
+                  />
+                  <Text style={styles.txtUnit}>원</Text>
+                  <TouchableOpacity 
+                    style={styles.btnCalc}
+                    onPress={calculateInterest}
+                  >
+                    <Text style={styles.btnCalcText}>계산하기</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.calcResultBox}>
+                <Text style={styles.calcResultTitle}>예상 수익 정보</Text>
+                <View style={styles.boxCalc}>
+                  <View style={styles.dlTotal}>
+                    <Text style={styles.dtTotal}>예상 투자수익</Text>
+                    <Text style={styles.ddTotal}>{formatNumber(calcResult.totalProfit)} 원</Text>
+                  </View>
+                  <View style={styles.dl}>
+                    <Text style={styles.dt}>세전 총 수익</Text>
+                    <Text style={styles.dd}>{formatNumber(calcResult.totalInterest)} 원</Text>
+                  </View>
+                  <View style={styles.dl}>
+                    <Text style={styles.dt}>세금(이자소득세+주민세)</Text>
+                    <Text style={styles.dd}>{formatNumber(calcResult.totalTax)} 원</Text>
+                  </View>
+                  <View style={styles.dl}>
+                    <Text style={styles.dt}>플랫폼 수수료</Text>
+                    <Text style={styles.dd}>{formatNumber(calcResult.totalComm)} 원</Text>
+                  </View>
+                </View>
+
+                {/* 상환 스케줄 */}
+                <Text style={styles.repayTit}>상환 스케줄</Text>
+                <View style={styles.repayList}>
+                  {calcResult.schedule.map((item, index) => (
+                    <View key={index} style={styles.repayItem}>
+                      <TouchableOpacity 
+                        style={[styles.inHead, expandedSchedule[index] && styles.inHeadOn]}
+                        onPress={() => {
+                          setExpandedSchedule(prev => ({
+                            ...prev,
+                            [index]: !prev[index]
+                          }));
+                        }}
+                      >
+                        <Text style={styles.inHeadNum}>{item.round}회차</Text>
+                        <Text style={styles.inHeadDate}>{item.paymentDate}</Text>
+                        <Text style={styles.inHeadPrice}>{formatNumber(item.actualPayment)} 원</Text>
+                        <Image 
+                          source={require('../assets/images/arrow_select.png')}
+                          style={[styles.inHeadArrow, expandedSchedule[index] && styles.inHeadArrowOn]}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                      {expandedSchedule[index] && (
+                        <View style={styles.inBody}>
+                          <View style={styles.inBodyRow}>
+                            <Text style={styles.inBodyLabel}>원금</Text>
+                            <Text style={styles.inBodyValue}>{formatNumber(item.principal)} 원</Text>
+                          </View>
+                          <View style={styles.inBodyRow}>
+                            <Text style={styles.inBodyLabel}>이자</Text>
+                            <Text style={styles.inBodyValue}>{formatNumber(item.interest)} 원</Text>
+                          </View>
+                          <View style={styles.inBodyRow}>
+                            <Text style={styles.inBodyLabel}>이자소득세</Text>
+                            <Text style={styles.inBodyValue}>{formatNumber(item.incomeTax)} 원</Text>
+                          </View>
+                          <View style={styles.inBodyRow}>
+                            <Text style={styles.inBodyLabel}>주민세</Text>
+                            <Text style={styles.inBodyValue}>{formatNumber(item.residentTax)} 원</Text>
+                          </View>
+                          <View style={styles.inBodyRow}>
+                            <Text style={styles.inBodyLabel}>수수료</Text>
+                            <Text style={styles.inBodyValue}>{formatNumber(item.commission)} 원</Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.calcModalButtonBox}>
+                <TouchableOpacity
+                  style={styles.calcModalButton}
+                  onPress={() => setShowCalcModal(false)}
+                >
+                  <Text style={styles.calcModalButtonText}>닫기</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1230,6 +1475,226 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#393f44',
     paddingHorizontal: 8,
+  },
+  // 수익금 계산 모달 스타일
+  calcModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  calcModalBox: {
+    width: '100%',
+    maxHeight: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingTop: 24,
+  },
+  calcModalTitle: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '700',
+    color: '#222',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  calcInputBox: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  calcInputLabel: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: '#222',
+    marginBottom: 8,
+  },
+  flexInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '400',
+    color: '#222',
+    padding: 0,
+  },
+  txtUnit: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+    color: '#666',
+    marginLeft: 8,
+    marginRight: 8,
+  },
+  btnCalc: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#2c3db8',
+    borderRadius: 6,
+  },
+  btnCalcText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  calcResultBox: {
+    paddingHorizontal: 16,
+  },
+  calcResultTitle: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#222',
+    marginBottom: 12,
+  },
+  boxCalc: {
+    backgroundColor: '#f6f6f6',
+    borderRadius: 8,
+    padding: 16,
+  },
+  dlTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  dtTotal: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '700',
+    color: '#222',
+  },
+  ddTotal: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: '#2c3db8',
+  },
+  dl: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  dt: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '400',
+    color: '#666',
+  },
+  dd: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: '#222',
+  },
+  repayTit: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#222',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  repayList: {
+    marginBottom: 24,
+  },
+  repayItem: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  inHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  inHeadOn: {
+    backgroundColor: '#f6f6f6',
+  },
+  inHeadNum: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: '#222',
+    width: 50,
+  },
+  inHeadDate: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '400',
+    color: '#666',
+  },
+  inHeadPrice: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: '#2c3db8',
+    marginRight: 8,
+  },
+  inHeadArrow: {
+    width: 16,
+    height: 16,
+  },
+  inHeadArrowOn: {
+    transform: [{ rotate: '180deg' }],
+  },
+  inBody: {
+    padding: 16,
+    paddingTop: 0,
+    backgroundColor: '#f6f6f6',
+  },
+  inBodyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  inBodyLabel: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '400',
+    color: '#666',
+  },
+  inBodyValue: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: '#222',
+  },
+  calcModalButtonBox: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    marginTop: 8,
+  },
+  calcModalButton: {
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#2c3db8',
+    borderRadius: 8,
+  },
+  calcModalButtonText: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
 

@@ -546,28 +546,15 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
     Alert.alert('알림', 'URL이 복사되었습니다.\n앱이 설치된 기기에서만 열립니다.');
   };
 
-  const handleInvestRequest = () => {
-    console.log('투자하기 클릭');
-    navigation.navigate('InvestRequest', {
-      orderKey: orderKey,
-      productData: productData
+  const handleGoToInvestList = async () => {
+    const currentUser = await ApiService.getCurrentUser();
+    const memberId = currentUser?.session?.member_id || currentUser?.id;
+
+    navigation.navigate('MyPage', {
+      user: currentUser,
+      member_id: memberId,
+      initialTab: 'invest'
     });
-  };
-
-  const handleAreaProductRequest = () => {
-    // TODO: 이웃신청하기 로직
-    console.log('이웃신청하기 클릭');
-  };
-
-  const handleInvestCancelRequest = () => {
-    // TODO: 투자 취소 로직
-    console.log('투자 취소하기 클릭');
-  };
-
-  const handleGoToInvestList = () => {
-    // TODO: 투자현황 페이지로 이동
-    console.log('투자현황 바로가기 클릭');
-    // navigation.navigate('InvestList');
   };
 
   const handleLogin = () => {
@@ -588,41 +575,12 @@ const ProductDetailOld3Screen = ({ navigation, route }) => {
       );
     }
 
-    // 로그인한 경우 checkInvest 값에 따라 버튼 변경
-    const { checkInvest } = productData || {};
-    
-    switch (checkInvest) {
-      case '0': // 투자 가능
-        return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
-            <Text style={styles.btnText}>투자하기</Text>
-          </TouchableOpacity>
-        );
-      case '22': // 이웃신청 필요
-        return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleAreaProductRequest}>
-            <Text style={styles.btnText}>이웃신청하기</Text>
-          </TouchableOpacity>
-        );
-      case '4': // 투자대기
-        return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnGray]} disabled>
-            <Text style={[styles.btnText, styles.btnTextGray]}>투자대기</Text>
-          </TouchableOpacity>
-        );
-      case '8': // 투자 취소 가능
-        return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestCancelRequest}>
-            <Text style={styles.btnText}>투자 취소 하기</Text>
-          </TouchableOpacity>
-        );
-      default: // 그 외 (이미 투자한 경우)
-        return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
-            <Text style={styles.btnText}>투자현황 바로가기</Text>
-          </TouchableOpacity>
-        );
-    }
+    // 로그인한 경우 - 투자현황 바로가기만 표시
+    return (
+      <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
+        <Text style={styles.btnText}>투자현황 바로가기</Text>
+      </TouchableOpacity>
+    );
   };
 
   const renderOrderTypeIcon = (orderType) => {
@@ -1324,7 +1282,7 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#fff',
   },
   btnTextGray: {

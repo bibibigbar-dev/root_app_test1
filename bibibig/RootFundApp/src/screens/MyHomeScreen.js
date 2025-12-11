@@ -24,7 +24,6 @@ const MyHomeScreen = ({ navigation }) => {
       const userData = await AsyncStorage.getItem('userData');
 
       if (!userData) {
-        console.log('로그인 정보 없음');
         navigation.reset({
           index: 0,
           routes: [{ name: 'Login' }],
@@ -34,7 +33,6 @@ const MyHomeScreen = ({ navigation }) => {
 
       const loginCheck = await ApiService.checkLoginExpiration();
       if (loginCheck.expired) {
-        console.log('세션 만료:', loginCheck.reason);
         await ApiService.clearLoginData();
         navigation.reset({
           index: 0,
@@ -47,7 +45,6 @@ const MyHomeScreen = ({ navigation }) => {
       if (currentUser) {
         setUser(currentUser);
       } else {
-        console.log('사용자 정보 조회 실패');
         navigation.reset({
           index: 0,
           routes: [{ name: 'Login' }],
@@ -96,7 +93,11 @@ const MyHomeScreen = ({ navigation }) => {
           <TouchableOpacity
             style={[styles.menuButton, styles.menuButtonSecondary]}
             onPress={() => {
-              console.log('투자 현황');
+              navigation.navigate('MyPage', {
+                user: user,
+                member_id: user?.session?.member_id || user?.id,
+                initialTab: 'invest'
+              });
             }}
           >
             <Text style={styles.menuButtonText}>투자 현황</Text>
@@ -105,7 +106,11 @@ const MyHomeScreen = ({ navigation }) => {
           <TouchableOpacity
             style={[styles.menuButton, styles.menuButtonSecondary]}
             onPress={() => {
-              console.log('마이페이지');
+              navigation.navigate('MyPage', {
+                user: user,
+                member_id: user?.session?.member_id || user?.id,
+                initialTab: 'info'
+              });
             }}
           >
             <Text style={styles.menuButtonText}>마이페이지</Text>

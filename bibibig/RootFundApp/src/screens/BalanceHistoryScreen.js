@@ -68,8 +68,6 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
         params: { member_id: memberId }
       });
 
-      console.log('입출금내역 응답:', response.data);
-
       // 응답 데이터 처리
       const data = response.data || {};
       

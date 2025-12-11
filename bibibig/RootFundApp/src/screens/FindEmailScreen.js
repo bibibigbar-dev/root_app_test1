@@ -45,9 +45,6 @@ const FindEmailScreen = ({ navigation }) => {
           },
         }
       );
-
-      console.log('📧 아이디 찾기 응답:', response.data);
-
       const rtnvalue = String(response.data.rtnvalue);
 
       if (rtnvalue === '0') {
@@ -255,9 +252,8 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#fff',
-    fontSize: 20,
-    lineHeight: 28,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
   },
   loginLinks: {
     flexDirection: 'row',

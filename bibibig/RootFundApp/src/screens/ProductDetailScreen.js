@@ -70,7 +70,6 @@ const ProductDetailScreen = ({ navigation, route }) => {
       const currentUser = await ApiService.getCurrentUser();
       const isUserLoggedIn = !!(currentUser && currentUser.id);
       setIsLoggedIn(isUserLoggedIn);
-      console.log('로그인 상태:', isUserLoggedIn, '사용자:', currentUser);
     } catch (error) {
       console.error('로그인 상태 확인 오류:', error);
       setIsLoggedIn(false);
@@ -80,11 +79,8 @@ const ProductDetailScreen = ({ navigation, route }) => {
   const loadProductDetail = async () => {
     try {
       setLoading(true);
-      console.log('📦 상품 상세 조회 시작 - orderKey:', orderKey);
       
       const response = await ApiService.api.get(`/app/product/detail/${orderKey}`);
-      
-      console.log('✅ 상품 상세 응답:', response.data);
       
       if (response.data) {
         setProductData(response.data);
@@ -280,7 +276,6 @@ const ProductDetailScreen = ({ navigation, route }) => {
   };
 
   const handleInvestRequest = () => {
-    console.log('투자하기 클릭');
     navigation.navigate('InvestRequest', {
       orderKey: orderKey,
       productData: productData
@@ -288,19 +283,48 @@ const ProductDetailScreen = ({ navigation, route }) => {
   };
 
   const handleAreaProductRequest = () => {
-    // TODO: 이웃신청하기 로직
-    console.log('이웃신청하기 클릭');
+    if (!productData || !productData.prod) {
+      Alert.alert('알림', '상품 정보를 불러오는 중입니다.');
+      return;
+    }
+    
+    navigation.navigate('NeighborRequest', {
+      product: {
+        orderNumber: productData.prod.orderNumber,
+        orderName: productData.prod.orderName,
+      }
+    });
   };
 
-  const handleInvestCancelRequest = () => {
-    // TODO: 투자 취소 로직
-    console.log('투자 취소하기 클릭');
+  const handleInvestCancelRequest = async () => {
+    if (!productData || !productData.prod) {
+      Alert.alert('알림', '상품 정보를 불러오는 중입니다.');
+      return;
+    }
+
+    const currentUser = await ApiService.getCurrentUser();
+    const memberId = currentUser?.session?.member_id || currentUser?.id;
+
+    if (!memberId) {
+      Alert.alert('알림', '로그인이 필요합니다.');
+      return;
+    }
+
+    navigation.navigate('InvestCancel', {
+      orderNumber: productData.prod.orderNumber,
+      member_id: memberId,
+    });
   };
 
-  const handleGoToInvestList = () => {
-    // TODO: 투자현황 페이지로 이동
-    console.log('투자현황 바로가기 클릭');
-    // navigation.navigate('InvestList');
+  const handleGoToInvestList = async () => {
+    const currentUser = await ApiService.getCurrentUser();
+    const memberId = currentUser?.session?.member_id || currentUser?.id;
+
+    navigation.navigate('MyPage', {
+      user: currentUser,
+      member_id: memberId,
+      initialTab: 'invest'
+    });
   };
 
   const handleLogin = () => {
@@ -373,6 +397,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
     switch (checkInvest) {
       case '0': // 투자 가능
         return (
+          
           <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
             <Text style={styles.btnText}>투자하기</Text>
           </TouchableOpacity>
@@ -397,11 +422,8 @@ const ProductDetailScreen = ({ navigation, route }) => {
         );
       default: // 그 외 (이미 투자한 경우)
         return (
-          //<TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
-          //  <Text style={styles.btnText}>투자현황 바로가기</Text>
-          //</TouchableOpacity>
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
-          <Text style={styles.btnText}>투자하기</Text>
+          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
+            <Text style={styles.btnText}>투자현황 바로가기</Text>
           </TouchableOpacity>
         );
     }
@@ -1319,7 +1341,7 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#fff',
   },
   btnTextGray: {

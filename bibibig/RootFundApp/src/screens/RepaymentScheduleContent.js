@@ -35,7 +35,6 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
     setLoading(true);
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      console.log('상환스케줄 조회 - member_id:', memberId, 'yyyy:', currentYear, 'mm:', currentMonth);
       
       // GET 요청으로 쿼리 파라미터 전송
       const response = await ApiService.api.get('/app/my/invest/calendar', {
@@ -45,8 +44,6 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
           mm: currentMonth.toString().padStart(2, '0'),
         }
       });
-      
-      console.log('상환스케줄 응답:', response.data);
       
       if (response.data) {
         setCalendarData(response.data);
@@ -1040,9 +1037,8 @@ const styles = StyleSheet.create({
   },
   modalBtnText: {
     color: '#fff',
-    fontSize: 20,
-    lineHeight: 48,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 

@@ -95,8 +95,6 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
         cs_contents: csContents.trim(),
       };
 
-      console.log('📤 상담 신청 데이터:', requestData);
-
       const response = await ApiService.api.post('/app/insertCsRequest', 
         ApiService.convertToFormData(requestData),
         {
@@ -105,9 +103,6 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
           },
         }
       );
-
-      console.log('✅ 상담 신청 응답:', response.data);
-
       const rtnvalue = String(response.data);
 
       if (rtnvalue === '0') {
@@ -548,8 +543,8 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#fff',
-    fontSize: 20,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 

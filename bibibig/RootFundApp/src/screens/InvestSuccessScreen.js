@@ -26,7 +26,6 @@ const InvestSuccessScreen = ({ navigation, route }) => {
   const loadSuccessData = async () => {
     try {
       setLoading(true);
-      console.log('📦 투자 성공 데이터 로드:', { orderNumber, tid });
 
       // 현재 로그인한 사용자 정보 가져오기
       const currentUser = await api.getCurrentUser();
@@ -39,7 +38,6 @@ const InvestSuccessScreen = ({ navigation, route }) => {
       });
 
       const response = await api.api.post('/app/product/ivsuccess', formData);
-      console.log('✅ 투자 성공 응답:', response.data);
 
       if (response.data && response.data.status === 'success') {
         setData({
@@ -288,9 +286,8 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#fff',
-    fontSize: 20,
-    lineHeight: 26,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 

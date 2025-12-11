@@ -34,13 +34,9 @@ const MemberWithdrawalScreen = ({ navigation, route }) => {
         return;
       }
 
-      console.log('회원탈퇴 정보 조회 시작:', memberId);
-      
       const response = await ApiService.api.get('/app/my/withdraw', {
         params: { member_id: memberId }
       });
-
-      console.log('회원탈퇴 API 응답:', response.data);
 
       if (response.data && response.data.rtnvalue === '0') {
         // 백엔드 응답 구조: { rtnvalue, member, withdraw, mh_num }
@@ -50,14 +46,6 @@ const MemberWithdrawalScreen = ({ navigation, route }) => {
           member_name: response.data.member?.r_name || response.data.member?.name,
           recordtime: response.data.member?.recordtime,
         };
-        console.log('설정된 데이터:', data);
-        console.log('탈퇴 조건 체크:', {
-          cur_invest_cnt: data.cur_invest_cnt,
-          total_invest_cnt: data.total_invest_cnt,
-          cur_loan_cnt: data.cur_loan_cnt,
-          total_loan_cnt: data.total_loan_cnt,
-          balance: data.balance,
-        });
         setWithdrawData(data);
       } else {
         Alert.alert('오류', '회원탈퇴 정보를 불러오지 못했습니다.');

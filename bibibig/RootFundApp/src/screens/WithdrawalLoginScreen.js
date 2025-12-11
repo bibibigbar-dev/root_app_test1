@@ -94,10 +94,8 @@ const WithdrawalLoginScreen = ({ navigation, route }) => {
   };
 
   const handleWithdrawalLogin = async () => {
-    console.log('🚀 출금 신청 로그인 시작');
     
     if (!email || !password) {
-      console.log('❌ 입력값 검증 실패:', { email: !!email, password: !!password });
       Alert.alert('로그인', '이메일과 비밀번호를 입력해주세요.');
       return;
     }
@@ -108,13 +106,10 @@ const WithdrawalLoginScreen = ({ navigation, route }) => {
       await saveRememberedEmail();
       
       const loginData = { email, password };
-      console.log('📤 출금 로그인 API 호출 전 데이터:', { email, password: '***' });
       
       const response = await ApiService.withdrawalLogin(loginData);
-      console.log('📥 출금 로그인 API 응답:', response);
       
       if (response.success && response.user) {
-        console.log('✅ 출금 로그인 성공!');
         
         // 로그인 성공 시 사용자 정보 저장
         await AsyncStorage.setItem('userData', JSON.stringify(response.user));
@@ -123,10 +118,7 @@ const WithdrawalLoginScreen = ({ navigation, route }) => {
         // 은행 목록 저장
         if (response.banks) {
           await AsyncStorage.setItem('bankList', JSON.stringify(response.banks));
-          console.log('💾 은행 목록 저장 완료:', response.banks.length, '개');
         }
-        
-        console.log('💾 AsyncStorage에 저장 완료');
         
         // 출금 화면으로 이동
         navigation.replace('Withdrawal');

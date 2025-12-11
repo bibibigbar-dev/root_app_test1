@@ -83,7 +83,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
     // 글로벌 함수 노출 (웹 콜백용)
     if (typeof window !== 'undefined') {
       window.fnKCBOkNameProcess = handleCertifyCallback;
-      console.log('✅ fnKCBOkNameProcess 글로벌 함수 등록 완료');
     }
 
     return () => {
@@ -98,13 +97,10 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
     setLoading(true);
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      console.log('회원정보 조회 - member_id:', memberId);
       
       const response = await ApiService.api.get('/app/my/info', {
         params: { member_id: memberId }
       });
-      console.log('회원정보 응답:', response.data);
-      console.log('okname 데이터:', response.data.okname);
       
       if (response.data && response.data.member) {
         const member = response.data.member;
@@ -355,11 +351,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
 
   const handlePhoneChange = async () => {
     try {
-      console.log('📞 본인인증 시작...');
-      console.log('📞 전체 memberData:', memberData);
-      console.log('📞 memberData.okname:', memberData?.okname);
-      console.log('📞 memberData 키 목록:', memberData ? Object.keys(memberData) : 'memberData 없음');
-      
       // 회원정보 조회 시 받아온 okname 데이터 사용
       const oknameData = memberData?.okname;
       
@@ -374,10 +365,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
         const cp_cd = oknameData.cp_cd;
         const token = oknameData.token;
         
-        console.log('✅ 본인인증 URL:', okname_url);
-        console.log('✅ cp_cd:', cp_cd);
-        console.log('✅ token:', token);
-        
         // Form 데이터를 URL 파라미터로 변환
         const formParams = new URLSearchParams({
           tc: 'kcb.oknm.online.safehscert.popup.cmd.P931_CertChoiceCmd',
@@ -386,8 +373,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
         });
         
         const fullUrl = `${okname_url}?${formParams.toString()}`;
-        
-        console.log('📞 최종 URL:', fullUrl);
         
         // 외부 브라우저로 본인인증 페이지 열기
         Alert.alert(
@@ -419,7 +404,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
       } else {
         const rslt_cd = oknameData.rslt_cd || '';
         const rslt_msg = oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
-        console.log('⚠️ 본인인증 실패:', rslt_cd, rslt_msg);
         Alert.alert('휴대전화 본인인증', `[${rslt_cd}] ${rslt_msg}`);
       }
     } catch (error) {
@@ -431,8 +415,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
   // 본인인증 완료 후 콜백 처리
   // 웹 페이지에서 fnKCBOkNameProcess(rtnvalue, rtnmessage, authtype, name, birthdate, gender, mobile, nationalInfo, di, ci) 형태로 호출
   const handleCertifyCallback = async (rtnvalue, rtnmessage, authtype, name, birthdate, gender, mobile, nationalInfo, di, ci) => {
-    console.log('📞 본인인증 콜백 호출:', { rtnvalue, rtnmessage, authtype, name, birthdate, gender, mobile });
-    
     if (rtnvalue === '0') {
       try {
         const response = await ApiService.api.post('/app/member/update/certify', {
@@ -445,8 +427,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
           di: di,
           ci: ci,
         });
-        
-        console.log('✅ 본인인증 API 응답:', response.data);
         
         if (response.data === '0') {
           Alert.alert('본인인증', '인증이 완료되었습니다.', [
@@ -1083,7 +1063,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                           script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
                           script.onload = function() {
                           document.getElementById('loading').style.display = 'none';
-                          console.log('Daum Postcode 스크립트 로드 완료');
                           
                           var daunaddrlayer = document.getElementById('layer');
 
@@ -1107,7 +1086,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                           function execDaumPostcode() {
                             new daum.Postcode({
                               oncomplete: function(data) {
-                                console.log('주소 선택됨:', data);
                                   var fullRoadAddr = data.roadAddress; // 도로명 주소 변수
                                   var extraRoadAddr = ''; // 도로명 조합형 주소 변수
                                   
@@ -1153,7 +1131,6 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                   `
                 }}
                 onMessage={(event) => {
-                  console.log('React Native 메시지 수신:', event.nativeEvent.data);
                   handleAddressSelect(event.nativeEvent.data);
                 }}
                 onNavigationStateChange={(navState) => {

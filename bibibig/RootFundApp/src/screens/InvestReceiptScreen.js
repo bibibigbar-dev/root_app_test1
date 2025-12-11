@@ -48,8 +48,6 @@ const InvestReceiptScreen = ({ navigation, route }) => {
         idx: idx,
       });
 
-      console.log('원리금수취권 증서 응답:', response.data);
-
       if (response.data) {
         const rtnvalue = response.data.rtnvalue || response.data.rtnvalue;
         

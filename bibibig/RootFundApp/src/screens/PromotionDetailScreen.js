@@ -46,12 +46,6 @@ const PromotionDetailScreen = ({ navigation, route }) => {
           // 오늘이 시작일과 종료일 사이에 있으면 진행중
           const ongoing = today >= startDate && today <= endDate;
           setIsOngoing(ongoing);
-          console.log('프로모션 상태:', {
-            today: today.toISOString(),
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            ongoing: ongoing
-          });
         }
       }
     } catch (error) {

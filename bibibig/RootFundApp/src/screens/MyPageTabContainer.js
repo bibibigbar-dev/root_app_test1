@@ -109,9 +109,13 @@ const MyPageTabContainer = ({ navigation, route }) => {
     }
   };
 
+  // 법인 C 회원 여부 확인
+  const isCorporateC = memberData?.member_class === 'C';
+
+  // 탭 목록 생성 (법인 C가 아니면 대출내역 제외)
   const tabs = [
     { key: 'assets', label: '자산관리' },
-    { key: 'loan', label: '대출내역' },
+    ...(isCorporateC ? [{ key: 'loan', label: '대출내역' }] : []),
     { key: 'invest', label: '투자현황' },
     { key: 'review', label: '투자후기' },
     { key: 'schedule', label: '상환스케줄' },

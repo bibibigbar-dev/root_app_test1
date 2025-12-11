@@ -84,8 +84,6 @@ const LoanRequestScreen = ({ navigation, route }) => {
         },
       });
 
-      console.log('✅ 약관 데이터 로드:', response.data);
-
       if (response.data) {
         setLoanTerms(response.data.loan?.contents || '');
         setPriv1Terms(response.data.priv1?.contents || '');
@@ -174,8 +172,6 @@ const LoanRequestScreen = ({ navigation, route }) => {
         text1: purpose.trim(),
       };
 
-      console.log('📤 대출 신청 데이터:', requestData);
-
       const response = await ApiService.api.post('/app/loan/proc/request',
         ApiService.convertToFormData(requestData),
         {
@@ -184,8 +180,6 @@ const LoanRequestScreen = ({ navigation, route }) => {
           },
         }
       );
-
-      console.log('✅대출 신청 응답:', response.data);
 
       const rtnvalue = String(response.data.rtnvalue);
 
@@ -777,8 +771,8 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#fff',
-    fontSize: 20,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,

@@ -20,8 +20,6 @@ class ApiService {
       },
     });
 
-    console.log('🌐 API 베이스 URL:', this.baseURL);
-
     // 요청 인터셉터 - 토큰 자동 추가
     this.api.interceptors.request.use(
       async (config) => {
@@ -75,13 +73,11 @@ class ApiService {
       
       // 만료 시간이 설정되지 않은 경우 (기존 로그인)
       if (!user.expirationTime) {
-        console.log('⚠️ 만료 시간 없는 기존 로그인 - 재로그인 필요');
         return { expired: true, reason: 'no_expiration' };
       }
       
       // 만료 시간 검사
       if (currentTime > user.expirationTime) {
-        console.log('⏰ 로그인 만료됨');
         return { expired: true, reason: 'expired' };
       }
       
@@ -90,7 +86,6 @@ class ApiService {
       const remainingHours = Math.floor(remainingTime / (60 * 60 * 1000));
       const remainingMinutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
       
-      console.log(`✅ 로그인 유효 - 남은 시간: ${remainingHours}시간 ${remainingMinutes}분`);
       return { 
         expired: false, 
         user: user,
@@ -110,7 +105,6 @@ class ApiService {
     try {
       await AsyncStorage.removeItem('userData');
       await AsyncStorage.removeItem('userToken');
-      console.log('🗑️ 로그인 정보 삭제 완료');
     } catch (error) {
       console.error('❌ 로그인 정보 삭제 실패:', error);
     }
@@ -119,8 +113,6 @@ class ApiService {
   // 로그아웃 (백엔드 로그아웃 API 호출 + 로컬 데이터 삭제)
   async logout() {
     try {
-      console.log('🚪 로그아웃 시작');
-      
       // member_id 가져오기
       const currentUser = await this.getCurrentUser();
       const memberId = currentUser?.session?.member_id || currentUser?.member_id || currentUser?.id;
@@ -128,11 +120,9 @@ class ApiService {
       // 백엔드 로그아웃 API 호출 (선택적)
       try {
         if (memberId) {
-          console.log('📤 로그아웃 API 호출 - member_id:', memberId);
           const response = await this.api.post('/app/logoutProcess', {
             member_id: memberId,
           });
-          console.log('✅ 백엔드 로그아웃 완료:', response.data);
         } else {
           console.warn('⚠️ member_id가 없어 백엔드 로그아웃 API를 호출하지 않습니다.');
         }
@@ -143,7 +133,6 @@ class ApiService {
       // 로컬 세션 데이터 삭제
       await this.clearLoginData();
       
-      console.log('✅ 로그아웃 완료');
       return { success: true };
     } catch (error) {
       console.error('❌ 로그아웃 실패:', error);
@@ -185,7 +174,6 @@ class ApiService {
       }
 
       const user = JSON.parse(userData);
-      console.log('🔍 getCurrentUser - 원본 사용자 데이터:', user);
       
       return {
         id: user.id,
@@ -247,7 +235,6 @@ class ApiService {
       user.session[key] = value;
       await AsyncStorage.setItem('userData', JSON.stringify(user));
       
-      console.log(`✅ 세션 데이터 업데이트: ${key} = ${value}`);
       return true;
     } catch (error) {
       console.error('❌ 세션 데이터 업데이트 실패:', error);
@@ -282,7 +269,6 @@ class ApiService {
     }
     
     try {
-      console.log('🔑 공개키 요청');
       
       // 웹에서 사용하는 공개키 엔드포인트 시도
       let response;
@@ -291,7 +277,6 @@ class ApiService {
         response = await this.api.get('/api/publickey');
         this.publicKey = response.data.publicKey || response.data;
       } catch (apiError) {
-        console.log('🔑 전용 API 실패, 웹 페이지에서 공개키 추출 시도');
         if (
           apiError.code === 'ECONNABORTED' ||
           apiError.message?.includes('timeout') ||
@@ -311,19 +296,16 @@ class ApiService {
         
         if (publicKeyMatch && publicKeyMatch[1]) {
           this.publicKey = publicKeyMatch[1].trim();
-          console.log('✅ 웹 페이지에서 공개키 추출 성공');
         } else {
           throw new Error('공개키를 찾을 수 없음');
         }
       }
       
-      console.log('✅ 공개키 수신 완료');
       return this.publicKey;
     } catch (error) {
       console.error('❌ 공개키 가져오기 실패:', error);
       
       // 개발용: 실제 서버 공개키가 없을 때 테스트용 키 생성
-      console.log('🔧 개발 모드: 테스트용 공개키 생성');
       
       // 실제 RSA 2048bit 공개키 (테스트용)
       this.publicKey = `-----BEGIN PUBLIC KEY-----
@@ -347,20 +329,14 @@ DwIDAQAB
     }
 
     try {
-      console.log('🔑 /app/pulickKey 통해 공개키 선 요청');
       const response = await this.api.get('/app/pulickKey');
       
-      console.log('🔑 /app/pulickKey 응답:', response.data);
       
       // 백엔드 응답: { bc5jsencpublickey: "-----BEGIN PUBLIC KEY-----..." }
       const publicKey = response.data?.bc5jsencpublickey;
       
       if (publicKey) {
         this.publicKey = publicKey;
-        console.log('✅ /app/pulickKey 공개키 수신 완료:', {
-          length: publicKey.length,
-          start: publicKey.substring(0, 50) + '...'
-        });
         return this.publicKey;
       }
       console.warn('⚠️ /app/pulickKey 응답에 bc5jsencpublickey가 없음');
@@ -368,7 +344,6 @@ DwIDAQAB
       console.warn('⚠️ /app/pulickKey 공개키 선 요청 실패 - 목업 모드로 전환:', error.message || error);
       
       // 앱용 API가 아직 구현되지 않은 경우 목업 공개키 사용
-      console.log('🔧 개발 모드: 목업 공개키 사용');
       this.publicKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlViLMalAkBbaP3f+m6jh
 GVhtR0RgYQGH3Bzi9yYcyqj/D1Gh5N40HBBlEoUZTq3yr7uQ7e2DizXwieo5129u
@@ -386,24 +361,13 @@ DwIDAQAB
   // 비밀번호 암호화 (웹의 _bc5jsencsetdata 함수와 동일)
   async encryptPassword(password) {
     try {
-      console.log('🔐 JSEncrypt 암호화 시도 (웹과 동일):', {
-        passwordLength: password ? password.length : 0,
-        passwordSample: password ? password.substring(0, 3) + '***' : 'null'
-      });
-
       // 공개키 가져오기 (웹의 $('#_bc5jsencpublickey').val() 와 동일)
       const publicKey = await this.getPublicKey();
       
       if (!publicKey) {
         console.error('❌ 공개키가 없음');
         throw new Error('공개키가 없음');
-      }
-
-      console.log('🔑 공개키 정보:', {
-        length: publicKey.length,
-        start: publicKey.substring(0, 50) + '...',
-        end: '...' + publicKey.substring(publicKey.length - 50)
-      });
+      }       
 
       // 웹과 동일한 JSEncrypt 사용
       // function _bc5jsencsetdata(_tabal){
@@ -417,40 +381,22 @@ DwIDAQAB
       try {
         const encrypt = new JSEncrypt();
         
-        console.log('🔑 공개키 설정 시도...');
         const setKeyResult = encrypt.setPublicKey(publicKey);
-        console.log('🔑 공개키 설정 결과:', setKeyResult);
         
-        console.log('🔐 encrypt.encrypt() 호출...');
         encryptedPassword = encrypt.encrypt(password);
         
-        console.log('🔐 JSEncrypt 암호화 결과:', {
-          original: password.substring(0, 3) + '***',
-          encrypted: encryptedPassword ? encryptedPassword.substring(0, 50) + '...' : 'null',
-          length: encryptedPassword ? encryptedPassword.length : 0,
-          type: typeof encryptedPassword,
-          isString: typeof encryptedPassword === 'string',
-          isFalse: encryptedPassword === false
-        });
 
         if (encryptedPassword === false || !encryptedPassword) {
           throw new Error('JSEncrypt 암호화 실패');
         }
 
-        console.log('✅ JSEncrypt 비밀번호 암호화 성공 (웹과 동일)');
         return encryptedPassword;
       } catch (jsEncryptError) {
         console.error('❌ JSEncrypt.encrypt() 오류:', jsEncryptError);
       }
 
       try {
-        console.log('🔐 커스텀 RSA 암호화 시도 (PKCS#1 v1.5)...');
         encryptedPassword = rsaEncryptWithPublicKey(publicKey, password);
-        console.log('✅ 커스텀 RSA 암호화 성공:', {
-          original: password.substring(0, 3) + '***',
-          encrypted: encryptedPassword.substring(0, 50) + '...',
-          length: encryptedPassword.length
-        });
         return encryptedPassword;
       } catch (customError) {
         console.error('❌ 커스텀 RSA 암호화 실패:', customError);
@@ -480,7 +426,6 @@ DwIDAQAB
   // 보안 요청 모드 설정
   async setReqModes(reqData = {}) {
     try {
-      console.log('🔒 setreqmodes 호출');
       
       // 백엔드에서 요구하는 reqdata 파라미터 추가
       const requestData = {
@@ -488,7 +433,6 @@ DwIDAQAB
       };
       
       const formData = this.convertToFormData(requestData);
-      console.log('📤 setreqmodes 전송 데이터:', formData);
       
       const response = await this.api.post('/app/setreqmodes', formData, {
         headers: {
@@ -498,8 +442,6 @@ DwIDAQAB
         }
       });
       
-      console.log('✅ setreqmodes 응답 타입:', typeof response.data);
-      console.log('✅ setreqmodes 응답 내용:', response.data);
       
       // HTML 응답인 경우 (페이지 에러)
       if (typeof response.data === 'string' && response.data.includes('페이지에러')) {
@@ -509,20 +451,13 @@ DwIDAQAB
       
       // 정상 JSON 응답인 경우 - 백엔드 HashMap 구조에 맞게 처리
       if (response.data && typeof response.data === 'object') {
-        console.log('✅ setreqmodes 정상 응답:', {
-          data1: response.data.data1 ? '***' : 'null',
-          data2: response.data.data2 ? '***' : 'null',
-          data3: response.data.data3,
-          data4: response.data.data4,
-          data5: response.data.data5
-        });
+
         return response.data;
       }
       
       throw new Error('Invalid response format');
     } catch (error) {
       console.warn('⚠️ setreqmodes API 오류 - 목업 데이터 사용:', error.message);
-      console.log('🔧 개발 모드: 목업 보안 데이터 반환');
       return { 
         data1: 'mock_encrypted_timestamp', 
         data2: 'mock_encrypted_reqdata',
@@ -536,8 +471,6 @@ DwIDAQAB
   // 로그인
   async login(credentials) {
     try {
-      console.log('🔐 로그인 요청:', credentials);
-      console.log('🌐 API URL:', `${this.baseURL}/app/loginProcess`);
       
       // 1. 먼저 setreqmodes 호출해서 보안 데이터 가져오기
       const reqModes = await this.setReqModes({});
@@ -553,50 +486,21 @@ DwIDAQAB
         _bcsrmd2: reqModes.data2 || ''
       };
       
-      console.log('📤 최종 로그인 데이터:', { 
-        id: loginData.id, 
-        password: '***',
-        _bcsrmd1: loginData._bcsrmd1 ? '***' : '',
-        _bcsrmd2: loginData._bcsrmd2 ? '***' : ''
-      });
-      
       // Form-data 형태로 변환
       const formData = this.convertToFormData(loginData);
-      console.log('📤 Form-data 형태:', formData);
       
       const response = await this.api.post('/app/loginProcess', formData);
       
-      console.log('✅ 로그인 응답:', response.data);
-      console.log('✅ 전체 응답 구조:', response);
       
       // 백엔드 응답 처리: rsdata : {memo=, rtnvalue=0, result=sessionMap}
       if (response.data) {
-        console.log('🔍 응답 데이터 분석:', {
-          rtnvalue: response.data.rtnvalue,
-          memo: response.data.memo,
-          hasRsdata: !!response.data.rsdata,
-          hasResult: !!response.data.rsdata?.result
-        });
 
         // rtnvalue가 "0" 또는 0이면 성공
         if (response.data.rtnvalue === "0" || response.data.rtnvalue === 0) {
-          console.log('✅ 로그인 성공 - 세션 데이터 처리');
-          
-          // 전체 응답 구조 확인
-          console.log('🔍 전체 로그인 응답:', JSON.stringify(response.data, null, 2));
-          console.log('🔍 rsdata 구조:', JSON.stringify(response.data.rsdata, null, 2));
-          
-          // member 데이터 상세 확인
-          console.log('🔍 rsdata.member 존재?:', !!response.data.rsdata?.member);
-          console.log('🔍 rsdata.member 내용:', response.data.rsdata?.member);
           
           // 백엔드에서 전달받은 세션 데이터 추출
           const sessionData = response.data.rsdata?.session || response.data.rsdata?.result || {};
           const memberData = response.data.rsdata?.member || {};
-          console.log('📋 백엔드 세션 데이터:', sessionData);
-          console.log('📋 백엔드 회원 데이터:', memberData);
-          console.log('📋 member 데이터 존재 여부:', !!response.data.rsdata?.member);
-          console.log('📋 member.bank_nm:', response.data.rsdata?.member?.bank_nm);
           
           // 로그인 만료 시간 설정 (24시간 후)
           const expirationTime = Date.now() + (24 * 60 * 60 * 1000); // 24시간
@@ -642,16 +546,7 @@ DwIDAQAB
             // 원본 응답 데이터도 보관
             ...response.data
           };
-          
-          console.log('💾 저장할 사용자 데이터:');
-          console.log('📋 기본 정보:', {
-            id: userData.id,
-            email: userData.email,
-            name: userData.name
-          });
-          console.log('📋 세션 데이터:', JSON.stringify(userData.session, null, 2));
-          console.log('📋 실제 백엔드 응답:', JSON.stringify(sessionData, null, 2));
-          
+                    
           return { 
             success: true, 
             user: userData
@@ -697,13 +592,6 @@ DwIDAQAB
               break;
           }
           
-          console.log('❌ 로그인 실패:', {
-            rtnvalue: rtnvalue,
-            memo: response.data.memo,
-            action: response.data.action,
-            errorMessage: errorMessage
-          });
-          
           return { 
             success: false, 
             message: errorMessage,
@@ -739,7 +627,6 @@ DwIDAQAB
       // 개발용: 타임아웃이나 네트워크 오류 시 테스트 계정으로 로그인 허용
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout') || 
           error.message.includes('Network Error') || error.code === 'ECONNREFUSED') {
-        console.log('🔧 개발 모드: 네트워크 오류로 인한 테스트 로그인 허용');
         
         // 실제 입력한 계정 정보로 목업 로그인 생성
         return {
@@ -778,8 +665,6 @@ DwIDAQAB
   // 출금 신청 로그인
   async withdrawalLogin(credentials) {
     try {
-      console.log('🔐 출금 신청 로그인 요청:', credentials);
-      console.log('🌐 API URL:', `${this.baseURL}/app/withdrawal/loginProcess`);
       
       // 1. 먼저 setreqmodes 호출해서 보안 데이터 가져오기
       const reqModes = await this.setReqModes({});
@@ -794,14 +679,6 @@ DwIDAQAB
         _bcsrmd1: reqModes.data1 || '',
         _bcsrmd2: reqModes.data2 || ''
       };
-      
-      console.log('📤 최종 출금 로그인 데이터:', { 
-        id: loginData.id, 
-        password: '***',
-        _bcsrmd1: loginData._bcsrmd1 ? '***' : '',
-        _bcsrmd2: loginData._bcsrmd2 ? '***' : ''
-      });
-      
       // Form-data 형태로 변환
       const formData = this.convertToFormData(loginData);
       
@@ -812,29 +689,17 @@ DwIDAQAB
         }
       });
       
-      console.log('✅ 출금 로그인 응답:', response.data);
       
       if (response.data) {
-        console.log('🔍 응답 데이터 분석:', {
-          rtnvalue: response.data.rtnvalue,
-          memo: response.data.memo,
-          hasSession: !!response.data.session,
-          hasMember: !!response.data.member,
-          hasBanks: !!response.data.banks
-        });
 
         // rtnvalue가 "0" 또는 0이면 성공
         if (response.data.rtnvalue === "0" || response.data.rtnvalue === 0) {
-          console.log('✅ 출금 로그인 성공 - 세션 및 은행 데이터 처리');
           
           // 백엔드에서 전달받은 데이터 추출 (rsdata 없이 직접 전달됨)
           const sessionData = response.data.session || {};
           const memberData = response.data.member || {};
           const banks = response.data.banks || [];
           
-          console.log('📋 백엔드 세션 데이터:', sessionData);
-          console.log('📋 백엔드 회원 데이터:', memberData);
-          console.log('📋 은행 목록:', banks.length, '개');
           
           // 로그인 만료 시간 설정 (24시간 후)
           const expirationTime = Date.now() + (24 * 60 * 60 * 1000);
@@ -870,7 +735,6 @@ DwIDAQAB
             ...response.data
           };
           
-          console.log('💾 저장할 사용자 데이터:', userData);
           
           return { 
             success: true, 
@@ -878,7 +742,6 @@ DwIDAQAB
             banks: banks
           };
         } else {
-          console.log('❌ 출금 로그인 실패:', response.data.memo);
           return { 
             success: false, 
             message: response.data.memo || '로그인에 실패했습니다.' 
@@ -988,13 +851,11 @@ DwIDAQAB
     const mockUser = mockUsers[credentials.email];
     
     if (mockUser && mockUser.password === credentials.password) {
-      console.log('✅ 목업 로그인 성공:', credentials.email);
       return {
         success: true,
         user: mockUser.userData
       };
     } else {
-      console.log('❌ 목업 로그인 실패: 잘못된 계정 정보');
       return {
         success: false,
         message: '이메일 또는 비밀번호가 올바르지 않습니다.'
@@ -1005,18 +866,12 @@ DwIDAQAB
   // 출금 신청
   async requestWithdrawal(withdrawalData) {
     try {
-      console.log('💰 출금 신청 시작:', withdrawalData);
       
       // 1단계: setReqModes 호출하여 보안 데이터 획득
-      console.log('🔒 setReqModes 호출 중...');
       const securityData = await this.setReqModes({
         reqdata: `${withdrawalData.amount}`
       });
       
-      console.log('🔒 setReqModes 응답:', securityData);
-      console.log('🔒 setReqModes data1 값:', securityData.data1);
-      console.log('🔒 setReqModes data2 값:', securityData.data2);
-      console.log('🔒 setReqModes 전체 응답 타입:', typeof securityData);
       
       // 2단계: 출금 API 호출
       const refundRequestData = {
@@ -1026,13 +881,7 @@ DwIDAQAB
         refund_price: withdrawalData.amount
       };
       
-      console.log('📤 실제 전송될 데이터 확인:');
-      console.log('  - _bcsrmd1:', refundRequestData._bcsrmd1);
-      console.log('  - _bcsrmd2:', refundRequestData._bcsrmd2);
-      console.log('  - member_id:', refundRequestData.member_id);
-      console.log('  - refund_price:', refundRequestData.refund_price);
       
-      console.log('📤 출금 API 호출 데이터:', refundRequestData);
       
       const formData = this.convertToFormData(refundRequestData);
       const response = await this.api.post('/app/member/process/refund', formData, {
@@ -1041,15 +890,10 @@ DwIDAQAB
         }
       });
       
-      console.log('✅ 출금 API 응답:', response.data);
-      console.log('✅ 응답 타입 확인:', typeof response.data);
-      console.log('✅ rtnvalue 값:', response.data);
-      console.log('✅ rtnvalue 타입:', typeof response.data);
       
       // 응답이 단순 숫자인 경우 처리
       if (typeof response.data === 'number' || typeof response.data === 'string') {
         const rtnvalue = response.data.toString();
-        console.log('✅ 단순 응답값 처리 - rtnvalue:', rtnvalue);
         
         if (rtnvalue === "0") {
           return { 
@@ -1104,7 +948,6 @@ DwIDAQAB
   // 계좌 변경
   async changeAccount(accountData) {
     try {
-      console.log('🔵 계좌 변경 요청:', accountData);
       
       // 계좌번호를 Base64 URL 인코딩
       const encodedAccount = Buffer.from(accountData.account).toString('base64')
@@ -1120,7 +963,6 @@ DwIDAQAB
         gubun: accountData.gubun || ''
       };
       
-      console.log('📤 계좌 변경 전송 데이터:', changeAccountData);
       
       const formData = this.convertToFormData(changeAccountData);
       const response = await this.api.post('/app/member/process/changeAccount', formData, {
@@ -1129,7 +971,6 @@ DwIDAQAB
         }
       });
       
-      console.log('✅ 계좌 변경 응답:', response.data);
       
       // 응답이 단순 숫자인 경우 처리
       if (typeof response.data === 'number' || typeof response.data === 'string') {

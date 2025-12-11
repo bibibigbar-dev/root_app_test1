@@ -34,7 +34,6 @@ const RepaymentScheduleScreen = ({ navigation, route }) => {
     setLoading(true);
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      console.log('상환스케줄 조회 - member_id:', memberId, 'yyyy:', currentYear, 'mm:', currentMonth);
       
       const response = await ApiService.api.get('/app/my/invest/calendar', {
         params: {
@@ -43,8 +42,6 @@ const RepaymentScheduleScreen = ({ navigation, route }) => {
           mm: currentMonth.toString().padStart(2, '0'),
         },
       });
-      
-      console.log('상환스케줄 응답:', response.data);
       
       if (response.data) {
         setCalendarData(response.data);

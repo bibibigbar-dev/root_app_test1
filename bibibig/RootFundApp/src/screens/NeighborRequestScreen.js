@@ -59,8 +59,6 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         parsedData = JSON.parse(data);
       }
       
-      console.log('주소 선택됨:', parsedData);
-      
       // Daum Postcode API 응답에서 시/도, 시/군/구, 읍/면, 동/리 추출
       // sido는 address 또는 roadAddress에서 추출
       const roadAddress = parsedData.roadAddress || '';
@@ -164,7 +162,16 @@ const NeighborRequestScreen = ({ navigation, route }) => {
     setLoading(true);
 
     try {
+      const memberId = user?.session?.member_id || user?.id;
+      
+      if (!memberId) {
+        Alert.alert('알림', '로그인이 필요합니다.');
+        setLoading(false);
+        return;
+      }
+
       const formData = new FormData();
+      formData.append('member_id', memberId);
       formData.append('orderNumber', orderNumber);
       formData.append('sido', sido);
       formData.append('sigungu', sigungu);
@@ -185,19 +192,15 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         },
       });
 
-      if (response.data === '0') {
-        Alert.alert(
-          '이웃신청',
-          '신청이 완료되었습니다.',
-          [
-            {
-              text: '확인',
-              onPress: () => {
-                navigation.navigate('NeighborRequestDone');
-              },
-            },
-          ]
-        );
+      const result = String(response.data);
+
+      if (result === '0') {
+        // 성공 - 완료 화면으로 이동
+        navigation.replace('NeighborRequestDone');
+      } else if (result === '1') {
+        Alert.alert('이웃신청', '회원 정보가 없습니다.');
+      } else if (result === '9') {
+        Alert.alert('이웃신청', '파일 업로드에 실패했습니다.');
       } else {
         Alert.alert('이웃신청', '처리도중 오류가 발생하였습니다.');
       }
@@ -250,25 +253,29 @@ const NeighborRequestScreen = ({ navigation, route }) => {
               style={styles.addressInput}
               value={sido}
               placeholder="시/도"
-              editable={false}
+              editable={true}
+              onChangeText={setSido}
             />
             <TextInput
               style={styles.addressInput}
               value={sigungu}
               placeholder="시/군/구"
-              editable={false}
+              editable={true}
+              onChangeText={setSigungu}
             />
             <TextInput
               style={styles.addressInput}
               value={bname1}
               placeholder="읍/면"
-              editable={false}
+              editable={true}
+              onChangeText={setBname1}
             />
             <TextInput
               style={styles.addressInput}
               value={bname}
               placeholder="동/리"
-              editable={false}
+              editable={true}
+              onChangeText={setBname}
             />
           </View>
 
@@ -352,15 +359,12 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         animationType="fade"
         onRequestClose={() => setShowAddressModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, styles.addressModalLarge]}>
+        <View style={styles.addressModalOverlay}>
+          <View style={styles.addressModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>거주지 검색</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowAddressModal(false)}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
+              <Text style={styles.modalTitle}>주소검색</Text>
+              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
 
@@ -443,7 +447,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
                                 width: '100%',
                                 height: '460px',
                                 maxSuggestItems: 5,
-                                shorthand: false
+                                shorthaneighbornd: false
                               }).embed(daunaddrlayer);
                             }
                             
@@ -623,6 +627,7 @@ const styles = StyleSheet.create({
   },
   fileUploadText: {
     marginTop: 2,
+    marginLeft: 10,
     color: '#a3a7ab',
     fontSize: 13,
     lineHeight: 13,
@@ -689,8 +694,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#a3a7ab',
   },
   submitButtonText: {
-    fontSize: 20,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#fff',
   },
   modalOverlay: {
@@ -707,13 +712,21 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
   },
-  addressModalLarge: {
-    maxWidth: '90%',
+  addressModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addressModalContent: {
+    width: '90%',
     maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   webViewContainer: {
-    height: 500,
-    backgroundColor: '#fff',
+    height: 460,
   },
   webView: {
     flex: 1,
@@ -727,24 +740,12 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e1e2',
   },
   modalTitle: {
-    paddingVertical: 20,
-    paddingHorizontal: 16,
     fontSize: 18,
-    lineHeight: 24,
     fontWeight: '700',
     color: '#222',
-    textAlign: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f6f6f6',
   },
-  modalCloseButton: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCloseText: {
-    fontSize: 18,
+  modalClose: {
+    fontSize: 24,
     color: '#666',
   },
   addressInputModal: {

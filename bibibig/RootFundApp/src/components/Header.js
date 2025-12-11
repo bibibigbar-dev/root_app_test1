@@ -60,7 +60,6 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
         setIsLoggedIn(true);
-        console.log('Header - 로그인 정보:', parsedUser);
       } else {
         setUser(null);
         setIsLoggedIn(false);
@@ -509,7 +508,7 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
                   style={styles.menuListItem}
                   onPress={() => {
                     setMenuVisible(false);
-                    navigation.navigate('NeighborRequest', { user });
+                    navigation.navigate('NeighborStatus', { user });
                   }}
                 >
                   <Image 

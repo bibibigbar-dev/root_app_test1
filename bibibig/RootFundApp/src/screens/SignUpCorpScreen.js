@@ -180,8 +180,6 @@ const SignUpCorpScreen = () => {
         kakaoCi: '0',
       });
 
-      console.log('corpAgree response:', response.data);
-
       if (response.data.status === 'success') {
         // 법인회원 가입 폼 화면으로 이동
         navigation.navigate('SignUpCorpForm', {
@@ -233,7 +231,7 @@ const SignUpCorpScreen = () => {
                         setWebViewHeight(data.height + 20);
                       }
                     } catch (e) {
-                      console.log('WebView message parse error:', e);
+                      console.error('WebView message parse error:', e);
                     }
                   }}
                 />
@@ -596,7 +594,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#bfc3c7',
   },
   nextButtonText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -650,8 +648,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmBtnText: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 });

@@ -49,8 +49,6 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
         params: params
       });
 
-      console.log('투자후기 목록 응답:', response.data);
-
       if (response.data && response.data.list) {
         const list = response.data.list;
         setReviewList(list);

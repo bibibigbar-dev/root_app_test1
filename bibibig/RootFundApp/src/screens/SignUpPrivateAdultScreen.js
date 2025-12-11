@@ -81,7 +81,6 @@ const SignUpPrivateAdultScreen = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
 
   useEffect(() => {
-    console.log('SignUpPrivateAdult params:', route.params);
   }, [route.params]);
 
   // 본인인증 완료 확인
@@ -93,18 +92,15 @@ const SignUpPrivateAdultScreen = () => {
 
     try {
       setLoading(true);
-      console.log('🔍 인증 결과 조회 중... token:', authToken);
       
       const response = await ApiService.api.get('/app/kcb/auth/result', {
         params: { token: authToken }
       });
       
-      console.log('📥 인증 결과 응답:', JSON.stringify(response.data, null, 2));
       
       if (response.data.status === 'success') {
         const authData = response.data.data;
         
-        console.log('✅ 파싱된 인증 데이터:', authData);
         
         if (authData.rtnvalue === '0') {
           setVerificationData({
@@ -196,11 +192,9 @@ const SignUpPrivateAdultScreen = () => {
         jobCode: jobCode,
       };
 
-      console.log('📤 회원가입 요청 데이터:', signUpData);
 
       const response = await ApiService.api.post('/app/certJoinProcess', signUpData);
 
-      console.log('📥 회원가입 응답:', response.data);
 
       const rtnvalue = String(response.data.rtnvalue).trim();
 
@@ -285,13 +279,9 @@ const SignUpPrivateAdultScreen = () => {
         email: email,
       });
 
-      console.log('✅ Email check response:', emailCheckResponse.data);
-      console.log('✅ Response type:', typeof emailCheckResponse.data);
-      console.log('✅ okname data:', okname);
 
       // 응답 데이터를 문자열로 변환하여 비교
       const responseValue = String(emailCheckResponse.data).trim();
-      console.log('✅ Response value (string):', responseValue);
 
       if (responseValue === '0') {
         // 이메일 사용 가능 - 본인인증 진행
@@ -300,7 +290,6 @@ const SignUpPrivateAdultScreen = () => {
         // okname 데이터 확인
         const oknameData = okname;
         
-        console.log('✅ okname data check:', oknameData);
         
         if (!oknameData) {
           console.error('❌ okname 데이터가 없습니다');
@@ -326,7 +315,6 @@ const SignUpPrivateAdultScreen = () => {
           
           const fullUrl = `${okname_url}?${formParams.toString()}`;
           
-          console.log('✅ KCB 인증 URL:', fullUrl);
           
           // 외부 브라우저로 본인인증 페이지 열기
           Alert.alert(
@@ -372,7 +360,6 @@ const SignUpPrivateAdultScreen = () => {
           setLoading(false);
         }
       } else if (responseValue === '1' || responseValue === '2') {
-        console.log('❌ 이메일 중복:', responseValue);
         setErrors({ ...errors, email: '* 이미 사용중인 이메일입니다.' });
       } else {
         console.error('❌ 알 수 없는 응답:', responseValue);
@@ -967,7 +954,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff9800',
   },
   submitButtonText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
   },

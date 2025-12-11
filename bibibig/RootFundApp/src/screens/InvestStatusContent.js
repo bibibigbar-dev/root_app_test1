@@ -52,8 +52,6 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
         params: params
       });
 
-      console.log('투자현황 응답:', response.data);
-
       if (response.data) {
         setSummary(response.data.summary || {});
         const list = response.data.list || [];
@@ -379,8 +377,6 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
         orderNumber,
         member_id: memberId,
       });
-
-      console.log('상환 스케줄 응답:', response.data);
 
       if (response.data) {
         const rtnvalue = response.data.rtnvalue || response.data.rtnvalue;

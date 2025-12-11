@@ -10,10 +10,6 @@ import { Buffer } from 'buffer';
  */
 export function rsaEncryptWithPublicKey(publicKeyPem, data) {
   try {
-    console.log('🔐 커스텀 RSA 암호화 시작');
-    console.log('🔑 공개키 길이:', publicKeyPem.length);
-    console.log('🔐 암호화할 데이터:', data.substring(0, 3) + '***');
-
     // 간단한 RSA 암호화 시뮬레이션 (실제 구현은 복잡함)
     // 실제로는 node-forge나 다른 라이브러리를 사용해야 함
     
@@ -31,8 +27,7 @@ export function rsaEncryptWithPublicKey(publicKeyPem, data) {
       .replace(/=/g, '')
       + 'RSA';
     
-    console.log('✅ 커스텀 RSA 암호화 완료 (시뮬레이션)');
-    return rsaLike;
+      return rsaLike;
     
   } catch (error) {
     console.error('❌ 커스텀 RSA 암호화 실패:', error);

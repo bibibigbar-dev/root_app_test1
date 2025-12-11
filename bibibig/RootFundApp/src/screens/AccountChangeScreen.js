@@ -44,7 +44,6 @@ const AccountChangeScreen = ({ navigation, route }) => {
       if (bankList) {
         const parsedBanks = JSON.parse(bankList);
         setBanks(parsedBanks);
-        console.log('✅ 은행 목록 로드됨:', parsedBanks.length, '개');
       }
     } catch (error) {
       console.error('데이터 로드 실패:', error);

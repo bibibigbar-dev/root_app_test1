@@ -69,8 +69,6 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
         }
       });
 
-      console.log('연도별 지급액 내역 응답:', response.data);
-
       // 응답 데이터 처리
       if (response.data && response.data.repayment) {
         setRepaymentData(response.data.repayment);
