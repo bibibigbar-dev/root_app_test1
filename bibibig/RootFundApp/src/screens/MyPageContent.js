@@ -1184,7 +1184,6 @@ const styles = StyleSheet.create({
   formContainer: {
     //paddingHorizontal: 20,
     paddingTop: 15,
-    paddingBottom: 40,
   },
   whitebox: {
     backgroundColor: '#fff',

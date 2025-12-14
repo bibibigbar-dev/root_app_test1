@@ -36,6 +36,14 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
   }, [navigation]);
 
   useEffect(() => {
+    // propUser가 변경되면 반영
+    if (propUser) {
+      setUser(propUser);
+      setIsLoggedIn(true);
+    }
+  }, [propUser]);
+
+  useEffect(() => {
     if (menuVisible) {
       Animated.timing(slideAnim, {
         toValue: 0,
@@ -71,8 +79,14 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
     }
   };
 
-  const toggleMenu = () => {
-    setMenuVisible(!menuVisible);
+  const toggleMenu = async () => {
+    const willBeVisible = !menuVisible;
+    setMenuVisible(willBeVisible);
+    
+    // 메뉴를 열 때 최신 사용자 정보 로드
+    if (willBeVisible) {
+      await loadUserData();
+    }
   };
 
   const handleLogout = async () => {
@@ -125,97 +139,93 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
     });
   };
 
-  return (
-    <>
-      <View style={[styles.headerSafeArea, { paddingTop: insets.top }]}>
-        <View style={[styles.headerContainer, noPaddingTop && styles.noPaddingTop]}>
-          <View style={styles.header}>
-        {showBack ? (
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleMyPress}
-          >
-            <Image 
-              source={require('../assets/images/ico_my.png')} 
-              style={{ width: 24, height: 24 }} 
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity 
-            style={styles.myButton}
-            onPress={handleMyPress}
-          >
-            <Image 
-              source={require('../assets/images/ico_my.png')} 
-              style={{ width: 24, height: 24 }} 
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        )}
+      return (
+        <>
+          <View style={[styles.headerSafeArea, { paddingTop: insets.top }]}>
+            <View style={[styles.headerContainer, noPaddingTop && styles.noPaddingTop]}>
+              <View style={styles.header}>
+            {showBack ? (
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={handleMyPress}
+              >
+                <Image 
+                  source={require('../assets/images/ico_my.png')} 
+                  style={{ width: 24, height: 24 }} 
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={styles.myButton}
+                onPress={handleMyPress}
+              >
+                <Image 
+                  source={require('../assets/images/ico_my.png')} 
+                  style={{ width: 24, height: 24 }} 
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
 
-        <TouchableOpacity 
-          style={styles.logoContainer}
-          onPress={() => navigation.navigate('Main')}
-        >
-          <Image 
-            source={require('../assets/images/rootfund_logo.png')} 
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.menuButton}
-          onPress={toggleMenu}
-        >
-          <Image 
-            source={require('../assets/images/ico_menu.png')} 
-            style={{ width: 24, height: 24 }} 
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* GNB (하단 네비게이션) */}
-      {!hideGnb ? (
-        <View style={[styles.gnbBox, hideBorder && styles.noBorder]}>
-          <View style={styles.gnb}>
             <TouchableOpacity 
-              style={styles.gnbItem}
-              onPress={() => {
-                setMenuVisible(false);
-                navigation.navigate('ProductList', { user });
-              }}
+              style={styles.logoContainer}
+              onPress={() => navigation.navigate('Main')}
             >
-              <View style={styles.gnbItemWrapper}>
-                <Text style={styles.gnbText}>투자하기</Text>
-                <View style={styles.blueDot} />
-              </View>
+              <Image 
+                source={require('../assets/images/rootfund_logo.png')} 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
+
             <TouchableOpacity 
-              style={styles.gnbItem}
-              onPress={() => {
-                setMenuVisible(false);
-                navigation.navigate('CorporateInvestment', { user });
-              }}
+              style={styles.menuButton}
+              onPress={toggleMenu}
             >
-              <Text style={styles.gnbText}>법인투자</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.gnbItem}
-              onPress={() => {
-                setMenuVisible(false);
-                navigation.navigate('CustomerService', { user });
-              }}
-            >
-              <Text style={styles.gnbText}>고객센터</Text>
+              <Image 
+                source={require('../assets/images/ico_menu.png')} 
+                style={{ width: 24, height: 24 }} 
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           </View>
-        </View>
-      ) : (
-        <View style={[styles.gnbBox, styles.gnbBoxEmpty]} />
-      )}
+
+          {/* GNB (하단 네비게이션) */}
+          <View style={styles.gnbBox}>
+            <View style={styles.gnb}>
+              <TouchableOpacity 
+                style={styles.gnbItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate('ProductList', { user });
+                }}
+              >
+                <View style={styles.gnbItemWrapper}>
+                  <Text style={styles.gnbText}>투자하기</Text>
+                  <View style={styles.blueDot} />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.gnbItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate('CorporateInvestment', { user });
+                }}
+              >
+                <Text style={styles.gnbText}>법인투자</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.gnbItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate('CustomerService', { user });
+                }}
+              >
+                <Text style={styles.gnbText}>고객센터</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -629,18 +639,15 @@ const styles = StyleSheet.create({
   },
   gnbBox: {
     backgroundColor: '#FFFFFF',
-  },
-  gnbBoxEmpty: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(224, 225, 226, 0.5)',
+    borderBottomColor: '#f0f0f0',
   },
   gnb: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(224, 225, 226, 0.5)',
   },
+
   gnbItem: {
     flex: 1,
     paddingTop: 12,
@@ -909,7 +916,8 @@ const styles = StyleSheet.create({
   },
 });
 
-// Header 높이 상수 export (50 Header + 19 GNB)
-export const HEADER_HEIGHT = 69;
+// Header 높이 상수 export (43 Header + 24 GNB)
+// iOS: 67, Android: 79
+export const HEADER_HEIGHT = Platform.OS === 'ios' ? 69 : 78;
 
 export default Header;

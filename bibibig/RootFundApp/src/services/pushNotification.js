@@ -1,0 +1,285 @@
+import { Platform, PermissionsAndroid, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import ApiService from './api';
+
+// Firebase Messaging을 동적으로 import
+let messaging = null;
+try {
+  messaging = require('@react-native-firebase/messaging').default;
+} catch (error) {
+  console.log('⚠️ Firebase Messaging 모듈을 찾을 수 없습니다.');
+}
+
+class PushNotificationService {
+  constructor() {
+    this.fcmToken = null;
+    this.initialized = false;
+    this.available = messaging !== null;
+  }
+
+  /**
+   * 푸시 알림 초기화
+   */
+  async initialize() {
+    if (!this.available) {
+      console.log('⚠️ Firebase가 설정되지 않았습니다. 푸시 알림 비활성화.');
+      console.log('📝 Firebase 설정 방법: PUSH_APP_SETUP_COMPLETE.md 참고');
+      return false;
+    }
+
+    try {
+      // Firebase 앱이 제대로 초기화되었는지 확인
+      const isFirebaseInitialized = await this.checkFirebaseInitialization();
+      if (!isFirebaseInitialized) {
+        console.log('⚠️ Firebase 프로젝트가 설정되지 않았습니다.');
+        console.log('📝 다음 파일을 추가해주세요:');
+        console.log('   - iOS: GoogleService-Info.plist');
+        console.log('   - Android: google-services.json');
+        console.log('💡 자세한 내용: PUSH_APP_SETUP_COMPLETE.md 참고');
+        return false;
+      }
+
+      // 권한 요청
+      const authStatus = await this.requestPermission();
+      
+      if (authStatus) {
+        // FCM 토큰 가져오기
+        await this.getFCMToken();
+        
+        // 메시지 리스너 설정
+        this.setupMessageListeners();
+        
+        this.initialized = true;
+        console.log('✅ 푸시 알림 초기화 완료');
+        return true;
+      } else {
+        console.log('⚠️ 푸시 알림 권한이 거부되었습니다');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ 푸시 알림 초기화 오류:', error.message);
+      if (error.message && error.message.includes('No Firebase App')) {
+        console.log('💡 Firebase 설정 파일이 누락되었습니다. PUSH_APP_SETUP_COMPLETE.md 참고');
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Firebase 초기화 상태 확인
+   */
+  async checkFirebaseInitialization() {
+    try {
+      // Firebase 앱이 초기화되어 있는지 확인
+      const app = require('@react-native-firebase/app').default;
+      const apps = app.apps;
+      
+      if (!apps || apps.length === 0) {
+        return false;
+      }
+      
+      // Firebase 앱이 있어도 설정 파일이 올바른지 확인
+      try {
+        await messaging().requestPermission();
+        return true;
+      } catch (err) {
+        if (err.message && err.message.includes('No Firebase App')) {
+          return false;
+        }
+        // 다른 에러는 권한 관련일 수 있으므로 true 반환
+        return true;
+      }
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * 푸시 알림 권한 요청
+   */
+  async requestPermission() {
+    try {
+      if (Platform.OS === 'ios') {
+        const authStatus = await messaging().requestPermission();
+        const enabled =
+          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+        if (enabled) {
+          console.log('✅ iOS 푸시 알림 권한 승인:', authStatus);
+          return true;
+        } else {
+          console.log('❌ iOS 푸시 알림 권한 거부:', authStatus);
+          return false;
+        }
+      } else {
+        // Android 13 (API 33) 이상에서는 권한 요청 필요
+        if (Platform.Version >= 33) {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+          );
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('✅ Android 푸시 알림 권한 승인');
+            return true;
+          } else {
+            console.log('❌ Android 푸시 알림 권한 거부');
+            return false;
+          }
+        }
+        // Android 12 이하는 자동 승인
+        return true;
+      }
+    } catch (error) {
+      console.error('권한 요청 오류:', error);
+      return false;
+    }
+  }
+
+  /**
+   * FCM 토큰 가져오기
+   */
+  async getFCMToken() {
+    try {
+      const token = await messaging().getToken();
+      this.fcmToken = token;
+      console.log('📱 FCM 토큰:', token);
+      
+      // 로컬에 저장
+      await AsyncStorage.setItem('fcmToken', token);
+      
+      // 서버에 토큰 전송 (백엔드 준비되면 활성화)
+      await this.sendTokenToServer(token);
+      
+      return token;
+    } catch (error) {
+      console.error('❌ FCM 토큰 가져오기 오류:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 서버에 FCM 토큰 전송
+   */
+  async sendTokenToServer(token) {
+    try {
+      // 백엔드 API 호출 (준비될 때까지 에러 무시)
+      const response = await ApiService.saveFCMToken(token);
+      if (response) {
+        console.log('✅ FCM 토큰 서버 전송 완료');
+      } else {
+        console.log('⏳ FCM 토큰 서버 전송 대기 중 (백엔드 구현 후 활성화)');
+      }
+    } catch (error) {
+      console.log('⏳ FCM 토큰 서버 전송 대기 중 (백엔드 구현 후 활성화)');
+    }
+  }
+
+  /**
+   * 메시지 리스너 설정
+   */
+  setupMessageListeners() {
+    // 포그라운드 메시지 수신 (앱 사용 중)
+    messaging().onMessage(async remoteMessage => {
+      console.log('📨 포그라운드 메시지 수신:', remoteMessage);
+      
+      // 알림 표시
+      this.showLocalNotification(remoteMessage);
+    });
+
+    // 백그라운드 메시지 수신 (index.js에서 설정)
+    // messaging().setBackgroundMessageHandler는 루트 레벨에서 설정
+
+    // 알림 탭 이벤트 (앱이 백그라운드에 있을 때)
+    messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('🔔 알림 탭으로 앱 열림 (백그라운드):', remoteMessage);
+      this.handleNotificationOpen(remoteMessage);
+    });
+
+    // 앱이 종료된 상태에서 알림 탭
+    messaging()
+      .getInitialNotification()
+      .then(remoteMessage => {
+        if (remoteMessage) {
+          console.log('🔔 알림 탭으로 앱 열림 (종료 상태):', remoteMessage);
+          this.handleNotificationOpen(remoteMessage);
+        }
+      });
+
+    // 토큰 갱신 리스너
+    messaging().onTokenRefresh(async token => {
+      console.log('🔄 FCM 토큰 갱신:', token);
+      this.fcmToken = token;
+      await AsyncStorage.setItem('fcmToken', token);
+      
+      // 서버에 새 토큰 전송
+      await this.sendTokenToServer(token);
+    });
+
+    console.log('✅ 메시지 리스너 설정 완료');
+  }
+
+  /**
+   * 로컬 알림 표시 (포그라운드)
+   */
+  showLocalNotification(remoteMessage) {
+    const title = remoteMessage.notification?.title || '알림';
+    const body = remoteMessage.notification?.body || '';
+    
+    Alert.alert(
+      title,
+      body,
+      [
+        {
+          text: '닫기',
+          style: 'cancel',
+        },
+        {
+          text: '보기',
+          onPress: () => this.handleNotificationOpen(remoteMessage),
+        },
+      ]
+    );
+  }
+
+  /**
+   * 알림 탭 처리 (화면 이동)
+   */
+  handleNotificationOpen(remoteMessage) {
+    try {
+      const data = remoteMessage.data;
+      console.log('📍 알림 데이터:', data);
+      
+      // TODO: 알림 타입에 따라 화면 이동
+      // navigation은 App.js에서 ref로 접근 가능하도록 설정 필요
+      
+      // 예시:
+      // if (data.type === 'product' && data.orderKey) {
+      //   navigation.navigate('ProductDetail', { orderKey: data.orderKey });
+      // } else if (data.type === 'repayment') {
+      //   navigation.navigate('RepaymentHistory');
+      // } else if (data.type === 'notice' && data.noticeId) {
+      //   navigation.navigate('NoticeDetail', { noticeId: data.noticeId });
+      // }
+      
+      console.log('⚠️ 화면 이동 로직은 navigation ref 설정 후 구현 필요');
+    } catch (error) {
+      console.error('❌ 알림 처리 오류:', error);
+    }
+  }
+
+  /**
+   * 현재 FCM 토큰 반환
+   */
+  getToken() {
+    return this.fcmToken;
+  }
+
+  /**
+   * 초기화 상태 확인
+   */
+  isInitialized() {
+    return this.initialized;
+  }
+}
+
+export default new PushNotificationService();

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
-import { Linking, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { Linking, ActivityIndicator, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header, { HEADER_HEIGHT } from '../components/Header';
@@ -11,6 +11,7 @@ import MainScreen from '../screens/MainScreen';
 import MyHomeScreen from '../screens/MyHomeScreen';
 import WithdrawalScreen from '../screens/WithdrawalScreen';
 import AccountChangeScreen from '../screens/AccountChangeScreen';
+import AccountChangeWithHeaderScreen from '../screens/AccountChangeWithHeaderScreen';
 import FindEmailScreen from '../screens/FindEmailScreen';
 import FindPasswordScreen from '../screens/FindPasswordScreen';
 import PhoneAuthScreen from '../screens/PhoneAuthScreen';
@@ -65,7 +66,7 @@ import NeighborStatusScreen from '../screens/NeighborStatusScreen';
 const Stack = createStackNavigator();
 
 // Header를 사용하지 않는 화면들 (로그인, 회원가입 등)
-const SCREENS_WITHOUT_HEADER = ['Login', 'WithdrawalLogin', 'Withdrawal', 'AccountChange', 'PhoneAuth'];
+const SCREENS_WITHOUT_HEADER = ['WithdrawalLogin', 'Withdrawal', 'AccountChange', 'PhoneAuth'];
 
 // 딥링크 설정
 const linking = {
@@ -120,22 +121,13 @@ const AppNavigator = () => {
 
   const checkLoginStatus = async () => {
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      const userToken = await AsyncStorage.getItem('userToken');
-      
-      if (userData && userToken) {
-        // 로그인되어 있으면 Main으로
-        setInitialRoute('Main');
-        setCurrentRoute('Main');
-      } else {
-        // 로그인 안 되어 있으면 Login으로
-        setInitialRoute('Login');
-        setCurrentRoute('Login');
-      }
+      // 앱 열리자마자 항상 Main 화면으로
+      setInitialRoute('Main');
+      setCurrentRoute('Main');
     } catch (error) {
       console.error('로그인 상태 확인 오류:', error);
-      setInitialRoute('Login');
-      setCurrentRoute('Login');
+      setInitialRoute('Main');
+      setCurrentRoute('Main');
     }
   };
 
@@ -216,6 +208,7 @@ const AppNavigator = () => {
           <Stack.Screen name="MyHome" component={MyHomeScreen} />
           <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
           <Stack.Screen name="AccountChange" component={AccountChangeScreen} />
+          <Stack.Screen name="AccountChangeWithHeader" component={AccountChangeWithHeaderScreen} />
           <Stack.Screen name="FindEmail" component={FindEmailScreen} />
           <Stack.Screen name="FindPassword" component={FindPasswordScreen} />
           <Stack.Screen name="PhoneAuth" component={PhoneAuthScreen} />
@@ -269,6 +262,19 @@ const AppNavigator = () => {
           </Stack.Navigator>
         </NavigationContainer>
       </View>
+
+      {/* 채널톡 플로팅 버튼 - 모든 화면에 표시 */}
+      <TouchableOpacity
+        style={styles.channelTalkButton}
+        onPress={() => Linking.openURL('https://rootenergy.channel.io')}
+        activeOpacity={0.9}
+      >
+        <Image
+          source={require('../assets/images/1.png')}
+          style={styles.channelTalkIcon}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -283,6 +289,27 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+  },
+  // ChannelTalk 플로팅 버튼
+  channelTalkButton: {
+    position: 'absolute',
+    right: 30,
+    bottom: 30,
+    width: 60,
+    height: 60,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+    zIndex: 9999,
+  },
+  channelTalkIcon: {
+    width: 60,
+    height: 60,
   },
 });
 

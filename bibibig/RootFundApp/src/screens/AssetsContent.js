@@ -36,10 +36,24 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
       
+      if (!memberId) {
+        console.warn('⚠️ member_id가 없습니다. 로그인이 필요합니다.');
+        setBalance(user?.session?.balance || '0');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('🔍 자산 정보 조회 시작:', {
+        member_id: memberId,
+        url: `${ApiService.baseURL}/app/my/home?member_id=${memberId}`
+      });
+      
       // 자산 정보 조회 API 호출
       const response = await ApiService.api.get('/app/my/home', {
         params: { member_id: memberId }
       });
+      
+      console.log('✅ 자산 정보 조회 성공:', response.data);
       
       // 투자자 여부 확인 (useBalancePage)
       if (response.data && response.data.useBalancePage === false) {
@@ -58,13 +72,31 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         setBalance(user?.session?.balance || '0');
       }
       
-      // 은행 목록 조회
-      const banksResponse = await ApiService.api.get('/app/banks');
-      if (banksResponse.data) {
-        setBanks(banksResponse.data);
+      // 은행 목록 조회 (실패해도 계속 진행)
+      try {
+        const banksResponse = await ApiService.api.get('/member/get/banks');
+        if (banksResponse.data) {
+          setBanks(banksResponse.data);
+          console.log('✅ 은행 목록 조회 성공:', banksResponse.data);
+        }
+      } catch (bankError) {
+        console.warn('⚠️ 은행 목록 조회 실패 (무시하고 계속):', bankError.response?.status);
+        // 은행 목록이 없어도 앱은 계속 작동
       }
     } catch (error) {
-      console.error('자산 정보 조회 실패:', error);
+      // 에러 상세 로깅
+      console.error('❌ 자산 정보 조회 실패:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url,
+        params: error.config?.params,
+        message: error.message
+      });
+      
+      // 404는 API 엔드포인트가 없거나 데이터가 없는 경우
+      if (error.response?.status === 404) {
+        console.warn('⚠️ 자산 정보를 찾을 수 없습니다. (404) - 백엔드 API 확인 필요');
+      }
       setBalance(user?.session?.balance || '0');
     } finally {
       setLoading(false);
@@ -592,7 +624,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                     <View style={styles.widFull}>
                       <TouchableOpacity
                         style={styles.changeButton}
-                        onPress={() => navigation.navigate('AccountChange')}
+                        onPress={() => navigation.navigate('AccountChangeWithHeader')}
                       >
                         <Text style={styles.changeButtonText}>계좌변경</Text>
                       </TouchableOpacity>

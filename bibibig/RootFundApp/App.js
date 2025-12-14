@@ -10,6 +10,7 @@ import { StatusBar, LogBox, Text, TextInput, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { getFontFamily } from './src/styles/fonts';
+import PushNotificationService from './src/services/pushNotification';
 
 // 전역 폰트 스타일 설정
 // Text 컴포넌트의 기본 렌더링 오버라이드
@@ -44,6 +45,17 @@ function App() {
     LogBox.ignoreLogs([
       'InteractionManager has been deprecated',
     ]);
+
+    // 푸시 알림 초기화
+    const initPushNotifications = async () => {
+      try {
+        await PushNotificationService.initialize();
+      } catch (error) {
+        console.error('푸시 알림 초기화 실패:', error);
+      }
+    };
+
+    initPushNotifications();
   }, []);
 
   return (

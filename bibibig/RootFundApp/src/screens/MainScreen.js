@@ -260,7 +260,7 @@ const MainScreen = ({ navigation }) => {
           <View style={styles.slideInbox}>
             <View style={styles.slideCont}>
               <LinearGradient
-                colors={['#F1F2FF', 'rgba(241,242,255,0.5)']}
+                colors={['#F5F7FA', 'rgba(241,242,255,0.5)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
                 style={styles.slideGradient}
@@ -789,7 +789,7 @@ const MainScreen = ({ navigation }) => {
             <Image 
               source={require('../assets/images/ma_bannerkakao01.png')} 
               style={styles.kakaoBannerImage}
-              resizeMode="contain"
+              resizeMode="cover"
             />
           </TouchableOpacity>
         </View>
@@ -800,7 +800,12 @@ const MainScreen = ({ navigation }) => {
             <View style={[styles.titleBox, styles.titleBoxRow]}>
               <Text style={styles.sectionTitle}>최신뉴스</Text>
               <TouchableOpacity style={styles.moreButtonContainer}>
-                <Text style={styles.moreButton}>전체보기 ›</Text>
+                <Text style={styles.moreButton}>전체보기</Text>
+                <Image 
+                  source={require('../assets/images/arrow_right.png')} 
+                  style={styles.moreButtonArrow}
+                  resizeMode="contain"
+                />
               </TouchableOpacity>
             </View>
             <ScrollView
@@ -808,6 +813,7 @@ const MainScreen = ({ navigation }) => {
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.newsScroll}
+              contentContainerStyle={styles.newsScrollContent}
               snapToInterval={SCREEN_WIDTH - 64}
               snapToAlignment="start"
               decelerationRate="fast"
@@ -819,7 +825,13 @@ const MainScreen = ({ navigation }) => {
               scrollEventThrottle={16}
             >
               {mainData.news.map((item, index) => (
-                <TouchableOpacity key={index} style={styles.newsCard}>
+                <TouchableOpacity 
+                  key={index} 
+                  style={[
+                    styles.newsCard,
+                    index === mainData.news.length - 1 && { marginLeft: 'auto', marginRight: -15 }
+                  ]}
+                >
                   <View style={styles.newsInbox}>
                     {item.thumbnail && (
                       <View style={styles.newsImgbox}>
@@ -917,7 +929,12 @@ const MainScreen = ({ navigation }) => {
                 <Text style={styles.whiteBoxTitle}>자주하는질문</Text>
               </View>
               <TouchableOpacity style={styles.moreButtonContainer}>
-                <Text style={styles.moreButton}>전체보기 ›</Text>
+                <Text style={styles.moreButton}>전체보기</Text>
+                <Image 
+                  source={require('../assets/images/arrow_right.png')} 
+                  style={styles.moreButtonArrow}
+                  resizeMode="contain"
+                />
               </TouchableOpacity>
             </View>
             <View style={styles.inCont}>
@@ -969,20 +986,27 @@ const MainScreen = ({ navigation }) => {
                 />
                 <Text style={styles.whiteBoxTitle}>공지사항</Text>
               </View>
-              <TouchableOpacity style={styles.moreButtonContainer}>
+              <TouchableOpacity 
+                style={styles.moreButtonContainer}
+                onPress={() => navigation.navigate('CustomerService', { user, initialTab: 0 })}
+              >
                 <Text style={styles.moreButton}>전체보기 ›</Text>
               </TouchableOpacity>
             </View>
-            {mainData.notice.slice(0, 3).map((item, index) => (
-              <View key={index} style={styles.noticeItem}>
-                <Text style={styles.noticeTitle} numberOfLines={1}>
-                  {item.subject}
-                </Text>
-                <Text style={styles.noticeDate}>
-                  {item.recordtime?.substring(0, 10)}
-                </Text>
-              </View>
-            ))}
+            <View style={styles.inCont}>
+              {mainData.notice.slice(0, 3).map((item, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.noticeItem}
+                  onPress={() => navigation.navigate('CustomerService', { user, initialTab: 0 })}
+                >
+                  <Text style={styles.noticeItemTitle}>{item.subject}</Text>
+                  <Text style={styles.noticeDate}>
+                    {item.recordtime?.substring(0, 10)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
@@ -1267,7 +1291,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingTop: 20,
     paddingBottom: 8,
-    backgroundColor: '#F1F2FF',
+    backgroundColor: '#F5F7FA',
   },
   bannerContainer: {
     width: '100%',
@@ -1298,9 +1322,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 12,
+    elevation: 6,
     backgroundColor: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   slideCont: {
     position: 'relative',
@@ -1536,8 +1560,8 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: 'transparent',
     marginBottom: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
   environmentSection: {
     backgroundColor: 'transparent',
@@ -1559,7 +1583,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333333',
     lineHeight: 28,
-    fontFamily: 'Pretendard',
   },
   titleWithIcon: {
     flexDirection: 'row',
@@ -1577,6 +1600,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   moreButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginLeft: 'auto',
     marginBottom: 2,
   },
@@ -1584,6 +1609,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: '#333',
+    marginRight: 4,
+  },
+  moreButtonArrow: {
+    width: 16,
+    height: 16,
   },
   dataList: {
     marginTop: 10,
@@ -1833,7 +1863,7 @@ const styles = StyleSheet.create({
   kakaoBanner: {
     borderRadius: 15,
     overflow: 'hidden',
-    marginHorizontal: 15,
+    marginHorizontal: 16,
   },
   kakaoBannerImage: {
     width: '100%',
@@ -1842,9 +1872,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   newsScroll: {
-    marginHorizontal: -20,
-    paddingLeft: 17,
     paddingTop: 5,
+  },
+  newsScrollContent: {
+    paddingLeft: 0,
+    paddingRight: 16,
   },
   newsPagination: {
     flexDirection: 'row',
@@ -1990,7 +2022,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#f6f6f6',
   },
   faqItem: {
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   faqTitbox: {
     flexDirection: 'row',
@@ -2004,7 +2036,7 @@ const styles = StyleSheet.create({
   },
   faqTitle: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     color: '#333333',
   },
   faqArrowImage: {
@@ -2031,13 +2063,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 12,
   },
-  noticeTitle: {
+  noticeItemTitle: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: '#333333',
     marginRight: 12,
   },

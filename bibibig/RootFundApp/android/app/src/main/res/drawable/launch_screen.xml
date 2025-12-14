@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white"/>
+    <!-- Background: white -->
+    <item android:drawable="@android:color/white" />
+
+    <!-- Splash image: match device width, height scales with aspect ratio -->
     <item>
         <bitmap
-            android:gravity="fill_horizontal|center_vertical"
-            android:src="@drawable/launch_screen"/>
+            android:src="@drawable/main"
+            android:gravity="fill"
+            android:antialias="true"
+            android:filter="true" />
     </item>
 </layer-list>

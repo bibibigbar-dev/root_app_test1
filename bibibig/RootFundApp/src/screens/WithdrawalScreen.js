@@ -224,7 +224,7 @@ const WithdrawalScreen = ({ navigation, route }) => {
           onPress: async () => {
             try {
               if (user) {
-                await ApiService.logout();
+              await ApiService.logout();
               } else {
                 await ApiService.clearLoginData();
               }

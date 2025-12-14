@@ -10,12 +10,19 @@ prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
+  # RN + CocoaPods에서 dynamic frameworks로 빌드되면 React-Core가
+  # "non-modular-include-in-framework-module"로 자주 깨집니다.
+  # static frameworks로 고정해서 이 이슈를 회피합니다.
+  Pod::UI.puts "Configuring Pods with statically linked Frameworks".green
+  use_frameworks! :linkage => :static
 end
 
 target 'RootFundApp' do
   config = use_native_modules!
+
+  # Firebase 관련 pods에만 modular headers 적용
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
 
   use_react_native!(
     :path => config[:reactNativePath],
@@ -30,5 +37,14 @@ target 'RootFundApp' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # 일부 환경에서 Pods(특히 React-Core)를 framework로 빌드할 때
+    # non-modular include가 -Werror로 승격되어 빌드가 중단됩니다.
+    # Pods 프로젝트에 한해서만 허용하도록 설정합니다.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+    end
   end
 end

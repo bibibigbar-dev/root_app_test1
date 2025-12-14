@@ -12,7 +12,7 @@ class ApiService {
     this.publicKey = null; // 공개키 캐시
     this.api = axios.create({
       baseURL: this.baseURL,
-      timeout: 60000, // 60초로 증가
+      timeout: 120000, // 120초로 증가
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Referer': 'RootFundApp://LoginScreen', // 앱의 로그인 화면
@@ -49,14 +49,14 @@ class ApiService {
 
   // API 베이스 URL 결정
   getApiBaseUrl() {
-    // 로컬 개발 환경
+    // 운영 환경
+    return 'https://rootenergy.co.kr';
+    
+    // 로컬 개발 환경 (주석 처리)
     // Android 에뮬레이터: 10.0.2.2
     // iOS 시뮬레이터: localhost
-    const localUrl = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
-    return localUrl;
-    
-    // 운영 환경 (주석 처리)
-    // return 'https://rootenergy.co.kr';
+    // const localUrl = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+    // return localUrl;
   }
 
   // URL-encoded 형태로 데이터 변환 (Spring @ModelAttribute용)
@@ -1080,6 +1080,26 @@ DwIDAQAB
     } catch (error) {
       console.error('Find password error:', error);
       return { rtnvalue: '0' };
+    }
+  }
+
+  // FCM 토큰 저장 (백엔드 준비되면 사용)
+  async saveFCMToken(fcmToken) {
+    try {
+      const formData = new URLSearchParams();
+      formData.append('fcm_token', fcmToken);
+
+      const response = await this.api.post(
+        '/member/save_fcm_token.json',
+        formData.toString()
+      );
+
+      console.log('✅ FCM 토큰 서버 저장 성공:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ FCM 토큰 서버 저장 실패:', error);
+      // 에러가 나도 앱 실행은 계속되도록 throw하지 않음
+      return null;
     }
   }
 }

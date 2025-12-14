@@ -37,31 +37,11 @@ const LoginScreen = ({ navigation, route }) => {
   }, []);
 
   useEffect(() => {
-    checkExistingLogin();
     loadRememberedEmail();
     // 로그인 화면 진입 시 공개키 선 요청
     ApiService.prefetchPublicKey();
+    setInitialLoading(false);
   }, []);
-
-  const checkExistingLogin = async () => {
-    try {
-      const userData = await AsyncStorage.getItem('userData');
-      const userToken = await AsyncStorage.getItem('userToken');
-      
-      // returnTo가 있으면 (특정 페이지에서 로그인 버튼을 눌러서 온 경우)
-      // 자동 이동하지 않고 로그인 화면을 보여줌
-      const { returnTo } = route.params || {};
-      
-      if (userData && userToken && !returnTo) {
-        // returnTo가 없고 이미 로그인된 사용자가 있으면 메인 화면으로 이동
-        navigation.replace('Main');
-      }
-    } catch (error) {
-      console.error('기존 로그인 확인 오류:', error);
-    } finally {
-      setInitialLoading(false);
-    }
-  };
 
   const loadRememberedEmail = async () => {
     try {
@@ -264,12 +244,21 @@ const LoginScreen = ({ navigation, route }) => {
               style={styles.input}
               placeholder="이메일을 입력해주세요"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                // 이메일이 변경되면 비밀번호 입력값은 초기화
+                if (password) setPassword('');
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
+              onSubmitEditing={() => {
+                // 이메일이 비어있을 때는 자동으로 다음 인풋으로 이동하지 않음
+                if (email?.trim()) {
+                  passwordRef.current?.focus();
+                }
+              }}
             />
           </View>
 
@@ -346,18 +335,11 @@ const LoginScreen = ({ navigation, route }) => {
 
             <TouchableOpacity onPress={handleSignUp} style={styles.signupButton}>
               <Text style={styles.signupButtonText}>
-                <Text style={styles.signupEmphasis}>회원가입</Text> 바로가기
+                <Text style={styles.signupEmphasis}>회원가입</Text>
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* 로그인 skip 버튼 */}
-          <TouchableOpacity 
-            style={styles.skipButton}
-            onPress={() => navigation.replace('Main')}
-          >
-            <Text style={styles.skipButtonText}>메인페이지로 이동</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -373,7 +355,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 130,
+    paddingVertical: 80,
     justifyContent: 'center',
   },
   loadingContainer: {
@@ -392,11 +374,12 @@ const styles = StyleSheet.create({
     marginBottom: 50,
   },
   logoSpacer: {
-    height: 40,
+    height: 10,
   },
   subtitle: {
     fontSize: 15,
     color: '#666666',
+    fontWeight: '400',
     marginBottom: 10,
   },
   logoImageContainer: {
@@ -529,6 +512,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
+    fontWeight: '500',
     color: '#666666',
   },
   separator: {
@@ -547,23 +531,13 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   signupButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 22,
+    fontWeight: '600',
     color: '#393f44',
   },
   signupEmphasis: {
     color: '#2c3db8',
-  },
-  skipButton: {
-    marginTop: 30,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  skipButtonText: {
-    fontSize: 18,
-    color: '#999999',
-    textDecorationLine: 'underline',
   },
 });
 

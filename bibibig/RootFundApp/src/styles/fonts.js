@@ -8,7 +8,7 @@ export const getFontFamily = (fontWeight) => {
   
   const weight = String(fontWeight);
   
-  if (weight === '700' || weight === 'bold') {
+  if (weight === '700' || weight === '800' || weight === '900' || weight === 'bold') {
     return 'Pretendard-Bold';
   } else if (weight === '600') {
     return 'Pretendard-SemiBold';
