@@ -75,7 +75,16 @@ class PushNotificationService {
       const apps = app.apps;
       
       if (!apps || apps.length === 0) {
+        console.log('⚠️ Firebase 앱이 초기화되지 않았습니다.');
         return false;
+      }
+      
+      console.log('✅ Firebase 앱 초기화 확인됨');
+      
+      // 개발 환경(시뮬레이터)에서는 권한 체크 건너뛰기
+      if (__DEV__) {
+        console.log('🧪 개발 환경: Firebase 초기화 통과');
+        return true;
       }
       
       // Firebase 앱이 있어도 설정 파일이 올바른지 확인
@@ -90,6 +99,7 @@ class PushNotificationService {
         return true;
       }
     } catch (error) {
+      console.error('Firebase 초기화 체크 오류:', error);
       return false;
     }
   }
@@ -110,6 +120,11 @@ class PushNotificationService {
           return true;
         } else {
           console.log('❌ iOS 푸시 알림 권한 거부:', authStatus);
+          // 개발 환경에서는 권한 거부되어도 계속 진행
+          if (__DEV__) {
+            console.log('🧪 개발 환경: 권한 체크 무시하고 계속 진행');
+            return true;
+          }
           return false;
         }
       } else {
@@ -123,6 +138,11 @@ class PushNotificationService {
             return true;
           } else {
             console.log('❌ Android 푸시 알림 권한 거부');
+            // 개발 환경에서는 권한 거부되어도 계속 진행
+            if (__DEV__) {
+              console.log('🧪 개발 환경: 권한 체크 무시하고 계속 진행');
+              return true;
+            }
             return false;
           }
         }
@@ -131,6 +151,11 @@ class PushNotificationService {
       }
     } catch (error) {
       console.error('권한 요청 오류:', error);
+      // 개발 환경에서는 오류 발생해도 계속 진행
+      if (__DEV__) {
+        console.log('🧪 개발 환경: 권한 오류 무시하고 계속 진행');
+        return true;
+      }
       return false;
     }
   }
@@ -153,6 +178,19 @@ class PushNotificationService {
       return token;
     } catch (error) {
       console.error('❌ FCM 토큰 가져오기 오류:', error);
+      console.error('오류 상세:', error.message);
+      
+      // 시뮬레이터에서는 실제 토큰을 생성할 수 없음
+      // 개발 환경에서는 Mock 토큰 사용
+      if (__DEV__ && error.message && error.message.includes('APNs')) {
+        console.log('⚠️ 시뮬레이터 감지: Mock FCM 토큰 생성');
+        const mockToken = `MOCK_FCM_TOKEN_${Platform.OS}_${Date.now()}`;
+        this.fcmToken = mockToken;
+        await AsyncStorage.setItem('fcmToken', mockToken);
+        console.log('🧪 Mock FCM 토큰:', mockToken);
+        return mockToken;
+      }
+      
       return null;
     }
   }
@@ -175,12 +213,63 @@ class PushNotificationService {
   }
 
   /**
+   * 알림 저장
+   */
+  async saveNotification(remoteMessage) {
+    try {
+      const notifications = await AsyncStorage.getItem('notifications');
+      const list = notifications ? JSON.parse(notifications) : [];
+      
+      const newNotification = {
+        id: Date.now().toString(),
+        title: remoteMessage.notification?.title || '알림',
+        body: remoteMessage.notification?.body || '',
+        data: remoteMessage.data || {},
+        receivedAt: new Date().toISOString(),
+        read: false
+      };
+      
+      list.unshift(newNotification);
+      
+      // 최근 100개만 유지
+      const trimmed = list.slice(0, 100);
+      await AsyncStorage.setItem('notifications', JSON.stringify(trimmed));
+      
+      // 안읽은 알림 개수 업데이트
+      await this.updateUnreadCount();
+      
+      console.log('✅ 알림 저장 완료:', newNotification.id);
+    } catch (error) {
+      console.error('❌ 알림 저장 오류:', error);
+    }
+  }
+
+  /**
+   * 안읽은 알림 개수 업데이트
+   */
+  async updateUnreadCount() {
+    try {
+      const notifications = await AsyncStorage.getItem('notifications');
+      const list = notifications ? JSON.parse(notifications) : [];
+      const unreadCount = list.filter(n => !n.read).length;
+      await AsyncStorage.setItem('unreadNotificationCount', unreadCount.toString());
+      return unreadCount;
+    } catch (error) {
+      console.error('❌ 안읽은 알림 개수 업데이트 오류:', error);
+      return 0;
+    }
+  }
+
+  /**
    * 메시지 리스너 설정
    */
   setupMessageListeners() {
     // 포그라운드 메시지 수신 (앱 사용 중)
     messaging().onMessage(async remoteMessage => {
       console.log('📨 포그라운드 메시지 수신:', remoteMessage);
+      
+      // 알림 저장
+      await this.saveNotification(remoteMessage);
       
       // 알림 표시
       this.showLocalNotification(remoteMessage);
@@ -190,17 +279,19 @@ class PushNotificationService {
     // messaging().setBackgroundMessageHandler는 루트 레벨에서 설정
 
     // 알림 탭 이벤트 (앱이 백그라운드에 있을 때)
-    messaging().onNotificationOpenedApp(remoteMessage => {
+    messaging().onNotificationOpenedApp(async remoteMessage => {
       console.log('🔔 알림 탭으로 앱 열림 (백그라운드):', remoteMessage);
+      await this.saveNotification(remoteMessage);
       this.handleNotificationOpen(remoteMessage);
     });
 
     // 앱이 종료된 상태에서 알림 탭
     messaging()
       .getInitialNotification()
-      .then(remoteMessage => {
+      .then(async remoteMessage => {
         if (remoteMessage) {
           console.log('🔔 알림 탭으로 앱 열림 (종료 상태):', remoteMessage);
+          await this.saveNotification(remoteMessage);
           this.handleNotificationOpen(remoteMessage);
         }
       });
@@ -279,6 +370,105 @@ class PushNotificationService {
    */
   isInitialized() {
     return this.initialized;
+  }
+
+  /**
+   * 모든 알림 가져오기
+   */
+  async getNotifications() {
+    try {
+      const notifications = await AsyncStorage.getItem('notifications');
+      return notifications ? JSON.parse(notifications) : [];
+    } catch (error) {
+      console.error('❌ 알림 목록 가져오기 오류:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 알림 읽음 처리
+   */
+  async markAsRead(notificationId) {
+    try {
+      const notifications = await AsyncStorage.getItem('notifications');
+      const list = notifications ? JSON.parse(notifications) : [];
+      
+      const updated = list.map(n => 
+        n.id === notificationId ? { ...n, read: true } : n
+      );
+      
+      await AsyncStorage.setItem('notifications', JSON.stringify(updated));
+      await this.updateUnreadCount();
+      
+      console.log('✅ 알림 읽음 처리:', notificationId);
+    } catch (error) {
+      console.error('❌ 알림 읽음 처리 오류:', error);
+    }
+  }
+
+  /**
+   * 모든 알림 읽음 처리
+   */
+  async markAllAsRead() {
+    try {
+      const notifications = await AsyncStorage.getItem('notifications');
+      const list = notifications ? JSON.parse(notifications) : [];
+      
+      const updated = list.map(n => ({ ...n, read: true }));
+      
+      await AsyncStorage.setItem('notifications', JSON.stringify(updated));
+      await AsyncStorage.setItem('unreadNotificationCount', '0');
+      
+      console.log('✅ 모든 알림 읽음 처리');
+    } catch (error) {
+      console.error('❌ 모든 알림 읽음 처리 오류:', error);
+    }
+  }
+
+  /**
+   * 알림 삭제
+   */
+  async deleteNotification(notificationId) {
+    try {
+      const notifications = await AsyncStorage.getItem('notifications');
+      const list = notifications ? JSON.parse(notifications) : [];
+      
+      const filtered = list.filter(n => n.id !== notificationId);
+      
+      await AsyncStorage.setItem('notifications', JSON.stringify(filtered));
+      await this.updateUnreadCount();
+      
+      console.log('✅ 알림 삭제:', notificationId);
+    } catch (error) {
+      console.error('❌ 알림 삭제 오류:', error);
+    }
+  }
+
+  /**
+   * 모든 알림 삭제
+   */
+  async deleteAllNotifications() {
+    try {
+      await AsyncStorage.setItem('notifications', JSON.stringify([]));
+      await AsyncStorage.setItem('unreadNotificationCount', '0');
+      
+      console.log('✅ 모든 알림 삭제');
+    } catch (error) {
+      console.error('❌ 모든 알림 삭제 오류:', error);
+    }
+  }
+
+  /**
+   * 안읽은 알림 개수 가져오기
+   */
+  async getUnreadCount() {
+    try {
+      const count = await AsyncStorage.getItem('unreadNotificationCount');
+      return count ? parseInt(count, 10) : 0;
+    } catch (error) {
+      console.error('❌ 안읽은 알림 개수 가져오기 오류:', error);
+      return 0;
+    }
   }
 }
 

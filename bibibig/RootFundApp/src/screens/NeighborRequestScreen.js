@@ -253,29 +253,25 @@ const NeighborRequestScreen = ({ navigation, route }) => {
               style={styles.addressInput}
               value={sido}
               placeholder="시/도"
-              editable={true}
-              onChangeText={setSido}
+              editable={false}
             />
             <TextInput
               style={styles.addressInput}
               value={sigungu}
               placeholder="시/군/구"
-              editable={true}
-              onChangeText={setSigungu}
+              editable={false}
             />
             <TextInput
               style={styles.addressInput}
               value={bname1}
               placeholder="읍/면"
-              editable={true}
-              onChangeText={setBname1}
+              editable={false}
             />
             <TextInput
               style={styles.addressInput}
               value={bname}
               placeholder="동/리"
-              editable={true}
-              onChangeText={setBname}
+              editable={false}
             />
           </View>
 
@@ -371,6 +367,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
             <View style={styles.webViewContainer}>
               <WebView
                 source={{
+                  baseUrl: 'https://rootenergy.co.kr',
                   html: `
                     <!DOCTYPE html>
                     <html>
@@ -380,40 +377,51 @@ const NeighborRequestScreen = ({ navigation, route }) => {
                         <style>
                           * { margin: 0; padding: 0; box-sizing: border-box; }
                           body { overflow: hidden; background-color: white; }
+                          #loading { padding: 20px; text-align: center; }
                           #layer { width: 100%; height: 460px; }
-                          #loading { 
-                            position: absolute; 
-                            top: 50%; 
-                            left: 50%; 
-                            transform: translate(-50%, -50%);
-                            font-size: 16px;
-                            color: #666;
-                          }
                         </style>
                       </head>
                       <body>
                         <div id="loading">주소 검색 로딩중...</div>
                         <div id="layer"></div>
                         <script>
+                          function rnSend(obj) {
+                            try {
+                              if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                                window.ReactNativeWebView.postMessage(JSON.stringify(obj));
+                                return true;
+                              }
+                            } catch (e) {}
+                            return false;
+                          }
+
+                          window.addEventListener('message', function(ev) {
+                            try {
+                              var data = ev.data;
+                              if (typeof data === 'string') {
+                                data = JSON.parse(data);
+                              }
+                              if (data && (data.zonecode || data.roadAddress || data.jibunAddress)) {
+                                var wrapped = { __type: 'address', payload: data, ts: Date.now() };
+                                rnSend(wrapped);
+                              }
+                            } catch (e) {}
+                          }, false);
+                          
                           var script = document.createElement('script');
                           script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
                           script.onload = function() {
                             document.getElementById('loading').style.display = 'none';
+                            
                             var daunaddrlayer = document.getElementById('layer');
 
                             function sendToReactNative(payload) {
-                              var msg = typeof payload === 'string' ? payload : JSON.stringify(payload);
+                              var wrapped = { __type: 'address', payload: payload, ts: Date.now() };
+                              var ok = rnSend(wrapped);
+                              if (!ok) {
                               try {
-                                if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-                                  window.ReactNativeWebView.postMessage(msg);
-                                }
-                              } catch (e) {
-                                console.error('postMessage 실패:', e.message);
-                              }
-                              try {
-                                window.location.href = 'postcode://' + encodeURIComponent(msg);
-                              } catch (err) {
-                                console.error('fallback 전송 실패: ' + err.message);
+                                  window.location.href = 'postcode://' + encodeURIComponent(JSON.stringify(payload));
+                                } catch (err) {}
                               }
                             }
                             
@@ -447,7 +455,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
                                 width: '100%',
                                 height: '460px',
                                 maxSuggestItems: 5,
-                                shorthaneighbornd: false
+                                autoClose: true
                               }).embed(daunaddrlayer);
                             }
                             
@@ -463,14 +471,15 @@ const NeighborRequestScreen = ({ navigation, route }) => {
                   `
                 }}
                 onMessage={(event) => {
-                  console.log('React Native 메시지 수신:', event.nativeEvent.data);
-                  handleAddressSelect(event.nativeEvent.data);
-                }}
-                onNavigationStateChange={(navState) => {
-                  if (navState.url && navState.url.startsWith('postcode://')) {
-                    const payload = decodeURIComponent(navState.url.replace('postcode://', ''));
-                    handleAddressSelect(payload);
-                  }
+                  const data = event.nativeEvent.data;
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed?.__type === 'address') {
+                      handleAddressSelect(parsed.payload);
+                      return;
+                    }
+                  } catch (_) {}
+                  handleAddressSelect(data);
                 }}
                 onShouldStartLoadWithRequest={(request) => {
                   if (request.url.startsWith('postcode://')) {

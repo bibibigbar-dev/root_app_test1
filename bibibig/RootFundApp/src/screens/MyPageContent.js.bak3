@@ -181,9 +181,12 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
         setShowAddressModal(false);
         
         setTimeout(() => {
-          lastAddressPayloadRef.current = null;
-          lastAddressPayloadRef.timestamp = null;
-        }, 1000);
+          Alert.alert('주소 선택 완료', '상세주소를 입력해주세요.');
+          setTimeout(() => {
+            lastAddressPayloadRef.current = null;
+            lastAddressPayloadRef.timestamp = null;
+          }, 1000);
+        }, 100);
       }
     } catch (error) {
       lastAddressPayloadRef.current = null;
@@ -1070,7 +1073,8 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                         <div id="loading">주소 검색 로딩중...</div>
                         <div id="layer"></div>
                         <script>
-                          // React Native 전달 헬퍼
+                          // NOTE: iOS에서 WebView console 로그가 RN으로 안 보일 수 있어
+                          // postMessage로 로그를 직접 올려서 디버깅합니다.
                           function rnSend(obj) {
                             try {
                               if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
@@ -1080,44 +1084,130 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                             } catch (e) {}
                             return false;
                           }
+                          function rnLog(message, extra) {
+                            rnSend({ __type: 'log', message: String(message), extra: extra || null, ts: Date.now() });
+                          }
 
-                          // Daum postcode iframe의 postMessage를 수신
-                          window.addEventListener('message', function(ev) {
+                          // 전역 에러 로깅 (iOS에서 조용히 실패하는 케이스 확인)
+                          window.onerror = function (message, source, lineno, colno, error) {
                             try {
-                              var data = ev.data;
-                              if (typeof data === 'string') {
-                                data = JSON.parse(data);
-                              }
-                              if (data && (data.zonecode || data.roadAddress || data.jibunAddress)) {
-                                var wrapped = { __type: 'address', payload: data, ts: Date.now() };
-                                rnSend(wrapped);
-                              }
+                              rnLog('❌ window.onerror', {
+                                message: message,
+                                source: source,
+                                lineno: lineno,
+                                colno: colno,
+                                error: error && (error.message || String(error)),
+                              });
                             } catch (e) {}
-                          }, false);
+                            return false;
+                          };
+
+                          rnLog('🚀 WebView 스크립트 시작');
+
+                          // Daum postcode iframe이 부모로 보내는 postMessage를 직접 수신해서 RN으로 전달
+                          (function () {
+                            var msgCount = 0;
+                            function tryExtractAddress(payload) {
+                              // payload가 문자열(JSON)일 수도, 객체일 수도 있음
+                              try {
+                                var obj = payload;
+                                if (typeof payload === 'string') {
+                                  // 너무 큰 데이터는 자르지 않음(주소는 작음)
+                                  obj = JSON.parse(payload);
+                                }
+                                if (obj && (obj.zonecode || obj.roadAddress || obj.jibunAddress)) {
+                                  return obj;
+                                }
+                              } catch (e) {}
+                              return null;
+                            }
+
+                            function onMsg(ev) {
+                              try {
+                                msgCount += 1;
+                                // 초반 몇 개만 로그로 확인
+                                if (msgCount <= 20) {
+                                  rnLog('📩 window.message 수신', {
+                                    origin: ev && ev.origin,
+                                    dataType: typeof (ev && ev.data),
+                                  });
+                                }
+
+                                var extracted = tryExtractAddress(ev && ev.data);
+                                if (extracted) {
+                                  rnLog('✅ message에서 주소 추출 성공', extracted);
+                                  sendToReactNative(extracted);
+                                }
+                              } catch (e) {
+                                rnLog('❌ message 처리 실패', { message: e && e.message });
+                              }
+                            }
+
+                            window.addEventListener('message', onMsg, false);
+                            // 일부 환경(Android) 호환
+                            document.addEventListener('message', onMsg, false);
+                            rnLog('👂 message listener 등록 완료');
+                          })();
+
+                          // 클릭 이벤트가 실제로 들어오는지 확인 (디버깅)
+                          document.addEventListener('click', function (e) {
+                            try {
+                              var tag = e && e.target ? (e.target.tagName || '') : '';
+                              rnLog('🖱️ WebView click', { tag: tag });
+                            } catch (err) {}
+                          }, true);
+                          // iOS에서는 click이 안 찍힐 수 있어 touch도 함께 로깅
+                          document.addEventListener('touchstart', function (e) {
+                            try {
+                              var tag = e && e.target ? (e.target.tagName || '') : '';
+                              rnLog('👆 WebView touchstart', { tag: tag });
+                            } catch (err) {}
+                          }, true);
                           
                           // Daum Postcode 스크립트 동적 로드
                           var script = document.createElement('script');
                           script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
                           script.onload = function() {
+                          rnLog('✅ Daum Postcode 스크립트 로드 완료');
                           document.getElementById('loading').style.display = 'none';
                           
                           var daunaddrlayer = document.getElementById('layer');
+                          rnLog('📍 layer element 확인', { hasLayer: !!daunaddrlayer });
 
+                          // React Native 전달 헬퍼
                           function sendToReactNative(payload) {
-                              var wrapped = { __type: 'address', payload: payload, ts: Date.now() };
-                              var ok = rnSend(wrapped);
-                              if (!ok) {
+                            // address payload는 타입을 붙여서 RN에서 확실히 구분
+                            rnLog('📤 주소 payload 전송 시도', payload);
+
+                            var wrapped = { __type: 'address', payload: payload, ts: Date.now() };
+                            var ok = rnSend(wrapped);
+                            if (ok) {
+                              rnLog('✅ postMessage 전송 성공');
+                              return;
+                            }
+
+                            // postMessage가 안 되면 URL scheme fallback
                             try {
-                                  window.location.href = 'postcode://' + encodeURIComponent(JSON.stringify(payload));
-                                } catch (err) {}
+                              var msg = JSON.stringify(payload);
+                              window.location.href = 'postcode://' + encodeURIComponent(msg);
+                              // fallback은 RN에서 onShouldStartLoadWithRequest로 잡힘
+                            } catch (err) {
+                              rnLog('❌ fallback 전송 실패', { message: err && err.message });
                             }
                           }
                           
                           function execDaumPostcode() {
-                            new daum.Postcode({
-                              oncomplete: function(data) {
-                                  var fullRoadAddr = data.roadAddress;
-                                  var extraRoadAddr = '';
+                            rnLog('🔧 execDaumPostcode 함수 실행');
+                            rnLog('🔍 daum 존재 여부', { hasDaum: (typeof daum !== 'undefined') });
+                            rnLog('🔍 daum.Postcode 존재 여부', { hasPostcode: (typeof daum !== 'undefined' && typeof daum.Postcode !== 'undefined') });
+
+                            try {
+                              new daum.Postcode({
+                                oncomplete: function(data) {
+                                  rnLog('🏠 Daum Postcode oncomplete 호출됨!');
+                                  
+                                  var fullRoadAddr = data.roadAddress; // 도로명 주소 변수
+                                  var extraRoadAddr = ''; // 도로명 조합형 주소 변수
                                   
                                   if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
                                     extraRoadAddr += data.bname;
@@ -1137,7 +1227,8 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                                     roadAddress: fullRoadAddr,
                                     jibunAddress: data.jibunAddress
                                   };
-
+                                  
+                                  rnLog('📮 전송할 payload', payload);
                                   sendToReactNative(payload);
                                 },
                                 width: '100%',
@@ -1145,13 +1236,21 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                                 maxSuggestItems: 5,
                                 autoClose: true
                               }).embed(daunaddrlayer);
+                            } catch (e) {
+                              rnLog('❌ daum.Postcode 생성/임베드 실패', { message: e && e.message });
                             }
+                          }
                             
+                            // 초기 실행
+                            rnLog('🎬 execDaumPostcode 호출 시작');
                             execDaumPostcode();
+                            rnLog('🎬 execDaumPostcode 호출 완료');
                           };
                           script.onerror = function() {
+                            rnLog('❌ Daum Postcode 스크립트 로드 실패');
                             document.getElementById('loading').innerHTML = '주소 검색 로드 실패<br>인터넷 연결을 확인해주세요';
                           };
+                          rnLog('📥 Daum Postcode 스크립트 추가 중...');
                           document.head.appendChild(script);
                         </script>
                       </body>
@@ -1160,16 +1259,25 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                 }}
                 onMessage={(event) => {
                   const data = event.nativeEvent.data;
+                  // iOS에서 console을 못 보기도 해서, WebView가 올려준 log/address를 구분 처리
                   try {
                     const parsed = JSON.parse(data);
+                    if (parsed?.__type === 'log') {
+                      return;
+                    }
                     if (parsed?.__type === 'address') {
                       handleAddressSelect(parsed.payload);
                       return;
                     }
-                  } catch (_) {}
+                  } catch (_) {
+                    // ignore (legacy/plain string)
+                  }
+
                   handleAddressSelect(data);
                 }}
                 onShouldStartLoadWithRequest={(request) => {
+                  // 어떤 URL로 이동하려고 하는지 전부 로깅
+                  // postcode:// 스킴은 fallback용으로만 사용
                   if (request.url.startsWith('postcode://')) {
                     const payload = decodeURIComponent(request.url.replace('postcode://', ''));
                     handleAddressSelect(payload);
@@ -1177,8 +1285,11 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                   }
                   return true;
                 }}
-                onError={(syntheticEvent) => {}}
-                onConsoleMessage={(event) => {}}
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                }}
+                onConsoleMessage={(event) => {
+                }}
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
                 mixedContentMode="always"

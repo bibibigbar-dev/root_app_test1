@@ -1176,9 +1176,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#db2852',
   },
   tagBasicText: {
-    fontSize: 8,
+    fontSize: 9,
     lineHeight: 10,
-    fontWeight: '400',
+    fontWeight: '600',
     color: '#fff',
     textAlign: 'center',
   },

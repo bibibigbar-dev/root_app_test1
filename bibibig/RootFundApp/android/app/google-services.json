@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "45935612049",
+    "firebase_url": "https://root-martion.firebaseio.com",
+    "project_id": "root-martion",
+    "storage_bucket": "root-martion.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:45935612049:android:b499dbc9fc4d3a43a6ef30",
+        "android_client_info": {
+          "package_name": "com.rootfundapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "45935612049-0enm3nugcnb4alcu59lm9i0h9o0krsk4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtV_jwXNphKMbUqpSsLdurKz9dtYh7xxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "45935612049-0enm3nugcnb4alcu59lm9i0h9o0krsk4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

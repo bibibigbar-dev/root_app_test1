@@ -15,22 +15,26 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import PushNotificationService from '../services/pushNotification';
 
 const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hideBorder = false, hideGnb = false, noPaddingTop = false }) => {
   const insets = useSafeAreaInsets();
   const [menuVisible, setMenuVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const slideAnim = useRef(new Animated.Value(-1000)).current;
 
   useEffect(() => {
     loadUserData();
+    loadUnreadCount();
   }, []);
 
   useEffect(() => {
-    // 화면이 포커스될 때마다 사용자 정보 재로드
+    // 화면이 포커스될 때마다 사용자 정보 및 알림 개수 재로드
     const unsubscribe = navigation.addListener('focus', () => {
       loadUserData();
+      loadUnreadCount();
     });
     return unsubscribe;
   }, [navigation]);
@@ -77,6 +81,20 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
       setUser(null);
       setIsLoggedIn(false);
     }
+  };
+
+  const loadUnreadCount = async () => {
+    try {
+      const count = await PushNotificationService.getUnreadCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('안읽은 알림 개수 로드 오류:', error);
+      setUnreadCount(0);
+    }
+  };
+
+  const handleNotificationPress = () => {
+    navigation.navigate('NotificationList');
   };
 
   const toggleMenu = async () => {
@@ -179,16 +197,34 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
               />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuButton}
-              onPress={toggleMenu}
-            >
-              <Image 
-                source={require('../assets/images/ico_menu.png')} 
-                style={{ width: 24, height: 24 }} 
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
+            <View style={styles.rightButtons}>
+              {/* 알림 버튼 */}
+              <TouchableOpacity 
+                style={styles.notificationButton}
+                onPress={handleNotificationPress}
+              >
+                <Text style={styles.notificationIcon}>🔔</Text>
+                {unreadCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* 메뉴 버튼 */}
+              <TouchableOpacity 
+                style={styles.menuButton}
+                onPress={toggleMenu}
+              >
+                <Image 
+                  source={require('../assets/images/ico_menu.png')} 
+                  style={{ width: 24, height: 24 }} 
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* GNB (하단 네비게이션) */}
@@ -627,6 +663,38 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 142,
     height: 24,
+  },
+  rightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  notificationButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  notificationIcon: {
+    fontSize: 22,
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#ff4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   menuButton: {
     width: 24,

@@ -24,6 +24,7 @@
     "jsencrypt": "^3.5.4",
     "react": "19.1.1",
     "react-native": "0.82.1",
+    "react-native-biometrics": "^3.0.1",
     "react-native-channel-plugin": "^0.12.4",
     "react-native-color-matrix-image-filters": "^7.0.2",
     "react-native-crypto-js": "^1.0.0",

@@ -484,8 +484,7 @@ const SignUpPrivateForeignerScreen = () => {
                 style={[styles.addressInput, errors.address && styles.inputError]}
                 placeholder="우편번호"
                 value={zipcode}
-                onChangeText={setZipcode}
-                editable={true}
+                editable={false}
               />
               <TouchableOpacity
                 style={styles.addressButton}
@@ -498,8 +497,7 @@ const SignUpPrivateForeignerScreen = () => {
               style={[styles.input, styles.mt8, errors.address && styles.inputError]}
               placeholder="기본주소"
               value={address1}
-              onChangeText={setAddress1}
-              editable={true}
+              editable={false}
             />
             <TextInput
               style={[styles.input, styles.mt8]}
@@ -721,6 +719,7 @@ const SignUpPrivateForeignerScreen = () => {
             <View style={styles.webViewContainer}>
               <WebView
                 source={{
+                  baseUrl: 'https://rootenergy.co.kr',
                   html: `
                     <!DOCTYPE html>
                     <html>
@@ -730,24 +729,55 @@ const SignUpPrivateForeignerScreen = () => {
                         <style>
                           * { margin: 0; padding: 0; box-sizing: border-box; }
                           body { overflow: hidden; background-color: white; }
+                          #loading { padding: 20px; text-align: center; }
                           #layer { width: 100%; height: 460px; }
                         </style>
                       </head>
                       <body>
+                        <div id="loading">주소 검색 로딩중...</div>
                         <div id="layer"></div>
-                        <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
                         <script>
-                          function sendToReactNative(payload) {
-                            var msg = typeof payload === 'string' ? payload : JSON.stringify(payload);
+                          function rnSend(obj) {
                             try {
                               if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-                                window.ReactNativeWebView.postMessage(msg);
+                                window.ReactNativeWebView.postMessage(JSON.stringify(obj));
+                                return true;
                               }
-                            } catch (e) {
-                              console.error('postMessage 실패:', e.message);
-                            }
+                            } catch (e) {}
+                            return false;
                           }
+
+                          window.addEventListener('message', function(ev) {
+                            try {
+                              var data = ev.data;
+                              if (typeof data === 'string') {
+                                data = JSON.parse(data);
+                              }
+                              if (data && (data.zonecode || data.roadAddress || data.jibunAddress)) {
+                                var wrapped = { __type: 'address', payload: data, ts: Date.now() };
+                                rnSend(wrapped);
+                              }
+                            } catch (e) {}
+                          }, false);
                           
+                          var script = document.createElement('script');
+                          script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+                          script.onload = function() {
+                            document.getElementById('loading').style.display = 'none';
+                            
+                            var daunaddrlayer = document.getElementById('layer');
+
+                            function sendToReactNative(payload) {
+                              var wrapped = { __type: 'address', payload: payload, ts: Date.now() };
+                              var ok = rnSend(wrapped);
+                              if (!ok) {
+                                try {
+                                  window.location.href = 'postcode://' + encodeURIComponent(JSON.stringify(payload));
+                                } catch (err) {}
+                          }
+                            }
+                            
+                            function execDaumPostcode() {
                           new daum.Postcode({
                             oncomplete: function(data) {
                               var fullRoadAddr = data.roadAddress;
@@ -775,17 +805,47 @@ const SignUpPrivateForeignerScreen = () => {
                               sendToReactNative(payload);
                             },
                             width: '100%',
-                            height: '460px'
-                          }).embed(document.getElementById('layer'));
+                                height: '460px',
+                                maxSuggestItems: 5,
+                                autoClose: true
+                              }).embed(daunaddrlayer);
+                            }
+                            
+                            execDaumPostcode();
+                          };
+                          script.onerror = function() {
+                            document.getElementById('loading').innerHTML = '주소 검색 로드 실패<br>인터넷 연결을 확인해주세요';
+                          };
+                          document.head.appendChild(script);
                         </script>
                       </body>
                     </html>
                   `
                 }}
-                onMessage={(event) => handleAddressSelect(event.nativeEvent.data)}
+                onMessage={(event) => {
+                  const data = event.nativeEvent.data;
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed?.__type === 'address') {
+                      handleAddressSelect(parsed.payload);
+                      return;
+                    }
+                  } catch (_) {}
+                  handleAddressSelect(data);
+                }}
+                onShouldStartLoadWithRequest={(request) => {
+                  if (request.url.startsWith('postcode://')) {
+                    const payload = decodeURIComponent(request.url.replace('postcode://', ''));
+                    handleAddressSelect(payload);
+                    return false;
+                  }
+                  return true;
+                }}
                 style={styles.webView}
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
+                mixedContentMode="always"
+                originWhitelist={['*']}
               />
             </View>
           </View>

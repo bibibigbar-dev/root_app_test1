@@ -41,9 +41,11 @@ TextInput.render = function (props, ref) {
 
 function App() {
   useEffect(() => {
-    // Suppress InteractionManager deprecation warning from React Navigation
+    // Suppress deprecation warnings
     LogBox.ignoreLogs([
       'InteractionManager has been deprecated',
+      'InteractionManager',
+      'requestIdleCallback',
     ]);
 
     // 푸시 알림 초기화

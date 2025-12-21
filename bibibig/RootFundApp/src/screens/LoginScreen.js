@@ -15,6 +15,7 @@ import {
   Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ReactNativeBiometrics from 'react-native-biometrics';
 import ApiService from '../services/api';
 
 const LoginScreen = ({ navigation, route }) => {
@@ -25,6 +26,8 @@ const LoginScreen = ({ navigation, route }) => {
   const [mainLoginLoading, setMainLoginLoading] = useState(false);
   const [withdrawalLoginLoading, setWithdrawalLoginLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [biometricsAvailable, setBiometricsAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState('');
   const passwordRef = useRef(null);
 
   useEffect(() => {
@@ -38,10 +41,65 @@ const LoginScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     loadRememberedEmail();
+    checkBiometrics();
     // 로그인 화면 진입 시 공개키 선 요청
     ApiService.prefetchPublicKey();
     setInitialLoading(false);
+    
+    // 저장된 로그인 정보가 있으면 자동으로 Face ID 실행
+    checkAndAutoTriggerBiometric();
   }, []);
+
+  const checkAndAutoTriggerBiometric = async () => {
+    try {
+      // 잠시 대기 (화면이 완전히 로드된 후)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 저장된 이메일/비밀번호 확인
+      const savedEmail = await AsyncStorage.getItem('rememberedEmail');
+      const savedPassword = await AsyncStorage.getItem('rememberedPassword');
+      
+      if (savedEmail && savedPassword) {
+        // 생체 인증 가능 여부 확인
+        const rnBiometrics = new ReactNativeBiometrics();
+        const { available } = await rnBiometrics.isSensorAvailable();
+        
+        if (available) {
+          console.log('🔐 자동 Face ID 실행');
+          handleBiometricLogin();
+        }
+      }
+    } catch (error) {
+      console.log('자동 Face ID 실행 실패:', error);
+      // 에러 발생 시 조용히 무시 (수동 로그인 가능)
+    }
+  };
+
+  const checkBiometrics = async () => {
+    try {
+      const rnBiometrics = new ReactNativeBiometrics();
+      const { available, biometryType } = await rnBiometrics.isSensorAvailable();
+      
+      console.log('🔍 생체 인증 체크:', { available, biometryType });
+      
+      if (available) {
+        setBiometricsAvailable(true);
+        setBiometricType(biometryType);
+        console.log('✅ 생체 인증 가능:', biometryType);
+      } else {
+        console.log('❌ 생체 인증 불가능');
+        // 개발 중에는 강제로 활성화 (테스트용)
+        setBiometricsAvailable(true);
+        setBiometricType('FaceID');
+        console.log('⚠️ 개발 모드: 생체 인증 버튼 강제 표시');
+      }
+    } catch (error) {
+      console.error('❌ 생체 인증 확인 오류:', error);
+      // 에러 발생 시에도 버튼 표시 (테스트용)
+      setBiometricsAvailable(true);
+      setBiometricType('FaceID');
+    }
+  };
 
   const loadRememberedEmail = async () => {
     try {
@@ -76,6 +134,60 @@ const LoginScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('이메일 저장 오류:', error);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      // 저장된 이메일과 비밀번호 확인
+      const savedEmail = await AsyncStorage.getItem('rememberedEmail');
+      const savedPassword = await AsyncStorage.getItem('rememberedPassword');
+      
+      if (!savedEmail || !savedPassword) {
+        Alert.alert('생체 인증 로그인', '먼저 이메일과 비밀번호로 로그인하고 "이메일 저장"을 활성화해주세요.');
+        return;
+      }
+
+      const rnBiometrics = new ReactNativeBiometrics();
+      const { success } = await rnBiometrics.simplePrompt({
+        promptMessage: '로그인하려면 인증하세요',
+        cancelButtonText: '취소',
+      });
+
+      if (success) {
+        console.log('✅ 생체 인증 성공');
+        // 저장된 이메일/비밀번호로 자동 로그인
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        
+        setMainLoginLoading(true);
+        try {
+          const loginData = { email: savedEmail, password: savedPassword };
+          const response = await ApiService.login(loginData);
+          
+          if (response.success && response.user) {
+            await AsyncStorage.setItem('userData', JSON.stringify(response.user));
+            await AsyncStorage.setItem('userToken', response.user.token);
+            
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Main' }],
+            });
+          } else {
+            Alert.alert('로그인 실패', response.message || '로그인에 실패했습니다.');
+          }
+        } catch (error) {
+          console.error('로그인 오류:', error);
+          Alert.alert('로그인 오류', '로그인 중 오류가 발생했습니다.');
+        } finally {
+          setMainLoginLoading(false);
+        }
+      } else {
+        console.log('❌ 생체 인증 취소');
+      }
+    } catch (error) {
+      console.error('생체 인증 오류:', error);
+      Alert.alert('오류', '생체 인증 중 오류가 발생했습니다.');
     }
   };
 
@@ -288,6 +400,7 @@ const LoginScreen = ({ navigation, route }) => {
           </TouchableOpacity>
 
           {/* 로그인 버튼 */}
+          <View style={styles.loginButtonContainer}>
           <TouchableOpacity 
             style={[styles.loginButton, (mainLoginLoading || withdrawalLoginLoading) && styles.disabledButton]} 
             onPress={handleMainLogin}
@@ -295,6 +408,20 @@ const LoginScreen = ({ navigation, route }) => {
           >
             <Text style={styles.loginButtonText}>로그인</Text>
           </TouchableOpacity>
+
+            {/* Face ID/Touch ID 버튼 */}
+            {biometricsAvailable && (
+              <TouchableOpacity 
+                style={styles.biometricButton}
+                onPress={handleBiometricLogin}
+                disabled={mainLoginLoading || withdrawalLoginLoading}
+              >
+                <Text style={styles.biometricIcon}>
+                  {biometricType === 'FaceID' ? '👤' : '👆'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* 카카오 로그인 버튼 */}
           <TouchableOpacity 
@@ -444,13 +571,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
   },
+  loginButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
   loginButton: {
+    flex: 1,
     height: 48,
     backgroundColor: '#2c3db8',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+  },
+  biometricButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  biometricIcon: {
+    fontSize: 24,
   },
   disabledButton: {
     backgroundColor: '#CCCCCC',

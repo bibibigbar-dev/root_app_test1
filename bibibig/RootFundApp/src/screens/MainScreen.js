@@ -11,17 +11,21 @@ import {
   Linking,
   Modal,
   FlatList,
+  Clipboard,
+  Alert,
 } from 'react-native';
 import Swiper from 'react-native-swiper';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import PushNotificationService from '../services/pushNotification';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const MainScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fcmToken, setFcmToken] = useState(null);
   const [mainData, setMainData] = useState({
     products: [],
     siteStats: null,
@@ -48,6 +52,7 @@ const MainScreen = ({ navigation }) => {
   useEffect(() => {
     loadUserData();
     loadMainData();
+    loadFCMToken();
   }, []);
 
   useEffect(() => {
@@ -79,10 +84,84 @@ const MainScreen = ({ navigation }) => {
     }
   };
 
+  const loadFCMToken = async () => {
+    try {
+      // 시뮬레이터에서는 FCM 토큰 로드 스킵 (실제 디바이스에서만 동작)
+      if (__DEV__) {
+        console.log('🧪 개발 환경: FCM 토큰 로드 스킵');
+        return;
+      }
+      
+      console.log('🔍 FCM 토큰 로드 시도...');
+      
+      // 1. AsyncStorage에서 직접 토큰 가져오기
+      const token = await AsyncStorage.getItem('fcmToken');
+      console.log('📦 AsyncStorage 토큰:', token ? `${token.substring(0, 30)}...` : '없음');
+      
+      if (token) {
+        setFcmToken(token);
+        console.log('✅ FCM 토큰 로드 성공 (AsyncStorage)');
+        return;
+      }
+      
+      // 2. PushNotificationService 초기화 상태 확인
+      const isInitialized = PushNotificationService.isInitialized();
+      console.log('🔧 PushNotificationService 초기화 상태:', isInitialized);
+      
+      if (!isInitialized) {
+        console.log('⚠️ PushNotificationService가 아직 초기화되지 않았습니다. 초기화 시도...');
+        const initSuccess = await PushNotificationService.initialize();
+        console.log('🔧 초기화 결과:', initSuccess ? '성공' : '실패');
+        
+        if (!initSuccess) {
+          console.error('❌ PushNotificationService 초기화 실패');
+          setTimeout(loadFCMToken, 3000);
+          return;
+        }
+      }
+      
+      // 3. PushNotificationService에서 토큰 가져오기
+      const serviceToken = PushNotificationService.getToken();
+      console.log('🎯 Service 토큰:', serviceToken ? `${serviceToken.substring(0, 30)}...` : '없음');
+      
+      if (serviceToken) {
+        setFcmToken(serviceToken);
+        console.log('✅ FCM 토큰 로드 성공 (Service)');
+      } else {
+        console.log('⏳ FCM 토큰이 아직 생성되지 않았습니다. 3초 후 재시도...');
+        setTimeout(loadFCMToken, 3000);
+      }
+    } catch (error) {
+      console.error('❌ FCM 토큰 로드 오류:', error);
+      setTimeout(loadFCMToken, 5000);
+    }
+  };
+
+  const copyFCMToken = () => {
+    if (fcmToken) {
+      Clipboard.setString(fcmToken);
+      Alert.alert('복사 완료', 'FCM 토큰이 클립보드에 복사되었습니다.');
+    } else {
+      Alert.alert(
+        'FCM 토큰 없음',
+        'FCM 토큰이 아직 생성되지 않았습니다.\n\n가능한 원인:\n1. Firebase 초기화 중\n2. 푸시 알림 권한 거부\n3. Firebase 설정 오류',
+        [
+          { text: '재시도', onPress: loadFCMToken },
+          { text: '확인' }
+        ]
+      );
+    }
+  };
+
   const loadMainData = async () => {
     try {
+      console.log('🔍 메인 데이터 로드 시작...');
+      console.log('📡 API URL:', ApiService.baseURL);
+      
       // 메인 페이지 데이터 로드
       const data = await ApiService.getMainData();
+      console.log('✅ 메인 데이터 응답:', data);
+      
       const result = data?.result ?? data;
       setMainData({
         products: result?.product || [],
@@ -96,8 +175,13 @@ const MainScreen = ({ navigation }) => {
         popup: result?.popup || [],
         popup_cnt: result?.popup_cnt || 0,
       });
+      
+      console.log('📊 상품 수:', result?.product?.length || 0);
     } catch (error) {
-      console.error('메인 데이터 로드 오류:', error);
+      console.error('❌ 메인 데이터 로드 오류:', error);
+      console.error('❌ 오류 상세:', error.message);
+      console.error('❌ 응답 상태:', error.response?.status);
+      console.error('❌ 응답 데이터:', error.response?.data);
     } finally {
       setLoading(false);
     }
@@ -509,6 +593,16 @@ const MainScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* FCM 토큰 표시 (개발용 - 나중에 삭제) */}
+      <TouchableOpacity
+        style={[styles.fcmTokenButton, !fcmToken && styles.fcmTokenButtonDisabled]}
+        onPress={copyFCMToken}
+      >
+        <Text style={styles.fcmTokenText}>
+          {fcmToken ? '📱 FCM 토큰 복사' : '⏳ FCM 토큰 로딩중...'}
+        </Text>
+      </TouchableOpacity>
+      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {mainData.topBanner && (
           <View style={styles.bannerWrapper}>
@@ -1272,6 +1366,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',
+  },
+  fcmTokenButton: {
+    position: 'absolute',
+    top: 60,
+    right: 10,
+    backgroundColor: '#2c3db8',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    zIndex: 9999,
+    elevation: 10,
+  },
+  fcmTokenButtonDisabled: {
+    backgroundColor: '#999',
+  },
+  fcmTokenText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,

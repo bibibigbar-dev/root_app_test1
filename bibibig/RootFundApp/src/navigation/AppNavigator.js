@@ -48,6 +48,7 @@ import UpwardRequestScreen from '../screens/UpwardRequestScreen';
 import UpwardRequestDoneScreen from '../screens/UpwardRequestDoneScreen';
 import ConsultationRequestScreen from '../screens/ConsultationRequestScreen';
 import ConsultationRequestDoneScreen from '../screens/ConsultationRequestDoneScreen';
+import NotificationListScreen from '../screens/NotificationListScreen';
 import LoanRequestScreen from '../screens/LoanRequestScreen';
 import LoanRequestDoneScreen from '../screens/LoanRequestDoneScreen';
 import BondMarketHowToUseScreen from '../screens/BondMarketHowToUseScreen';
@@ -245,6 +246,7 @@ const AppNavigator = () => {
           <Stack.Screen name="UpwardRequestDone" component={UpwardRequestDoneScreen} />
           <Stack.Screen name="ConsultationRequest" component={ConsultationRequestScreen} />
           <Stack.Screen name="ConsultationRequestDone" component={ConsultationRequestDoneScreen} />
+          <Stack.Screen name="NotificationList" component={NotificationListScreen} />
           <Stack.Screen name="LoanRequest" component={LoanRequestScreen} />
           <Stack.Screen name="LoanRequestDone" component={LoanRequestDoneScreen} />
           <Stack.Screen name="BondMarketHowToUse" component={BondMarketHowToUseScreen} />

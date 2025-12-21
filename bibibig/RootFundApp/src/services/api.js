@@ -4,11 +4,12 @@ import { Buffer } from 'buffer';
 import JSEncrypt from 'jsencrypt';
 import { rsaEncryptWithPublicKey } from '../utils/rsaEncrypt';
 import { Platform } from 'react-native';
+import { API_BASE_URL } from '../config/api'; // API URL을 config에서 가져옴
 
 class ApiService {
   constructor() {
-    // 개발 환경에 따른 API URL 설정
-    this.baseURL = this.getApiBaseUrl();
+    // config/api.js에서 설정한 API URL 사용
+    this.baseURL = API_BASE_URL;
     this.publicKey = null; // 공개키 캐시
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -47,16 +48,10 @@ class ApiService {
     );
   }
 
-  // API 베이스 URL 결정
+  // ⚠️ DEPRECATED: API URL은 이제 config/api.js에서 관리합니다
+  // 이 메서드는 하위 호환성을 위해 남겨두지만 사용하지 않습니다
   getApiBaseUrl() {
-    // 운영 환경
-    return 'https://rootenergy.co.kr';
-    
-    // 로컬 개발 환경 (주석 처리)
-    // Android 에뮬레이터: 10.0.2.2
-    // iOS 시뮬레이터: localhost
-    // const localUrl = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
-    // return localUrl;
+    return API_BASE_URL;
   }
 
   // URL-encoded 형태로 데이터 변환 (Spring @ModelAttribute용)
@@ -1027,17 +1022,29 @@ DwIDAQAB
 
   async getMainData() {
     try {
+      console.log('🔍 [API] /app/main 호출 시작...');
+      console.log('🌐 [API] baseURL:', this.baseURL);
+      
       const response = await this.api.get('/app/main', {
         headers: {
           Accept: 'application/json',
         },
       });
+      
+      console.log('✅ [API] /app/main 응답 성공:', response.status);
+      console.log('📦 [API] 응답 데이터:', response.data);
+      
       return response.data;
     } catch (error) {
-      console.error('Get main data error:', error);
+      console.error('❌ [API] Get main data error:', error);
+      console.error('❌ [API] Error message:', error.message);
+      console.error('❌ [API] Error code:', error.code);
+      console.error('❌ [API] Response status:', error.response?.status);
+      console.error('❌ [API] Response data:', error.response?.data);
+      
       // 404 에러나 다른 에러 발생 시 빈 데이터 반환하여 앱이 계속 작동하도록 함
       if (error.response?.status === 404) {
-        console.warn('메인 데이터 API 엔드포인트를 찾을 수 없습니다. 빈 데이터를 반환합니다.');
+        console.warn('⚠️ [API] 메인 데이터 API 엔드포인트를 찾을 수 없습니다. 빈 데이터를 반환합니다.');
       }
       return {
         result: {

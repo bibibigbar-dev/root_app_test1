@@ -75,8 +75,8 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
       // 은행 목록 조회 (실패해도 계속 진행)
       try {
         const banksResponse = await ApiService.api.get('/member/get/banks');
-        if (banksResponse.data) {
-          setBanks(banksResponse.data);
+      if (banksResponse.data) {
+        setBanks(banksResponse.data);
           console.log('✅ 은행 목록 조회 성공:', banksResponse.data);
         }
       } catch (bankError) {
