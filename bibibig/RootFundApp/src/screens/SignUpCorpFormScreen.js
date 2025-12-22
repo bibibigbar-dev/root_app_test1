@@ -9,11 +9,11 @@ import {
   Alert,
   ActivityIndicator,
   Image,
-  Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 // 가입 경로 옵션
 const joinRootOptions = [
@@ -22,7 +22,10 @@ const joinRootOptions = [
   { label: '인터넷 검색', value: '인터넷 검색' },
   { label: '구글 광고', value: '구글 광고' },
   { label: '네이버 광고', value: '네이버 광고' },
-  { label: 'SNS(페이스북·인스타그램) 광고', value: 'SNS(페이스북/인스타그램) 광고' },
+  {
+    label: 'SNS(페이스북·인스타그램) 광고',
+    value: 'SNS(페이스북/인스타그램) 광고',
+  },
   { label: '뉴스/기사', value: '뉴스/기사' },
   { label: '인터넷 커뮤니티', value: '인터넷 커뮤니티' },
   { label: '세미나/교육/포럼', value: '세미나/교육/포럼' },
@@ -57,33 +60,38 @@ const SignUpCorpFormScreen = () => {
 
     try {
       setCheckingCorpNo(true);
-      
+
       const data = {
-        b_no: [corpNoTemp]
+        b_no: [corpNoTemp],
       };
-      
-      const serviceKey = 'R8wLA%2BjGmUyPNyjHuPQsIzCQlZg1Qkvq6pIITuiz6TtCEGMJ1ALzuvvd8%2BoL6TXo3YoTmC3ZR0RN04yB%2BSxzVA%3D%3D';
-      
+
+      const serviceKey =
+        'R8wLA%2BjGmUyPNyjHuPQsIzCQlZg1Qkvq6pIITuiz6TtCEGMJ1ALzuvvd8%2BoL6TXo3YoTmC3ZR0RN04yB%2BSxzVA%3D%3D';
+
       const response = await fetch(
         `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${serviceKey}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
           },
           body: JSON.stringify(data),
-        }
+        },
       );
 
       const result = await response.json();
 
       // status_code 확인
-      if (result.status_code === 'OK' && result.data && result.data.length > 0) {
+      if (
+        result.status_code === 'OK' &&
+        result.data &&
+        result.data.length > 0
+      ) {
         const bizData = result.data[0];
-        
+
         let checkNextStep = false;
-        
+
         if (bizData.b_stt_cd === '01') {
           // 계속사업자
           Alert.alert('사업자번호 조회', '조회가 완료되었습니다.');
@@ -95,14 +103,14 @@ const SignUpCorpFormScreen = () => {
             '휴업자 등록번호 입니다. 계속 진행하시겠습니까?',
             [
               { text: '취소', style: 'cancel' },
-              { 
-                text: '확인', 
+              {
+                text: '확인',
                 onPress: () => {
                   setCorpNo(corpNoTemp);
                   setCorpNoVerified(true);
-                }
-              }
-            ]
+                },
+              },
+            ],
           );
           return;
         } else if (bizData.b_stt_cd === '03') {
@@ -112,36 +120,42 @@ const SignUpCorpFormScreen = () => {
             '폐업자 등록번호 입니다. 계속 진행하시겠습니까?',
             [
               { text: '취소', style: 'cancel' },
-              { 
-                text: '확인', 
+              {
+                text: '확인',
                 onPress: () => {
                   setCorpNo(corpNoTemp);
                   setCorpNoVerified(true);
-                }
-              }
-            ]
+                },
+              },
+            ],
           );
           return;
         } else {
           // 기타 상태 코드
-          console.warn('⚠️ 알 수 없는 사업자 상태:', bizData.b_stt_cd, bizData.b_stt);
+          console.warn(
+            '⚠️ 알 수 없는 사업자 상태:',
+            bizData.b_stt_cd,
+            bizData.b_stt,
+          );
           Alert.alert(
             '사업자번호 조회',
-            `사업자 상태: ${bizData.b_stt || '알 수 없음'}\n계속 진행하시겠습니까?`,
+            `사업자 상태: ${
+              bizData.b_stt || '알 수 없음'
+            }\n계속 진행하시겠습니까?`,
             [
               { text: '취소', style: 'cancel' },
-              { 
-                text: '확인', 
+              {
+                text: '확인',
                 onPress: () => {
                   setCorpNo(corpNoTemp);
                   setCorpNoVerified(true);
-                }
-              }
-            ]
+                },
+              },
+            ],
           );
           return;
         }
-        
+
         if (checkNextStep) {
           setCorpNo(corpNoTemp);
           setCorpNoVerified(true);
@@ -149,23 +163,22 @@ const SignUpCorpFormScreen = () => {
       } else if (result.status_code === 'NO_DATA') {
         // 데이터 없음
         console.warn('⚠️ 사업자번호 조회 결과 없음');
-        Alert.alert(
-          '사업자번호 조회',
-          '등록되지 않은 사업자번호입니다.'
-        );
+        Alert.alert('사업자번호 조회', '등록되지 않은 사업자번호입니다.');
       } else {
         // 기타 오류
         console.error('❌ API 응답 오류:', result);
         Alert.alert(
           '사업자번호 조회',
-          `확인할 수 없습니다. (${result.status_code || 'UNKNOWN'})\n사업자번호를 확인하여 주세요.`
+          `확인할 수 없습니다. (${
+            result.status_code || 'UNKNOWN'
+          })\n사업자번호를 확인하여 주세요.`,
         );
       }
     } catch (error) {
       console.error('❌ 사업자번호 조회 오류:', error);
       Alert.alert(
         '사업자번호 조회',
-        error.message || '처리도중 오류가 발생하였습니다.'
+        error.message || '처리도중 오류가 발생하였습니다.',
       );
     } finally {
       setCheckingCorpNo(false);
@@ -214,11 +227,17 @@ const SignUpCorpFormScreen = () => {
       return;
     }
     if (password.length < 10) {
-      Alert.alert('회원가입', '비밀번호 형식에 맞지 않습니다.(10자리 이상 영문/숫자/특수문자 조합)');
+      Alert.alert(
+        '회원가입',
+        '비밀번호 형식에 맞지 않습니다.(10자리 이상 영문/숫자/특수문자 조합)',
+      );
       return;
     }
     if (!validationPwd.test(password)) {
-      Alert.alert('회원가입', '비밀번호 형식에 맞지 않습니다.(10자리 이상 영문/숫자/특수문자 조합)');
+      Alert.alert(
+        '회원가입',
+        '비밀번호 형식에 맞지 않습니다.(10자리 이상 영문/숫자/특수문자 조합)',
+      );
       return;
     }
     if (password !== passwordConfirm) {
@@ -245,14 +264,17 @@ const SignUpCorpFormScreen = () => {
         marketing: marketing || 'N',
       };
 
-      const response = await ApiService.api.post('/app/corpJoinProcess', signUpData);
+      const response = await ApiService.api.post(
+        '/app/corpJoinProcess',
+        signUpData,
+      );
 
       const rtnvalue = String(response.data.rtnvalue || response.data).trim();
       const member_id = response.data.member_id || '';
 
       if (rtnvalue === '0') {
         // 회원가입 성공
-        
+
         // 자동 로그인 처리
         if (member_id) {
           try {
@@ -260,10 +282,16 @@ const SignUpCorpFormScreen = () => {
               web_id: email,
               member_pwd: password, // 사용자가 입력한 평문 비밀번호
             };
-            
-            const loginResponse = await ApiService.api.post('/app/loginProcess', loginData);
-            
-            if (loginResponse.data.rtnvalue === '0' && loginResponse.data.member) {
+
+            const loginResponse = await ApiService.api.post(
+              '/app/loginProcess',
+              loginData,
+            );
+
+            if (
+              loginResponse.data.rtnvalue === '0' &&
+              loginResponse.data.member
+            ) {
               // 로그인 성공 - 세션 저장
               const userData = {
                 id: loginResponse.data.member.member_id,
@@ -271,11 +299,11 @@ const SignUpCorpFormScreen = () => {
                 name: loginResponse.data.member.member_name,
                 loginId: loginResponse.data.member.web_id,
                 loginTime: Date.now(),
-                expirationTime: Date.now() + (24 * 60 * 60 * 1000), // 24시간
+                expirationTime: Date.now() + 24 * 60 * 60 * 1000, // 24시간
                 session: loginResponse.data.member,
                 member: loginResponse.data.member,
               };
-              
+
               await AsyncStorage.setItem('userData', JSON.stringify(userData));
             } else {
               console.warn('⚠️ 자동 로그인 실패, 수동 로그인 필요');
@@ -284,7 +312,7 @@ const SignUpCorpFormScreen = () => {
             console.error('❌ 자동 로그인 오류:', loginError);
           }
         }
-        
+
         // 서비스 이용신청 화면으로 이동
         navigation.replace('MyCert', {
           use_tf_join: 'Y',
@@ -294,7 +322,10 @@ const SignUpCorpFormScreen = () => {
       } else if (rtnvalue === '1') {
         Alert.alert('회원가입', '입력정보를 확인해주세요.');
       } else if (rtnvalue === '2') {
-        Alert.alert('회원가입', '인증정보가 올바르지 않습니다.\n(법인휴대전화의 경우 실 사용자 등록이 되어야 합니다.)');
+        Alert.alert(
+          '회원가입',
+          '인증정보가 올바르지 않습니다.\n(법인휴대전화의 경우 실 사용자 등록이 되어야 합니다.)',
+        );
       } else if (rtnvalue === '3') {
         Alert.alert('회원가입', '이미 가입된 이메일 입니다.');
       } else if (rtnvalue === '4') {
@@ -346,7 +377,7 @@ const SignUpCorpFormScreen = () => {
               value={corpName}
               onChangeText={setCorpName}
               placeholder="법인명 입력"
-              placeholderTextColor="#bfc3c7"
+              placeholderTextColor="#999"
             />
           </View>
 
@@ -356,17 +387,24 @@ const SignUpCorpFormScreen = () => {
           </View>
           <View style={styles.flexInputRow}>
             <TextInput
-              style={[styles.input, styles.inputFlex, corpNoVerified && styles.inputDisabled]}
+              style={[
+                styles.input,
+                styles.inputFlex,
+                corpNoVerified && styles.inputDisabled,
+              ]}
               value={corpNoTemp}
               onChangeText={setCorpNoTemp}
               placeholder="사업자번호 입력"
-              placeholderTextColor="#bfc3c7"
+              placeholderTextColor="#999"
               keyboardType="number-pad"
               editable={!corpNoVerified}
             />
             {!corpNoVerified ? (
               <TouchableOpacity
-                style={[styles.btnCheck, checkingCorpNo && styles.btnCheckDisabled]}
+                style={[
+                  styles.btnCheck,
+                  checkingCorpNo && styles.btnCheckDisabled,
+                ]}
                 onPress={handleCheckCorpNo}
                 disabled={checkingCorpNo}
               >
@@ -377,7 +415,10 @@ const SignUpCorpFormScreen = () => {
                 )}
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={styles.btnCheck} onPress={handleChangeCorpNo}>
+              <TouchableOpacity
+                style={styles.btnCheck}
+                onPress={handleChangeCorpNo}
+              >
                 <Text style={styles.btnCheckText}>변경하기</Text>
               </TouchableOpacity>
             )}
@@ -398,8 +439,12 @@ const SignUpCorpFormScreen = () => {
               autoCapitalize="none"
             />
           </View>
-          <Text style={styles.noticeText}>* 이메일 주소는 변경이 불가합니다.</Text>
-          <Text style={styles.noticeText}>* 실사용 이메일 주소로 기입해주시기 바랍니다.</Text>
+          <Text style={styles.noticeText}>
+            * 이메일 주소는 변경이 불가합니다.
+          </Text>
+          <Text style={styles.noticeText}>
+            * 실사용 이메일 주소로 기입해주시기 바랍니다.
+          </Text>
 
           {/* 비밀번호 */}
           <View style={styles.flexTit}>
@@ -411,7 +456,7 @@ const SignUpCorpFormScreen = () => {
               value={password}
               onChangeText={setPassword}
               placeholder="비밀번호 입력"
-              placeholderTextColor="#bfc3c7"
+              placeholderTextColor="#999"
               secureTextEntry={true}
               textContentType="oneTimeCode"
               autoComplete="off"
@@ -430,7 +475,8 @@ const SignUpCorpFormScreen = () => {
             />
           </View>
           <Text style={styles.noticeText}>
-            * 영문, 숫자, 특수문자(숫자키 상단 특수문자만 가능) 최소 10자리 이상으로 입력해 주셔야 합니다.
+            * 영문, 숫자, 특수문자(숫자키 상단 특수문자만 가능) 최소 10자리
+            이상으로 입력해 주셔야 합니다.
           </Text>
 
           {/* 가입 경로 */}
@@ -443,7 +489,8 @@ const SignUpCorpFormScreen = () => {
               onPress={() => setShowJoinRootModal(true)}
             >
               <Text style={styles.selectText}>
-                {joinRootOptions.find(opt => opt.value === joinRoot)?.label || '선택해주세요'}
+                {joinRootOptions.find(opt => opt.value === joinRoot)?.label ||
+                  '선택해주세요'}
               </Text>
               <Text style={styles.selectArrow}>▼</Text>
             </TouchableOpacity>
@@ -455,7 +502,7 @@ const SignUpCorpFormScreen = () => {
                 value={joinRootEtc}
                 onChangeText={setJoinRootEtc}
                 placeholder="기타입력"
-                placeholderTextColor="#bfc3c7"
+                placeholderTextColor="#999"
               />
             </View>
           )}
@@ -465,42 +512,35 @@ const SignUpCorpFormScreen = () => {
       </ScrollView>
 
       {/* 가입 경로 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showJoinRootModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowJoinRootModal(false)}
+        title="가입 경로 선택"
+        onClose={() => setShowJoinRootModal(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowJoinRootModal(false),
+        }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>가입 경로 선택</Text>
-              <TouchableOpacity onPress={() => setShowJoinRootModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              {joinRootOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setJoinRoot(option.value);
-                    setShowJoinRootModal(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.modalItemText,
-                    joinRoot === option.value && styles.modalItemTextSelected
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        {joinRootOptions.map(option => (
+          <TouchableOpacity
+            key={option.value}
+            style={styles.modalItem}
+            onPress={() => {
+              setJoinRoot(option.value);
+              setShowJoinRootModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalItemText,
+                joinRoot === option.value && styles.modalItemTextSelected,
+              ]}
+            >
+              {option.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </AppModal>
 
       {/* 다음 버튼 */}
       <View style={styles.fixBtnWrap}>
@@ -713,4 +753,3 @@ const styles = StyleSheet.create({
 });
 
 export default SignUpCorpFormScreen;
-

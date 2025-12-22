@@ -6,17 +6,17 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Modal,
   ActivityIndicator,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useWindowDimensions } from 'react-native';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const SignUpPrivateScreen = ({ route, navigation }) => {
   const { joinType } = route.params || { joinType: 'adult' };
   const { width } = useWindowDimensions();
-  
+
   const [checkAll, setCheckAll] = useState(false);
   const [checks, setChecks] = useState({
     service: false,
@@ -29,7 +29,7 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
   const [termsLoading, setTermsLoading] = useState(true);
   const [termsData, setTermsData] = useState(null);
-  
+
   // 모달 상태
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -50,7 +50,7 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
           kakaoCi: '0',
         },
       });
-      
+
       if (response.data.status === 'success') {
         setTermsData(response.data);
       }
@@ -74,11 +74,11 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
     setErrorMsg('');
   };
 
-  const handleCheck = (key) => {
+  const handleCheck = key => {
     const newChecks = { ...checks, [key]: !checks[key] };
     setChecks(newChecks);
     setErrorMsg('');
-    
+
     // 모든 항목이 체크되었는지 확인
     const allChecked = Object.values(newChecks).every(v => v === true);
     setCheckAll(allChecked);
@@ -94,29 +94,37 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
       return;
     }
     if (!checks.p2p) {
-      setErrorMsg('* 개인(신용)정보 제3자(P2P자금관리) 제공에 동의하여 주십시오.');
+      setErrorMsg(
+        '* 개인(신용)정보 제3자(P2P자금관리) 제공에 동의하여 주십시오.',
+      );
       return;
     }
     if (!checks.bank) {
-      setErrorMsg('* 개인(신용)정보 제3자(투자금예치은행) 제공에 동의하여 주십시오.');
+      setErrorMsg(
+        '* 개인(신용)정보 제3자(투자금예치은행) 제공에 동의하여 주십시오.',
+      );
       return;
     }
 
     try {
       setLoading(true);
       const marketing = checks.marketing ? 'Y' : 'N';
-      
+
       // API 호출 - FormData 형식으로 전송
       const formData = new FormData();
       formData.append('marketing', marketing);
       formData.append('f_joinType', joinType);
       formData.append('kakaoCi', '0');
-      
-      const response = await ApiService.api.post('/app/join/privateAgree', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+
+      const response = await ApiService.api.post(
+        '/app/join/privateAgree',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         },
-      });
+      );
 
       if (response.data.status === 'success') {
         // joinType에 따라 다른 화면으로 이동
@@ -153,7 +161,7 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
     }
   };
 
-  const createHtmlContent = (htmlContent) => {
+  const createHtmlContent = htmlContent => {
     return `
       <!DOCTYPE html>
       <html>
@@ -214,49 +222,33 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
   const [webViewHeight, setWebViewHeight] = useState(300);
 
   const renderModal = (visible, onClose, title, content) => (
-    <Modal
+    <AppModal
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
+      title={title}
+      onClose={onClose}
+      primaryAction={{ text: '닫기', onPress: onClose }}
     >
-      <View style={styles.popContainer}>
-        <TouchableOpacity style={styles.popMask} onPress={onClose} activeOpacity={1} />
-        <View style={styles.popWrapper}>
-          <View style={styles.popBox}>
-            <Text style={styles.popTitle}>{title}</Text>
-            <ScrollView 
-              style={styles.popContent}
-              showsVerticalScrollIndicator={true}
-            >
-              {content && (
-                <WebView
-                  originWhitelist={['*']}
-                  source={{ html: createHtmlContent(content) }}
-                  style={[styles.webView, { height: webViewHeight }]}
-                  scrollEnabled={true}
-                  showsVerticalScrollIndicator={false}
-                  showsHorizontalScrollIndicator={true}
-                  onMessage={(event) => {
-                    try {
-                      const data = JSON.parse(event.nativeEvent.data);
-                      if (data.type === 'height' && data.height) {
-                        setWebViewHeight(data.height + 20);
-                      }
-                    } catch (e) {
-                      console.error('WebView message parse error:', e);
-                    }
-                  }}
-                />
-              )}
-            </ScrollView>
-            <TouchableOpacity style={styles.popCloseBtn} onPress={onClose}>
-              <Text style={styles.popCloseBtnText}>닫기</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      {content && (
+        <WebView
+          originWhitelist={['*']}
+          source={{ html: createHtmlContent(content) }}
+          style={[styles.webView, { height: webViewHeight }]}
+          scrollEnabled={false}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={true}
+          onMessage={event => {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data.type === 'height' && data.height) {
+                setWebViewHeight(data.height + 20);
+              }
+            } catch (e) {
+              console.error('WebView message parse error:', e);
+            }
+          }}
+        />
+      )}
+    </AppModal>
   );
 
   if (termsLoading) {
@@ -270,12 +262,15 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
           style={styles.backButton}
           hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
         >
-          <Image source={require('../assets/images/ico_back.png')} style={styles.backButtonImage} />
+          <Image
+            source={require('../assets/images/ico_back.png')}
+            style={styles.backButtonImage}
+          />
         </TouchableOpacity>
       </View>
 
@@ -289,7 +284,10 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
         <View style={styles.termsArea}>
           {/* 전체 동의 */}
           <View style={styles.termsBox}>
-            <TouchableOpacity style={styles.checkboxContainer} onPress={handleCheckAll}>
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={handleCheckAll}
+            >
               <Image
                 source={
                   checkAll
@@ -306,7 +304,10 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
           <View style={styles.termsList}>
             {/* 서비스 이용약관 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleCheck('service')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleCheck('service')}
+              >
                 <Image
                   source={
                     checks.service
@@ -316,17 +317,26 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowServiceModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowServiceModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
                   <Text style={styles.colorBlue}>(필수)</Text> 서비스 이용약관
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
             {/* 개인정보처리방침 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleCheck('privacy')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleCheck('privacy')}
+              >
                 <Image
                   source={
                     checks.privacy
@@ -336,17 +346,26 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowPrivacyModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowPrivacyModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
                   <Text style={styles.colorBlue}>(필수)</Text> 개인정보처리방침
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
             {/* P2P자금관리 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleCheck('p2p')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleCheck('p2p')}
+              >
                 <Image
                   source={
                     checks.p2p
@@ -356,17 +375,27 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowP2PModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowP2PModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보 제3자(P2P자금관리) 제공 동의
+                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보
+                  제3자(P2P자금관리) 제공 동의
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
             {/* 투자금예치은행 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleCheck('bank')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleCheck('bank')}
+              >
                 <Image
                   source={
                     checks.bank
@@ -376,17 +405,27 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowBankModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowBankModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보 제3자(투자금예치은행) 제공 동의
+                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보
+                  제3자(투자금예치은행) 제공 동의
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
             {/* 마케팅 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleCheck('marketing')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleCheck('marketing')}
+              >
                 <Image
                   source={
                     checks.marketing
@@ -396,11 +435,17 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowMarketingModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowMarketingModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
                   (선택) 마케팅 정보 수집 및 활용 동의
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
@@ -418,8 +463,8 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
       {/* 다음 버튼 */}
       <View style={styles.fixBtnWrap}>
         <View style={styles.btnBox}>
-          <TouchableOpacity 
-            style={[styles.btnNext, loading && styles.btnNextDisabled]} 
+          <TouchableOpacity
+            style={[styles.btnNext, loading && styles.btnNextDisabled]}
             onPress={handleNext}
             disabled={loading}
           >
@@ -437,31 +482,36 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
         showServiceModal,
         () => setShowServiceModal(false),
         '서비스 이용약관',
-        termsData?.service?.contents || '서비스 이용약관 내용을 불러오는 중입니다.'
+        termsData?.service?.contents ||
+          '서비스 이용약관 내용을 불러오는 중입니다.',
       )}
       {renderModal(
         showPrivacyModal,
         () => setShowPrivacyModal(false),
         '개인정보처리방침',
-        termsData?.private_agree?.contents || '개인정보처리방침 내용을 불러오는 중입니다.'
+        termsData?.private_agree?.contents ||
+          '개인정보처리방침 내용을 불러오는 중입니다.',
       )}
       {renderModal(
         showP2PModal,
         () => setShowP2PModal(false),
         '개인(신용)정보\n제3자(P2P자금관리) 제공 동의',
-        termsData?.priv2?.contents || '개인(신용)정보 제3자 제공 동의 내용을 불러오는 중입니다.'
+        termsData?.priv2?.contents ||
+          '개인(신용)정보 제3자 제공 동의 내용을 불러오는 중입니다.',
       )}
       {renderModal(
         showBankModal,
         () => setShowBankModal(false),
         '개인(신용)정보\n제3자(투자금예치은행) 제공 동의',
-        termsData?.nhapi?.contents || '개인(신용)정보 제3자 제공 동의 내용을 불러오는 중입니다.'
+        termsData?.nhapi?.contents ||
+          '개인(신용)정보 제3자 제공 동의 내용을 불러오는 중입니다.',
       )}
       {renderModal(
         showMarketingModal,
         () => setShowMarketingModal(false),
         '마케팅 정보 수집 및 활용 동의',
-        termsData?.marketing?.contents || '마케팅 정보 수집 및 활용에 대한 약관 내용입니다.'
+        termsData?.marketing?.contents ||
+          '마케팅 정보 수집 및 활용에 대한 약관 내용입니다.',
       )}
     </View>
   );

@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Modal,
   ActivityIndicator,
   Clipboard,
   Image,
 } from 'react-native';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const AssetsContent = ({ navigation, route, user, member_id }) => {
   const [loading, setLoading] = useState(true);
@@ -35,26 +35,26 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
     setLoading(true);
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      
+
       if (!memberId) {
         console.warn('⚠️ member_id가 없습니다. 로그인이 필요합니다.');
         setBalance(user?.session?.balance || '0');
         setLoading(false);
         return;
       }
-      
+
       console.log('🔍 자산 정보 조회 시작:', {
         member_id: memberId,
-        url: `${ApiService.baseURL}/app/my/home?member_id=${memberId}`
+        url: `${ApiService.baseURL}/app/my/home?member_id=${memberId}`,
       });
-      
+
       // 자산 정보 조회 API 호출
       const response = await ApiService.api.get('/app/my/home', {
-        params: { member_id: memberId }
+        params: { member_id: memberId },
       });
-      
+
       console.log('✅ 자산 정보 조회 성공:', response.data);
-      
+
       // 투자자 여부 확인 (useBalancePage)
       if (response.data && response.data.useBalancePage === false) {
         // 투자자가 아니면 인증 페이지로 리다이렉트
@@ -64,23 +64,26 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         });
         return;
       }
-      
+
       if (response.data) {
         setAssetData(response.data);
         setBalance(response.data.balance || user?.session?.balance || '0');
       } else {
         setBalance(user?.session?.balance || '0');
       }
-      
+
       // 은행 목록 조회 (실패해도 계속 진행)
       try {
         const banksResponse = await ApiService.api.get('/member/get/banks');
-      if (banksResponse.data) {
-        setBanks(banksResponse.data);
+        if (banksResponse.data) {
+          setBanks(banksResponse.data);
           console.log('✅ 은행 목록 조회 성공:', banksResponse.data);
         }
       } catch (bankError) {
-        console.warn('⚠️ 은행 목록 조회 실패 (무시하고 계속):', bankError.response?.status);
+        console.warn(
+          '⚠️ 은행 목록 조회 실패 (무시하고 계속):',
+          bankError.response?.status,
+        );
         // 은행 목록이 없어도 앱은 계속 작동
       }
     } catch (error) {
@@ -90,12 +93,14 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         statusText: error.response?.statusText,
         url: error.config?.url,
         params: error.config?.params,
-        message: error.message
+        message: error.message,
       });
-      
+
       // 404는 API 엔드포인트가 없거나 데이터가 없는 경우
       if (error.response?.status === 404) {
-        console.warn('⚠️ 자산 정보를 찾을 수 없습니다. (404) - 백엔드 API 확인 필요');
+        console.warn(
+          '⚠️ 자산 정보를 찾을 수 없습니다. (404) - 백엔드 API 확인 필요',
+        );
       }
       setBalance(user?.session?.balance || '0');
     } finally {
@@ -103,7 +108,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = value => {
     if (!value) return '0';
     const stringValue = typeof value === 'string' ? value : String(value);
     const numericValue = stringValue.replace(/[^0-9]/g, '');
@@ -112,12 +117,43 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
 
   const handleRefreshBalance = async () => {
     try {
-      const response = await ApiService.api.post('/app/product/balance/refresh');
+      const memberId = member_id || user?.session?.member_id || user?.id;
+
+      if (!memberId) {
+        Alert.alert('오류', '회원 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      const response = await ApiService.api.post(
+        '/app/product/balance/refresh',
+        { member_id: memberId },
+      );
+      console.log('Balance refresh response:', response.data);
+
       if (response.data) {
-        const newBalance = typeof response.data === 'string' 
-          ? response.data 
-          : response.data.balance || response.data;
-        setBalance(newBalance);
+        // balance 값을 직접 받는 경우
+        if (
+          typeof response.data === 'string' ||
+          typeof response.data === 'number'
+        ) {
+          setBalance(String(response.data));
+        }
+        // rtnvalue가 0이면 성공
+        else if (
+          response.data.rtnvalue === '0' ||
+          response.data.rtnvalue === 0
+        ) {
+          const newBalance =
+            response.data.balance || response.data.data?.balance || '0';
+          setBalance(newBalance);
+        } else {
+          // 실패 시 메시지 표시
+          const errorMessage =
+            response.data.msg ||
+            response.data.message ||
+            '예치금 잔액 확인 처리도중 오류가 발생하였습니다.';
+          Alert.alert('알림', errorMessage);
+        }
       }
     } catch (error) {
       console.error('잔액 갱신 실패:', error);
@@ -125,7 +161,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
     }
   };
 
-  const handleCopyAccount = async (account) => {
+  const handleCopyAccount = async account => {
     try {
       await Clipboard.setString(account);
       Alert.alert('알림', '계좌를 복사했습니다.');
@@ -135,12 +171,16 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
     }
   };
 
-  const handleAddAmount = (amount) => {
+  const handleAddAmount = amount => {
     const currentAmount = withdrawAmount.replace(/[^0-9]/g, '') || '0';
     const currentNumeric = parseInt(currentAmount, 10);
-    const addAmount = amount === 'all' ? (assetData?.refund_bal || parseInt(balance.replace(/[^0-9]/g, ''), 10)) : amount;
+    const addAmount =
+      amount === 'all'
+        ? assetData?.refund_bal || parseInt(balance.replace(/[^0-9]/g, ''), 10)
+        : amount;
     const newAmount = currentNumeric + addAmount;
-    const refundBal = assetData?.refund_bal || parseInt(balance.replace(/[^0-9]/g, ''), 10);
+    const refundBal =
+      assetData?.refund_bal || parseInt(balance.replace(/[^0-9]/g, ''), 10);
     const finalAmount = Math.min(newAmount, refundBal); // 출금 가능 금액을 초과하지 않도록
     setWithdrawAmount(formatCurrency(finalAmount));
   };
@@ -154,7 +194,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
 
     try {
       const reqModes = await ApiService.setReqModes({ reqdata: amount });
-      
+
       Alert.alert(
         '출금신청',
         `(${formatCurrency(amount)}원)을 출금 신청하시겠습니까?`,
@@ -164,7 +204,8 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
             text: '실행',
             onPress: async () => {
               try {
-                const memberId = member_id || user?.session?.member_id || user?.id;
+                const memberId =
+                  member_id || user?.session?.member_id || user?.id;
                 if (!memberId) {
                   Alert.alert('오류', '사용자 ID를 확인할 수 없습니다.');
                   return;
@@ -176,20 +217,25 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                   _bcsrmd1: reqModes.data1,
                   _bcsrmd2: reqModes.data2,
                 };
-                
-                const formData = ApiService.convertToFormData(refundRequestData);
-                
-                const response = await ApiService.api.post('/app/member/process/refund', formData, {
-                  headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+
+                const formData =
+                  ApiService.convertToFormData(refundRequestData);
+
+                const response = await ApiService.api.post(
+                  '/app/member/process/refund',
+                  formData,
+                  {
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded',
+                    },
                   },
-                });
+                );
 
                 const responseData = String(response.data);
 
                 if (responseData === '0') {
                   Alert.alert('출금신청하기', '출금신청이 완료되었습니다.', [
-                    { text: '확인', onPress: () => loadAssetData() }
+                    { text: '확인', onPress: () => loadAssetData() },
                   ]);
                 } else if (responseData === '1') {
                   navigation.navigate('Login');
@@ -198,19 +244,28 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                 } else if (responseData === '4' || responseData === '5') {
                   Alert.alert('예치금 출금', '출금금액이 예치금보다 많습니다.');
                 } else if (responseData === '10') {
-                  Alert.alert('예치금 출금', '직전 출금신청에 대한 내용을 처리중입니다. 잠시후에 다시 요청하세요.');
+                  Alert.alert(
+                    '예치금 출금',
+                    '직전 출금신청에 대한 내용을 처리중입니다. 잠시후에 다시 요청하세요.',
+                  );
                 } else if (responseData === '99') {
-                  Alert.alert('예치금 출금', '은행사와 통신이 원활하지 않습니다.\n잠시 후 다시 요청하세요.');
+                  Alert.alert(
+                    '예치금 출금',
+                    '은행사와 통신이 원활하지 않습니다.\n잠시 후 다시 요청하세요.',
+                  );
                 } else {
-                  Alert.alert('예치금 출금', `[${responseData}] 처리도중 오류가 발생하였습니다.`);
+                  Alert.alert(
+                    '예치금 출금',
+                    `[${responseData}] 처리도중 오류가 발생하였습니다.`,
+                  );
                 }
               } catch (error) {
                 console.error('❌ 출금 신청 오류:', error);
                 Alert.alert('예치금 출금', '처리도중 오류가 발생하였습니다.');
               }
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     } catch (error) {
       Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
@@ -229,24 +284,37 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
 
     try {
       const selectedBankData = banks.find(b => b.bank_cd === selectedBank);
-      const response = await ApiService.api.post('/app/member/process/changeAccount', {
-        bank_cd: selectedBank,
-        bank_nm: selectedBankData?.bank_nm || '',
-        account: accountNumber,
-        bbachk: 'Y',
-      });
+      const response = await ApiService.api.post(
+        '/app/member/process/changeAccount',
+        {
+          bank_cd: selectedBank,
+          bank_nm: selectedBankData?.bank_nm || '',
+          account: accountNumber,
+          bbachk: 'Y',
+        },
+      );
 
       if (response.data === '0') {
         Alert.alert('알림', '계좌가 변경되었습니다.', [
-          { text: '확인', onPress: () => {
-            setShowAccountModal(false);
-            loadAssetData();
-          }}
+          {
+            text: '확인',
+            onPress: () => {
+              setShowAccountModal(false);
+              loadAssetData();
+            },
+          },
         ]);
-      } else if (response.data === '1' || response.data === '2' || response.data === '3') {
+      } else if (
+        response.data === '1' ||
+        response.data === '2' ||
+        response.data === '3'
+      ) {
         Alert.alert('계좌 등록', '잘못된 데이터 입니다.');
       } else if (response.data === '5') {
-        Alert.alert('계좌인증', '확인할 수 없는 계좌입니다.\n계좌를 확인하여 주십시오.');
+        Alert.alert(
+          '계좌인증',
+          '확인할 수 없는 계좌입니다.\n계좌를 확인하여 주십시오.',
+        );
       } else if (response.data === '6') {
         Alert.alert('계좌인증', '인증받은 정보와 계좌주가 일치하지 않습니다.');
       } else {
@@ -260,13 +328,14 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
   const getLimitPrice = () => {
     const memberClass = user?.session?.member_class || '0';
     const ocli = assetData?.ocli || {};
-    
+
     let limitPrice = 0;
     if (memberClass === '10') limitPrice = ocli.class_10 || 0;
     else if (memberClass === '20') limitPrice = ocli.class_20 || 0;
-    else if (memberClass === '30' || memberClass === '40') limitPrice = ocli.class_30 || 0;
+    else if (memberClass === '30' || memberClass === '40')
+      limitPrice = ocli.class_30 || 0;
     else limitPrice = ocli.class_0 || 0;
-    
+
     return limitPrice;
   };
 
@@ -280,10 +349,12 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
 
   const limitPrice = getLimitPrice();
   const refundBal = assetData?.refund_bal || balance;
-  const vAccount = user?.session?.v_account || assetData?.member?.v_account || '';
+  const vAccount =
+    user?.session?.v_account || assetData?.member?.v_account || '';
   const bankNm = user?.session?.bank_nm || assetData?.member?.bank_nm || '';
   const accountDec = assetData?.member?.account_dec || '';
-  const seyfertNm = assetData?.member?.seyfert_nm || user?.session?.r_name || '';
+  const seyfertNm =
+    assetData?.member?.seyfert_nm || user?.session?.r_name || '';
   const totalInvestPrice = assetData?.rpa?.total_invest_price || 0;
 
   return (
@@ -293,135 +364,143 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         <View style={styles.subWhitebox}>
           <View style={styles.subTitleBox}>
             <Text style={styles.title}>나의자산</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.linkButton}
-              onPress={() => navigation.navigate('RepaymentHistory', { user, member_id })}
+              onPress={() =>
+                navigation.navigate('RepaymentHistory', { user, member_id })
+              }
             >
               <Text style={styles.linkButtonText}>연도별 지급액 확인</Text>
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.blBox}>
             <View style={styles.blBoxLeftBorder} />
-          <View style={styles.assetsList}>
-            {/* 예치금 */}
-            <View style={[styles.assetItem, styles.assetItemFirst]}>
-              <View style={styles.assetInbox}>
-                <View style={styles.assetImgbox}>
-                  <Image
-                    source={require('../assets/images/ico_my_assets01.png')}
-                    style={styles.assetIcon}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.assetTxtbox}>
-                  <View style={styles.assetTitleRow}>
-                    <Text style={styles.assetTitle}>예치금</Text>
-                    <TouchableOpacity 
-                      style={styles.refreshButton}
-                      onPress={handleRefreshBalance}
-                    >
-                      <Image
-                        source={require('../assets/images/ico_refresh.png')}
-                        style={styles.refreshIcon}
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacity>
+            <View style={styles.assetsList}>
+              {/* 예치금 */}
+              <View style={[styles.assetItem, styles.assetItemFirst]}>
+                <View style={styles.assetInbox}>
+                  <View style={styles.assetImgbox}>
+                    <Image
+                      source={require('../assets/images/ico_my_assets01.png')}
+                      style={styles.assetIcon}
+                      resizeMode="contain"
+                    />
                   </View>
-                  <Text style={styles.assetValue}>
-                    {formatCurrency(balance)}
-                    <Text style={styles.assetUnit}>원</Text>
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* 총 누적 투자금액 */}
-            <View style={styles.assetItem}>
-              <View style={styles.assetInbox}>
-                <View style={styles.assetImgbox}>
-                  <Image
-                    source={require('../assets/images/ico_my_assets02.png')}
-                    style={styles.assetIcon}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.assetTxtbox}>
-                  <View style={styles.assetTitleRow}>
-                    <Text style={styles.assetTitle}>총 누적 투자금액</Text>
-                    <View style={styles.tipButtonContainer}>
-                      <TouchableOpacity 
-                        style={styles.tipButton}
-                        onPress={() => setShowInvestTooltip(!showInvestTooltip)}
+                  <View style={styles.assetTxtbox}>
+                    <View style={styles.assetTitleRow}>
+                      <Text style={styles.assetTitle}>예치금</Text>
+                      <TouchableOpacity
+                        style={styles.refreshButton}
+                        onPress={handleRefreshBalance}
                       >
                         <Image
-                          source={require('../assets/images/ico_tip.png')}
-                          style={styles.tipIcon}
+                          source={require('../assets/images/ico_refresh.png')}
+                          style={styles.refreshIcon}
                           resizeMode="contain"
                         />
                       </TouchableOpacity>
-                      {showInvestTooltip && (
-                        <View style={styles.tooltip}>
-                          <Text style={styles.tooltipText}>루트펀드에 투자한 총 투자 원금</Text>
-                          <View style={styles.tooltipArrow} />
-                        </View>
-                      )}
                     </View>
+                    <Text style={styles.assetValue}>
+                      {formatCurrency(balance)}
+                      <Text style={styles.assetUnit}>원</Text>
+                    </Text>
                   </View>
-                  <Text style={styles.assetValue}>
-                    {formatCurrency(totalInvestPrice)}
-                    <Text style={styles.assetUnit}>원</Text>
-                  </Text>
                 </View>
               </View>
-            </View>
 
-            {/* 이용가능한도 */}
-            <View style={styles.assetItem}>
-              <View style={styles.assetInbox}>
-                <View style={styles.assetImgbox}>
-                  <Image
-                    source={require('../assets/images/ico_my_assets03.png')}
-                    style={styles.assetIcon}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.assetTxtbox}>
-                  <View style={styles.assetTitleRow}>
-                    <Text style={styles.assetTitle}>이용가능한도</Text>
-                    <View style={styles.tipButtonContainer}>
-                      <TouchableOpacity 
-                        style={styles.tipButton}
-                        onPress={() => setShowLimitTooltip(!showLimitTooltip)}
-                      >
-                        <Image
-                          source={require('../assets/images/ico_tip.png')}
-                          style={styles.tipIcon}
-                          resizeMode="contain"
-                        />
-                      </TouchableOpacity>
-                      {showLimitTooltip && (
-                        <View style={styles.tooltip}>
-                          <Text style={styles.tooltipText}>온투업권 전체 한도 중 투자 가능한 잔여 한도</Text>
-                          <View style={styles.tooltipArrow} />
-                        </View>
-                      )}
-                    </View>
+              {/* 총 누적 투자금액 */}
+              <View style={styles.assetItem}>
+                <View style={styles.assetInbox}>
+                  <View style={styles.assetImgbox}>
+                    <Image
+                      source={require('../assets/images/ico_my_assets02.png')}
+                      style={styles.assetIcon}
+                      resizeMode="contain"
+                    />
                   </View>
-                  <Text style={styles.assetValue}>
-                    {limitPrice > 0 ? (
-                      <>
-                        {formatCurrency(limitPrice)}
-                        <Text style={styles.assetUnit}>원</Text>
-                        <Text style={styles.assetTotal}> / 20,000,000원</Text>
-                      </>
-                    ) : (
-                      '제한없음'
-                    )}
-                  </Text>
+                  <View style={styles.assetTxtbox}>
+                    <View style={styles.assetTitleRow}>
+                      <Text style={styles.assetTitle}>총 누적 투자금액</Text>
+                      <View style={styles.tipButtonContainer}>
+                        <TouchableOpacity
+                          style={styles.tipButton}
+                          onPress={() =>
+                            setShowInvestTooltip(!showInvestTooltip)
+                          }
+                        >
+                          <Image
+                            source={require('../assets/images/ico_tip.png')}
+                            style={styles.tipIcon}
+                            resizeMode="contain"
+                          />
+                        </TouchableOpacity>
+                        {showInvestTooltip && (
+                          <View style={styles.tooltip}>
+                            <Text style={styles.tooltipText}>
+                              루트펀드에 투자한 총 투자 원금
+                            </Text>
+                            <View style={styles.tooltipArrow} />
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <Text style={styles.assetValue}>
+                      {formatCurrency(totalInvestPrice)}
+                      <Text style={styles.assetUnit}>원</Text>
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
+
+              {/* 이용가능한도 */}
+              <View style={styles.assetItem}>
+                <View style={styles.assetInbox}>
+                  <View style={styles.assetImgbox}>
+                    <Image
+                      source={require('../assets/images/ico_my_assets03.png')}
+                      style={styles.assetIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View style={styles.assetTxtbox}>
+                    <View style={styles.assetTitleRow}>
+                      <Text style={styles.assetTitle}>이용가능한도</Text>
+                      <View style={styles.tipButtonContainer}>
+                        <TouchableOpacity
+                          style={styles.tipButton}
+                          onPress={() => setShowLimitTooltip(!showLimitTooltip)}
+                        >
+                          <Image
+                            source={require('../assets/images/ico_tip.png')}
+                            style={styles.tipIcon}
+                            resizeMode="contain"
+                          />
+                        </TouchableOpacity>
+                        {showLimitTooltip && (
+                          <View style={styles.tooltip}>
+                            <Text style={styles.tooltipText} numberOfLines={1}>
+                              온투업권 전체 한도 중 투자 가능한 잔여 한도
+                            </Text>
+                            <View style={styles.tooltipArrow} />
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <Text style={styles.assetValue}>
+                      {limitPrice > 0 ? (
+                        <>
+                          {formatCurrency(limitPrice)}
+                          <Text style={styles.assetUnit}>원</Text>
+                          <Text style={styles.assetTotal}> / 20,000,000원</Text>
+                        </>
+                      ) : (
+                        '제한없음'
+                      )}
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </View>
           </View>
         </View>
@@ -442,8 +521,12 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                   />
                 </View>
                 <View style={styles.methodTxtbox}>
-                  <Text style={styles.methodTit}>개인전용{'\n'}가상계좌번호 확인</Text>
-                  <Text style={styles.methodTxt}>아래 가상계좌번호를{'\n'}확인해주세요</Text>
+                  <Text style={styles.methodTit}>
+                    개인전용{'\n'}가상계좌번호 확인
+                  </Text>
+                  <Text style={styles.methodTxt}>
+                    아래 가상계좌번호를{'\n'}확인해주세요
+                  </Text>
                 </View>
               </View>
             </View>
@@ -458,7 +541,9 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                 </View>
                 <View style={styles.methodTxtbox}>
                   <Text style={styles.methodTit}>예치금 입금</Text>
-                  <Text style={styles.methodTxt}>*가입 시 등록한{'\n'}출금계좌에서만 입금가능</Text>
+                  <Text style={styles.methodTxt}>
+                    *가입 시 등록한{'\n'}출금계좌에서만 입금가능
+                  </Text>
                 </View>
               </View>
             </View>
@@ -483,9 +568,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         {/* 입출금 관리 */}
         <View style={styles.subTitleBoxStandalone}>
           <Text style={styles.title}>입출금 관리</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => navigation.navigate('BalanceHistory', { user, member_id })}
+            onPress={() =>
+              navigation.navigate('BalanceHistory', { user, member_id })
+            }
           >
             <Text style={styles.linkButtonText}>입출금내역</Text>
           </TouchableOpacity>
@@ -494,18 +581,34 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         {/* 탭 메뉴 */}
         <View style={styles.subTab}>
           <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'deposit' && styles.tabItemActive]}
+            style={[
+              styles.tabItem,
+              activeTab === 'deposit' && styles.tabItemActive,
+            ]}
             onPress={() => setActiveTab('deposit')}
           >
-            <Text style={[styles.tabText, activeTab === 'deposit' && styles.tabTextActive]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'deposit' && styles.tabTextActive,
+              ]}
+            >
               투자금 입금
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'withdraw' && styles.tabItemActive]}
+            style={[
+              styles.tabItem,
+              activeTab === 'withdraw' && styles.tabItemActive,
+            ]}
             onPress={() => setActiveTab('withdraw')}
           >
-            <Text style={[styles.tabText, activeTab === 'withdraw' && styles.tabTextActive]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'withdraw' && styles.tabTextActive,
+              ]}
+            >
               투자금 출금
             </Text>
           </TouchableOpacity>
@@ -516,16 +619,16 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
           <View style={styles.tabContent}>
             <View style={styles.myMgmt}>
               <View style={styles.myBank}>
-              <View style={styles.bankImgbox}>
-                <Image
-                  source={require('../assets/images/img_my_rootenergy.png')}
-                  style={styles.bankImage}
-                  resizeMode="contain"
-                />
-              </View>
-              <View style={styles.bankTxtbox}>
+                <View style={styles.bankImgbox}>
+                  <Image
+                    source={require('../assets/images/img_my_rootenergy.png')}
+                    style={styles.bankImage}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.bankTxtbox}>
                   <View style={[styles.bankRow, styles.bankRowFirst]}>
-                  <Text style={styles.bankLabel}>은행명</Text>
+                    <Text style={styles.bankLabel}>은행명</Text>
                     <View style={styles.bankValueContainer}>
                       <Image
                         source={require('../assets/images/logo_bank_nh.png')}
@@ -533,72 +636,79 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                         resizeMode="contain"
                       />
                     </View>
-                </View>
-                <View style={styles.bankRow}>
-                  <Text style={styles.bankLabel}>예금주</Text>
+                  </View>
+                  <View style={styles.bankRow}>
+                    <Text style={styles.bankLabel}>예금주</Text>
                     <View style={styles.bankValueContainer}>
-                  <Text style={styles.bankValue}>{seyfertNm}</Text>
+                      <Text style={styles.bankValue}>{seyfertNm}</Text>
                     </View>
-                </View>
-                <View style={styles.bankRow}>
-                  <Text style={styles.bankLabel}>투자금 입금 계좌</Text>
+                  </View>
+                  <View style={styles.bankRow}>
+                    <Text style={styles.bankLabel}>투자금 입금 계좌</Text>
                     <View style={styles.bankValueContainer}>
-                  <View style={styles.accountRow}>
-                    <Text style={styles.accountValue}>{vAccount || '-'}</Text>
-                    {vAccount && (
-                      <TouchableOpacity
-                        style={styles.copyButton}
-                        onPress={() => handleCopyAccount(vAccount)}
-                      >
-                        <Image
-                          source={require('../assets/images/ico_copy.png')}
-                          style={styles.copyIcon}
-                          resizeMode="contain"
-                        />
-                      </TouchableOpacity>
-                    )}
+                      <View style={styles.accountRow}>
+                        <Text style={styles.accountValue}>
+                          {vAccount || '-'}
+                        </Text>
+                        {vAccount && (
+                          <TouchableOpacity
+                            style={styles.copyButton}
+                            onPress={() => handleCopyAccount(vAccount)}
+                          >
+                            <Image
+                              source={require('../assets/images/ico_copy.png')}
+                              style={styles.copyIcon}
+                              resizeMode="contain"
+                            />
+                          </TouchableOpacity>
+                        )}
                       </View>
+                    </View>
                   </View>
                 </View>
               </View>
-            </View>
 
-            <View style={styles.flexText}>
-              <Image
-                source={require('../assets/images/bg_method.png')}
-                style={styles.flexTextImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.flexText}>
-              <Text style={styles.flexTextNone}>*</Text>
-              <Text style={styles.flexTextContent}>
-                <Text style={styles.flexTextStrong}>본인명의 타행계좌 : </Text>
-                본인명의 타행계좌로는 입금할 수 없습니다.{'\n'}
-                루트펀드에 등록된 출금계좌가 주거래 은행이 아닌 경우 출금계좌를 변경하여 이용할 수 있습니다.
-              </Text>
-            </View>
-            <View style={styles.flexText}>
-              <Text style={styles.flexTextNone}>*</Text>
-              <Text style={styles.flexTextContent}>
-                <Text style={styles.flexTextStrong}>간편송금 : </Text>
-                토스, 카카오페이 등 간편송금을 통한 입금이 불가능 합니다.
-              </Text>
-            </View>
-            <View style={styles.flexText}>
-              <Text style={styles.flexTextNone}>*</Text>
-              <Text style={styles.flexTextContent}>
-                <Text style={styles.flexTextStrong}>오픈뱅킹 : </Text>
-                타행 은행 인터넷 뱅킹 혹은 모바일 뱅킹에서 오픈뱅킹을 통한 입금이 불가능 합니다.
-              </Text>
-            </View>
-            <View style={styles.flexText}>
-              <Text style={styles.flexTextNone}>*</Text>
-              <Text style={styles.flexTextContent}>
-                <Text style={styles.flexTextStrong}>은행 방문 이용 : </Text>
-                등록된 투자금 출금 계좌가 농협이 아닌 경우 창구, ATM에서 입금이 불가능합니다.
-              </Text>
-            </View>
+              <View style={styles.flexText}>
+                <Image
+                  source={require('../assets/images/bg_method.png')}
+                  style={styles.flexTextImage}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.flexText}>
+                <Text style={styles.flexTextNone}>*</Text>
+                <Text style={styles.flexTextContent}>
+                  <Text style={styles.flexTextStrong}>
+                    본인명의 타행계좌 :{' '}
+                  </Text>
+                  본인명의 타행계좌로는 입금할 수 없습니다.{'\n'}
+                  루트펀드에 등록된 출금계좌가 주거래 은행이 아닌 경우
+                  출금계좌를 변경하여 이용할 수 있습니다.
+                </Text>
+              </View>
+              <View style={styles.flexText}>
+                <Text style={styles.flexTextNone}>*</Text>
+                <Text style={styles.flexTextContent}>
+                  <Text style={styles.flexTextStrong}>간편송금 : </Text>
+                  토스, 카카오페이 등 간편송금을 통한 입금이 불가능 합니다.
+                </Text>
+              </View>
+              <View style={styles.flexText}>
+                <Text style={styles.flexTextNone}>*</Text>
+                <Text style={styles.flexTextContent}>
+                  <Text style={styles.flexTextStrong}>오픈뱅킹 : </Text>
+                  타행 은행 인터넷 뱅킹 혹은 모바일 뱅킹에서 오픈뱅킹을 통한
+                  입금이 불가능 합니다.
+                </Text>
+              </View>
+              <View style={styles.flexText}>
+                <Text style={styles.flexTextNone}>*</Text>
+                <Text style={styles.flexTextContent}>
+                  <Text style={styles.flexTextStrong}>은행 방문 이용 : </Text>
+                  등록된 투자금 출금 계좌가 농협이 아닌 경우 창구, ATM에서
+                  입금이 불가능합니다.
+                </Text>
+              </View>
             </View>
           </View>
         )}
@@ -608,117 +718,123 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
           <View style={styles.tabContent}>
             <View style={styles.myMgmt}>
               <View style={styles.myBank}>
-              <View style={styles.bankImgbox}>
-                <Image
-                  source={require('../assets/images/img_my_rootenergy.png')}
-                  style={styles.bankImage}
-                  resizeMode="contain"
-                />
-              </View>
-              <View style={styles.bankTxtbox}>
+                <View style={styles.bankImgbox}>
+                  <Image
+                    source={require('../assets/images/img_my_rootenergy.png')}
+                    style={styles.bankImage}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.bankTxtbox}>
                   <View style={[styles.bankRow, styles.bankRowFirst]}>
-                  <Text style={styles.bankLabel}>은행명</Text>
+                    <Text style={styles.bankLabel}>은행명</Text>
                     <View style={styles.bankValueContainer}>
                       <Text style={styles.bankValue}>{bankNm || '-'}</Text>
                     </View>
                     <View style={styles.widFull}>
                       <TouchableOpacity
                         style={styles.changeButton}
-                        onPress={() => navigation.navigate('AccountChangeWithHeader')}
+                        onPress={() =>
+                          navigation.navigate('AccountChangeWithHeader')
+                        }
                       >
                         <Text style={styles.changeButtonText}>계좌변경</Text>
                       </TouchableOpacity>
                     </View>
-                </View>
-                <View style={styles.bankRow}>
-                  <Text style={styles.bankLabel}>예금주</Text>
+                  </View>
+                  <View style={styles.bankRow}>
+                    <Text style={styles.bankLabel}>예금주</Text>
                     <View style={styles.bankValueContainer}>
-                  <Text style={styles.bankValue}>{user?.session?.r_name || '-'}</Text>
+                      <Text style={styles.bankValue}>
+                        {user?.session?.r_name || '-'}
+                      </Text>
                     </View>
-                </View>
-                <View style={styles.bankRow}>
-                  <Text style={styles.bankLabel}>투자금 출금 계좌</Text>
+                  </View>
+                  <View style={styles.bankRow}>
+                    <Text style={styles.bankLabel}>투자금 출금 계좌</Text>
                     <View style={styles.bankValueContainer}>
-                  <Text style={styles.bankValue}>{accountDec || '-'}</Text>
+                      <Text style={styles.bankValue}>{accountDec || '-'}</Text>
                     </View>
+                  </View>
                 </View>
               </View>
-            </View>
 
               <View style={styles.myAmount}>
-              <Text style={styles.amountLabel}>출금 가능 금액</Text>
-              <Text style={styles.amountValue}>
-                {formatCurrency(refundBal)}원
-              </Text>
-            </View>
+                <Text style={styles.amountLabel}>출금 가능 금액</Text>
+                <Text style={styles.amountValue}>
+                  {formatCurrency(refundBal)}원
+                </Text>
+              </View>
 
               <View style={styles.flexInput}>
-              <TextInput
-                style={styles.amountInput}
-                value={withdrawAmount}
-                onChangeText={(text) => {
-                  const numeric = text.replace(/[^0-9]/g, '');
-                  setWithdrawAmount(formatCurrency(numeric));
-                }}
-                placeholder="출금금액 입력"
-                keyboardType="numeric"
-              />
-              <Text style={styles.unitText}>원</Text>
-            </View>
-            
-            <View style={styles.amountButtonContainer}>
-              <TouchableOpacity
-                style={styles.amountButton}
-                onPress={() => handleAddAmount(10000)}
-              >
-                <Text style={styles.amountButtonText}>+1만</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.amountButton}
-                onPress={() => handleAddAmount(50000)}
-              >
-                <Text style={styles.amountButtonText}>+5만</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.amountButton}
-                onPress={() => handleAddAmount(100000)}
-              >
-                <Text style={styles.amountButtonText}>+10만</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.amountButton}
-                onPress={() => handleAddAmount(1000000)}
-              >
-                <Text style={styles.amountButtonText}>+100만</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.amountButton}
-                onPress={() => handleAddAmount('all')}
-              >
-                <Text style={styles.amountButtonText}>전액</Text>
-              </TouchableOpacity>
-            </View>
+                <TextInput
+                  style={styles.amountInput}
+                  value={withdrawAmount}
+                  onChangeText={text => {
+                    const numeric = text.replace(/[^0-9]/g, '');
+                    setWithdrawAmount(formatCurrency(numeric));
+                  }}
+                  placeholder="출금금액 입력"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.unitText}>원</Text>
+              </View>
+
+              <View style={styles.amountButtonContainer}>
+                <TouchableOpacity
+                  style={styles.amountButton}
+                  onPress={() => handleAddAmount(10000)}
+                >
+                  <Text style={styles.amountButtonText}>+1만</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.amountButton}
+                  onPress={() => handleAddAmount(50000)}
+                >
+                  <Text style={styles.amountButtonText}>+5만</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.amountButton}
+                  onPress={() => handleAddAmount(100000)}
+                >
+                  <Text style={styles.amountButtonText}>+10만</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.amountButton}
+                  onPress={() => handleAddAmount(1000000)}
+                >
+                  <Text style={styles.amountButtonText}>+100만</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.amountButton}
+                  onPress={() => handleAddAmount('all')}
+                >
+                  <Text style={styles.amountButtonText}>전액</Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.btnBox}>
-            <TouchableOpacity
-              style={styles.withdrawButton}
-              onPress={handleWithdraw}
-            >
-              <Text style={styles.withdrawButtonText}>출금신청</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.withdrawButton}
+                  onPress={handleWithdraw}
+                >
+                  <Text style={styles.withdrawButtonText}>출금신청</Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.flexText}>
                 <Text style={styles.flexTextNone}>*</Text>
                 <Text style={styles.flexTextContent}>
                   계좌변경은 본인명의 계좌로만 가능합니다.
-              </Text>
-            </View>
+                </Text>
+              </View>
               <View style={styles.flexText}>
                 <Text style={styles.flexTextNone}>*</Text>
                 <Text style={styles.flexTextContent}>
-                  신한은행, 우리은행, 신협의 경우 (구)계좌는 이용이 불가능하며, 신 계좌번호(신한 110, 우리 1002, 신협 13 으로 시작)만 이용 가능 합니다.
-              </Text>
+                  신한은행, 우리은행, 신협의 경우 (구)계좌는 이용이 불가능하며,
+                  신 계좌번호(신한 110, 우리 1002, 신협 13 으로 시작)만 이용
+                  가능 합니다.
+                </Text>
               </View>
             </View>
           </View>
@@ -726,80 +842,74 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
       </ScrollView>
 
       {/* 출금계좌 변경 모달 */}
-      <Modal
+      <AppModal
         visible={showAccountModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAccountModal(false)}
+        title="출금계좌 변경"
+        onClose={() => setShowAccountModal(false)}
+        secondaryAction={{
+          text: '취소',
+          onPress: () => setShowAccountModal(false),
+        }}
+        primaryAction={{
+          text: '변경',
+          onPress: handleChangeAccount,
+        }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>출금계좌 변경</Text>
-            
-            <View style={styles.modalBody}>
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>예금주</Text>
-                <Text style={styles.modalValue}>{user?.session?.r_name || '-'}</Text>
-              </View>
-              
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>은행선택</Text>
-                <View style={styles.selectContainer}>
-                  {banks.length > 0 ? (
-                    <ScrollView style={styles.selectScroll}>
-                      {banks.map((bank) => (
-                        <TouchableOpacity
-                          key={bank.bank_cd}
-                          style={[
-                            styles.selectOption,
-                            selectedBank === bank.bank_cd && styles.selectOptionActive
-                          ]}
-                          onPress={() => setSelectedBank(bank.bank_cd)}
-                        >
-                          <Text style={[
-                            styles.selectOptionText,
-                            selectedBank === bank.bank_cd && styles.selectOptionTextActive
-                          ]}>
-                            {bank.bank_nm}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  ) : (
-                    <Text style={styles.selectPlaceholder}>은행 목록을 불러오는 중...</Text>
-                  )}
-                </View>
-              </View>
-              
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>계좌번호</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={accountNumber}
-                  onChangeText={setAccountNumber}
-                  placeholder="기호('-')없이 숫자만 입력"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
+        <View style={styles.modalBody}>
+          <View style={styles.modalRow}>
+            <Text style={styles.modalLabel}>예금주</Text>
+            <Text style={styles.modalValue}>
+              {user?.session?.r_name || '-'}
+            </Text>
+          </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setShowAccountModal(false)}
-              >
-                <Text style={styles.modalButtonText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
-                onPress={handleChangeAccount}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>변경</Text>
-              </TouchableOpacity>
+          <View style={styles.modalRow}>
+            <Text style={styles.modalLabel}>은행선택</Text>
+            <View style={styles.selectContainer}>
+              {banks.length > 0 ? (
+                <ScrollView style={styles.selectScroll}>
+                  {banks.map(bank => (
+                    <TouchableOpacity
+                      key={bank.bank_cd}
+                      style={[
+                        styles.selectOption,
+                        selectedBank === bank.bank_cd &&
+                          styles.selectOptionActive,
+                      ]}
+                      onPress={() => setSelectedBank(bank.bank_cd)}
+                    >
+                      <Text
+                        style={[
+                          styles.selectOptionText,
+                          selectedBank === bank.bank_cd &&
+                            styles.selectOptionTextActive,
+                        ]}
+                      >
+                        {bank.bank_nm}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : (
+                <Text style={styles.selectPlaceholder}>
+                  은행 목록을 불러오는 중...
+                </Text>
+              )}
             </View>
           </View>
+
+          <View style={styles.modalRow}>
+            <Text style={styles.modalLabel}>계좌번호</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={accountNumber}
+              onChangeText={setAccountNumber}
+              placeholder="기호('-')없이 숫자만 입력"
+              keyboardType="numeric"
+            />
+          </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {(showInvestTooltip || showLimitTooltip) && (
         <TouchableOpacity
@@ -965,13 +1075,11 @@ const styles = StyleSheet.create({
   tooltip: {
     position: 'absolute',
     bottom: 22,
-    left: -90,
+    left: -120,
     backgroundColor: '#393f44',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    minWidth: 200,
-    maxWidth: 280,
     zIndex: 1000,
     elevation: 10,
   },
@@ -1056,7 +1164,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
     overflow: 'hidden',
-    minHeight: 165,
+    minHeight: 175,
   },
   methodImgbox: {
     position: 'absolute',

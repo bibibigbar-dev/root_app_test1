@@ -20,7 +20,7 @@ const LoanScreen = ({ navigation, route }) => {
     try {
       const userData = await AsyncStorage.getItem('userData');
       const userToken = await AsyncStorage.getItem('userToken');
-      
+
       if (userData && userToken) {
         // 로그인 상태 - 대출 상담 신청 페이지로 이동
         const user = JSON.parse(userData);
@@ -45,10 +45,12 @@ const LoanScreen = ({ navigation, route }) => {
               <Text style={styles.tagText}>대출</Text>
             </View>
             <Text style={styles.title}>저탄소 사업을 위한{'\n'}금융조달</Text>
-            <Text style={styles.titleP}>루트펀드에서 편하게{'\n'}상담 받아보세요</Text>
+            <Text style={styles.titleP}>
+              루트펀드에서 편하게{'\n'}상담 받아보세요
+            </Text>
             <View style={styles.visualBanner}>
-              <Image 
-                source={require('../assets/images/img_sub_visual_banner.png')} 
+              <Image
+                source={require('../assets/images/img_sub_visual_banner.png')}
                 style={styles.visualBannerImg}
                 resizeMode="contain"
               />
@@ -62,8 +64,8 @@ const LoanScreen = ({ navigation, route }) => {
             기후금융 플랫폼{'\n'}저탄소 사업자와 가치투자자를{'\n'}연결합니다
           </Text>
           <View style={styles.connectionImgbox}>
-            <Image 
-              source={require('../assets/images/img_sub_guide_connection.png')} 
+            <Image
+              source={require('../assets/images/img_sub_guide_connection.png')}
               style={styles.connectionImg}
               resizeMode="contain"
             />
@@ -76,19 +78,34 @@ const LoanScreen = ({ navigation, route }) => {
             루트펀드 대출 상품이{'\n'}좋은 이유
           </Text>
           <Text style={styles.subTitlePGuide}>
-            루트펀드는 K-택소노미 사업에 필요한{'\n'}금융 지원을 확대하고 있습니다.
+            루트펀드는 K-택소노미 사업에 필요한{'\n'}금융 지원을 확대하고
+            있습니다.
           </Text>
           <View style={styles.reasonList}>
-            <View style={styles.reasonItem}><Text style={styles.reasonText}>토지 소유권 확보 전에도 대출 💰</Text></View>
-            <View style={styles.reasonItem}><Text style={styles.reasonText}>총 공사비의 최대 90% 💸</Text></View>
-            <View style={styles.reasonItem}><Text style={styles.reasonText}>REC 계약 없이도 가능 📋</Text></View>
-            <View style={styles.reasonItem}><Text style={styles.reasonText}>중도상환수수료 없음 🚫</Text></View>
-            <View style={styles.reasonItem}><Text style={styles.reasonText}>신용등급 영향 없음 🔒</Text></View>
-            <View style={styles.reasonItem}><Text style={styles.reasonText}>지역 수용성 상승 🗺</Text></View>
+            <View style={styles.reasonItem}>
+              <Text style={styles.reasonText}>
+                토지 소유권 확보 전에도 대출 💰
+              </Text>
+            </View>
+            <View style={styles.reasonItem}>
+              <Text style={styles.reasonText}>총 공사비의 최대 90% 💸</Text>
+            </View>
+            <View style={styles.reasonItem}>
+              <Text style={styles.reasonText}>REC 계약 없이도 가능 📋</Text>
+            </View>
+            <View style={styles.reasonItem}>
+              <Text style={styles.reasonText}>중도상환수수료 없음 🚫</Text>
+            </View>
+            <View style={styles.reasonItem}>
+              <Text style={styles.reasonText}>신용등급 영향 없음 🔒</Text>
+            </View>
+            <View style={styles.reasonItem}>
+              <Text style={styles.reasonText}>지역 수용성 상승 🗺</Text>
+            </View>
           </View>
           <View style={styles.reasonImgbox}>
-            <Image 
-              source={require('../assets/images/img_sub_guide_reason.png')} 
+            <Image
+              source={require('../assets/images/img_sub_guide_reason.png')}
               style={styles.reasonImg}
               resizeMode="contain"
             />
@@ -101,33 +118,48 @@ const LoanScreen = ({ navigation, route }) => {
             상황에 맞는{'\n'}대출을 선택하세요
           </Text>
           <Text style={styles.subTitlePGuide}>
-            루트펀드 대출 상품은 설치부지 확정 및 인허가가{'\n'}완료된 중·소규모재생에너지 (태양광, 풍력, ESS등){'\n'}발전사업자를 중심으로 대출이 이루어지며,{'\n'}단기 준공자금 대출 상품과 장기 운영자금 대출 상품을{'\n'}제공합니다.
+            루트펀드 대출 상품은 설치부지 확정 및 인허가가{'\n'}완료된
+            중·소규모재생에너지 (태양광, 풍력, ESS등){'\n'}발전사업자를 중심으로
+            대출이 이루어지며,{'\n'}단기 준공자금 대출 상품과 장기 운영자금 대출
+            상품을{'\n'}제공합니다.
           </Text>
 
           <Text style={styles.viewTitle}>대출 전 조건</Text>
           <View style={styles.condition}>
             <View style={styles.conditionItem}>
               <View style={styles.conditionImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_sub_guide_condition01.png')} 
+                <Image
+                  source={require('../assets/images/ico_sub_guide_condition01.png')}
                   style={styles.conditionImg}
                   resizeMode="contain"
                 />
               </View>
-              <Text style={styles.conditionTit}>사업부지 소유{'\n'}혹은 임대</Text>
-              <Text style={styles.conditionTxt}>토지 매매 혹은{'\n'}임대 계약 완료</Text>
+              <Text style={styles.conditionTit}>
+                사업부지 소유{'\n'}혹은 임대
+              </Text>
+              <Text style={styles.conditionTxt}>
+                토지 매매 혹은{'\n'}임대 계약 완료
+              </Text>
             </View>
-            <View style={styles.conditionDivider} />
+            <View style={styles.conditionDivider}>
+              <Image
+                source={require('../assets/images/ico_plus_blue.png')}
+                style={styles.conditionDividerIcon}
+                resizeMode="contain"
+              />
+            </View>
             <View style={styles.conditionItem}>
               <View style={styles.conditionImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_sub_guide_condition02.png')} 
+                <Image
+                  source={require('../assets/images/ico_sub_guide_condition02.png')}
                   style={styles.conditionImg}
                   resizeMode="contain"
                 />
               </View>
               <Text style={styles.conditionTit}>인허가{'\n'}완료</Text>
-              <Text style={styles.conditionTxt}>발전사업, 개발행위{'\n'}PPA접수 인허가 미비 시{'\n'}별도 문의</Text>
+              <Text style={styles.conditionTxt}>
+                발전사업, 개발행위{'\n'}PPA접수 인허가 미비 시{'\n'}별도 문의
+              </Text>
             </View>
           </View>
 
@@ -138,21 +170,24 @@ const LoanScreen = ({ navigation, route }) => {
             </View>
             <View style={styles.itemboxCon}>
               <Text style={styles.itemboxTxt}>
-                <Text style={styles.strong}>인허가가 완료</Text>된 사업을 대상으로 발전소{'\n'}
+                <Text style={styles.strong}>인허가가 완료</Text>된 사업을
+                대상으로 발전소{'\n'}
                 <Text style={styles.strong}>건설자금</Text>을 제공합니다.{'\n'}
                 상환 기간 동안 안전하게 건설하고,{'\n'}
                 준공 후 은행 시설자금대출 등으로 상환합니다.
               </Text>
               <View style={styles.itemboxImgbox}>
-                <Image 
-                  source={require('../assets/images/img_sub_guide_view1.png')} 
+                <Image
+                  source={require('../assets/images/img_sub_guide_view1.png')}
                   style={styles.itemboxImg}
                   resizeMode="contain"
                 />
               </View>
               <View style={styles.itemboxDl}>
                 <Text style={styles.dlDt}>대출 규모</Text>
-                <Text style={styles.dlDd}>총 사업비의 <Text style={styles.colorBlue}>50~90%</Text></Text>
+                <Text style={styles.dlDd}>
+                  총 사업비의 <Text style={styles.colorBlue}>50~90%</Text>
+                </Text>
               </View>
               <View style={styles.itemboxDl}>
                 <Text style={styles.dlDt}>상환 기간</Text>
@@ -160,7 +195,9 @@ const LoanScreen = ({ navigation, route }) => {
               </View>
               <View style={styles.itemboxDl}>
                 <Text style={styles.dlDt}>이자율</Text>
-                <Text style={styles.dlDd}><Text style={styles.colorBlue}>8~13%</Text> 이자율(년)</Text>
+                <Text style={styles.dlDd}>
+                  <Text style={styles.colorBlue}>8~13%</Text> 이자율(년)
+                </Text>
               </View>
             </View>
           </View>
@@ -172,20 +209,23 @@ const LoanScreen = ({ navigation, route }) => {
             </View>
             <View style={styles.itemboxCon}>
               <Text style={styles.itemboxTxt}>
-                <Text style={styles.strong}>운영 중인 발전소</Text>를 담보로 <Text style={styles.strong}>운영자금</Text>을 제공합니다.{'\n'}
+                <Text style={styles.strong}>운영 중인 발전소</Text>를 담보로{' '}
+                <Text style={styles.strong}>운영자금</Text>을 제공합니다.{'\n'}
                 발전소 가치를 평가하여 자금이 지급되고,{'\n'}
                 발전소 매출로 상환합니다.
               </Text>
               <View style={styles.itemboxImgbox}>
-                <Image 
-                  source={require('../assets/images/img_sub_guide_view2.png')} 
+                <Image
+                  source={require('../assets/images/img_sub_guide_view2.png')}
                   style={styles.itemboxImg}
                   resizeMode="contain"
                 />
               </View>
               <View style={styles.itemboxDl}>
                 <Text style={styles.dlDt}>대출 규모</Text>
-                <Text style={styles.dlDd}>총 사업비의 <Text style={styles.colorMint}>50~90%</Text></Text>
+                <Text style={styles.dlDd}>
+                  총 사업비의 <Text style={styles.colorMint}>50~90%</Text>
+                </Text>
               </View>
               <View style={styles.itemboxDl}>
                 <Text style={styles.dlDt}>상환 기간</Text>
@@ -193,11 +233,16 @@ const LoanScreen = ({ navigation, route }) => {
               </View>
               <View style={styles.itemboxDl}>
                 <Text style={styles.dlDt}>이자율</Text>
-                <Text style={styles.dlDd}><Text style={styles.colorMint}>6~10%</Text> 이자율(년)</Text>
+                <Text style={styles.dlDd}>
+                  <Text style={styles.colorMint}>6~10%</Text> 이자율(년)
+                </Text>
               </View>
               <View style={styles.itemboxDl}>
                 <Text style={styles.dlDt}>배당</Text>
-                <Text style={styles.dlDd}>6~12개월 마다 <Text style={styles.colorMint}>사업주 배당</Text> 가능</Text>
+                <Text style={styles.dlDd}>
+                  6~12개월 마다{' '}
+                  <Text style={styles.colorMint}>사업주 배당</Text> 가능
+                </Text>
               </View>
               <View style={styles.itemboxDl}>
                 <Text style={styles.dlDt}>혜택</Text>
@@ -217,74 +262,85 @@ const LoanScreen = ({ navigation, route }) => {
             <View style={styles.guideStepItem}>
               <View style={styles.guideStepDot} />
               <View style={styles.guideStepImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_sub_guide_step01.png')} 
+                <Image
+                  source={require('../assets/images/ico_sub_guide_step01.png')}
                   style={styles.guideStepImg}
                   resizeMode="contain"
                 />
               </View>
               <Text style={styles.guideStepTit}>대출 문의</Text>
-              <Text style={styles.guideStepTxt}>온라인으로 대출문의 신청서를 제출합니다.</Text>
+              <Text style={styles.guideStepTxt}>
+                온라인으로 대출문의 신청서를 제출합니다.
+              </Text>
             </View>
             <View style={styles.guideStepItem}>
               <View style={styles.guideStepDot} />
               <View style={styles.guideStepImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_sub_guide_step02.png')} 
+                <Image
+                  source={require('../assets/images/ico_sub_guide_step02.png')}
                   style={styles.guideStepImg}
                   resizeMode="contain"
                 />
               </View>
               <Text style={styles.guideStepTit}>대출 심사 및 약정</Text>
-              <Text style={styles.guideStepTxt}>서류 심사 후, 필요시 현장 및 기술실사를 거쳐서{'\n'}최종 대출 약정이 이루어집니다.</Text>
+              <Text style={styles.guideStepTxt}>
+                서류 심사 후, 필요시 현장 및 기술실사를 거쳐서{'\n'}최종 대출
+                약정이 이루어집니다.
+              </Text>
             </View>
             <View style={styles.guideStepItem}>
               <View style={styles.guideStepDot} />
               <View style={styles.guideStepImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_sub_guide_step03.png')} 
+                <Image
+                  source={require('../assets/images/ico_sub_guide_step03.png')}
                   style={styles.guideStepImg}
                   resizeMode="contain"
                 />
               </View>
               <Text style={styles.guideStepTit}>투자금 모금</Text>
-              <Text style={styles.guideStepTxt}>다수의 투자자(개인/법인)로부터{'\n'}투자금이 모급됩니다. (지역 우대금리)</Text>
+              <Text style={styles.guideStepTxt}>
+                다수의 투자자(개인/법인)로부터{'\n'}투자금이 모급됩니다. (지역
+                우대금리)
+              </Text>
             </View>
             <View style={[styles.guideStepItem, styles.guideStepItemLast]}>
               <View style={styles.guideStepDot} />
               <View style={styles.guideStepLastLine} />
               <View style={styles.guideStepImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_sub_guide_step04.png')} 
+                <Image
+                  source={require('../assets/images/ico_sub_guide_step04.png')}
                   style={styles.guideStepImg}
                   resizeMode="contain"
                 />
               </View>
               <Text style={styles.guideStepTit}>대출 실행</Text>
-              <Text style={styles.guideStepTxt}>대출금은 시공 단계별로 지정된 기자재 공금사{'\n'}토지주, 혹은 시공사에 직접 입금됩니다.</Text>
+              <Text style={styles.guideStepTxt}>
+                대출금은 시공 단계별로 지정된 기자재 공금사{'\n'}토지주, 혹은
+                시공사에 직접 입금됩니다.
+              </Text>
             </View>
           </View>
         </View>
 
         {/* 하단 이미지 섹션 */}
-        <ImageBackground 
-          source={require('../assets/images/img_corp_guide.png')} 
+        <ImageBackground
+          source={require('../assets/images/img_corp_guide.png')}
           style={styles.subCorpImgbox}
           resizeMode="cover"
         >
           <View style={styles.corpTxtbox}>
             <Text style={styles.corpTit}>시작부터 끝까지{'\n'}함께 합니다</Text>
-            <Text style={styles.corpTxt}>신청서를 작성하시면 세부 내용에 대한 설명과{'\n'}더불어 모든 절차를 도와드립니다</Text>
+            <Text style={styles.corpTxt}>
+              신청서를 작성하시면 세부 내용에 대한 설명과{'\n'}더불어 모든
+              절차를 도와드립니다
+            </Text>
           </View>
         </ImageBackground>
       </ScrollView>
 
       {/* 하단 고정 버튼 */}
       <View style={styles.fixBtnWrap}>
-        <TouchableOpacity 
-          style={styles.btnStyle}
-          onPress={handleLoanRequest}
-        >
+        <TouchableOpacity style={styles.btnStyle} onPress={handleLoanRequest}>
           <Text style={styles.btnText}>대출 상담 신청</Text>
         </TouchableOpacity>
       </View>
@@ -302,12 +358,12 @@ const styles = StyleSheet.create({
   },
   // 비주얼 섹션
   subVisual: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ebf3fe',
   },
   visualTxtbox: {
     paddingTop: 40,
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 60,
     alignItems: 'center',
   },
   tag: {
@@ -327,7 +383,7 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 16,
     fontSize: 26,
-    lineHeight: 36,
+    lineHeight: 31,
     fontWeight: '700',
     textAlign: 'center',
     color: '#222',
@@ -335,41 +391,41 @@ const styles = StyleSheet.create({
   titleP: {
     marginTop: 12,
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 20,
     fontWeight: '400',
     textAlign: 'center',
     color: '#666',
   },
   visualBanner: {
-    marginTop: 24,
     width: SCREEN_WIDTH - 40,
+    marginTop: -20,
   },
   visualBannerImg: {
     width: '100%',
-    height: 150,
+    height: 220,
   },
   // 연결 가이드 섹션
   subGuideConnection: {
     paddingTop: 50,
-    paddingBottom: 30,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f7fa',
+    marginBottom: 40,
   },
   subTitleGuide: {
     fontSize: 24,
-    lineHeight: 36,
+    lineHeight: 32,
     fontWeight: '600',
     textAlign: 'center',
     color: '#222',
   },
   connectionImgbox: {
-    marginTop: 40,
-    paddingHorizontal: 50,
-    paddingRight: 17,
-    paddingBottom: 48,
+    marginTop: 20,
+    paddingLeft: 20,
+    paddingRight: 35,
+    paddingBottom: 30,
   },
   connectionImg: {
     width: '100%',
-    height: 200,
+    height: 500,
   },
   // 좋은 이유 섹션
   subGuideReason: {
@@ -407,8 +463,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   reasonImg: {
-    width: 239,
-    height: 200,
+    width: 200,
+    height: 180,
   },
   // 대출 선택 섹션
   subGuideView: {
@@ -448,14 +504,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    width: 32,
-    height: 32,
     marginTop: -16,
     marginLeft: -16,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e0e1e2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  conditionDividerIcon: {
+    width: 28,
+    height: 28,
   },
   conditionImgbox: {
     width: 56,
@@ -531,8 +588,8 @@ const styles = StyleSheet.create({
   itemboxImgbox: {
     width: 196,
     marginHorizontal: 'auto',
-    marginTop: 20,
-    marginBottom: 30,
+    marginTop: 5,
+    marginBottom: 5,
     alignSelf: 'center',
   },
   itemboxImg: {
@@ -575,9 +632,9 @@ const styles = StyleSheet.create({
   },
   // 절차 가이드 섹션
   subGuideStep: {
-    paddingTop: 50,
+    paddingTop: 30,
     paddingBottom: 30,
-    backgroundColor: '#fff',
+    backgroundColor: '#f6f6f6',
   },
   guideStep: {
     position: 'relative',
@@ -617,7 +674,7 @@ const styles = StyleSheet.create({
   },
   guideStepLastLine: {
     position: 'absolute',
-    top: 5,
+    top: 11,
     bottom: 0,
     left: 0,
     width: 11,
@@ -646,7 +703,7 @@ const styles = StyleSheet.create({
   },
   // 하단 이미지 섹션
   subCorpImgbox: {
-    minHeight: 390,
+    minHeight: 450,
     justifyContent: 'center',
     overflow: 'hidden',
   },
@@ -658,7 +715,7 @@ const styles = StyleSheet.create({
   },
   corpTit: {
     fontSize: 24,
-    lineHeight: 34,
+    lineHeight: 32,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 10,
@@ -666,7 +723,7 @@ const styles = StyleSheet.create({
   },
   corpTxt: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 20,
     fontWeight: '400',
     color: '#fff',
     textAlign: 'center',
@@ -696,4 +753,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoanScreen;
-

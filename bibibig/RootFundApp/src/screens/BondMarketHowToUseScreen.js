@@ -148,8 +148,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   titlePEm: {
-    color: '#2c3db8',
-    fontWeight: '600',
+    color: '#666',
+    fontWeight: '700',
   },
   stitle: {
     width: '100%',

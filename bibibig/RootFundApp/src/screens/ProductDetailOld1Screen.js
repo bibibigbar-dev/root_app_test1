@@ -21,7 +21,7 @@ import ApiService from '../services/api';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // HTML을 WebView에서 렌더링하기 위한 래퍼 함수
-const createHtmlContent = (htmlContent) => {
+const createHtmlContent = htmlContent => {
   return `
     <!DOCTYPE html>
     <html>
@@ -251,7 +251,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     evidence: true,
     protect: true,
   });
-  
+
   // WebView 높이 상태
   const [webViewHeights, setWebViewHeights] = useState({
     contents1: 300,
@@ -259,7 +259,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     contents3: 300,
     contents4: 300,
   });
-  
+
   // 수익 계산 모달 상태
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [calcPrice, setCalcPrice] = useState('1000000');
@@ -268,7 +268,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     totalInterest: 0,
     totalTax: 0,
     totalComm: 0,
-    schedule: []
+    schedule: [],
   });
   const [expandedSchedule, setExpandedSchedule] = useState({});
   const [estimatedProfit, setEstimatedProfit] = useState(0);
@@ -301,7 +301,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
     const prod = productData.prod;
     const option = productData.option;
-    
+
     let tBal = 0;
     let tInt = 0;
     let tTax = 0;
@@ -310,11 +310,11 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     const sort = prod.sort;
     const rpType = prod.repay_type;
     const rate = Number(prod.rate);
-    const dRate = (rate / 100) / 365;
+    const dRate = rate / 100 / 365;
     const price = 1000000; // 100만원 고정
     const period = Number(prod.period);
     const comm = Number(option.i_comm_1 || 0);
-    const dComm = (comm / 100) / 365;
+    const dComm = comm / 100 / 365;
     const iTaxPer = Number(option.i_tax || 0);
     const rTaxPer = Number(option.r_tax || 0);
     let startDate = getCurrentDate();
@@ -324,7 +324,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
     for (let i = 1; i <= period; i++) {
       let endDate;
-      
+
       if (sort === 'BRIDGE' || sort === 'bridge') {
         endDate = addMonths(startDate, 1);
       } else if (sort === 'PF' || sort === 'pf') {
@@ -344,10 +344,10 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
         }
       }
 
-      const ri = (tBal * dRate) * diffDt;
+      const ri = tBal * dRate * diffDt;
       const rti = Math.floor((ri * (iTaxPer / 100)) / 10) * 10;
       const rtr = Math.floor((ri * (rTaxPer / 100)) / 10) * 10;
-      const rc = (price * dComm) * diffDt;
+      const rc = price * dComm * diffDt;
 
       rp = Math.floor(rp);
       const riFloor = Math.floor(ri);
@@ -378,9 +378,11 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
   const loadProductDetail = async () => {
     try {
       setLoading(true);
-      
-      const response = await ApiService.api.get(`/app/product/detail/${orderKey}`);
-      
+
+      const response = await ApiService.api.get(
+        `/app/product/detail/${orderKey}`,
+      );
+
       if (response.data) {
         setProductData(response.data);
       }
@@ -391,17 +393,17 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     }
   };
 
-  const toggleSection = (section) => {
+  const toggleSection = section => {
     setExpandedSections(prev => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
-  const toggleSchedule = (index) => {
+  const toggleSchedule = index => {
     setExpandedSchedule(prev => ({
       ...prev,
-      [index]: !prev[index]
+      [index]: !prev[index],
     }));
   };
 
@@ -414,7 +416,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const getDateString = (date) => {
+  const getDateString = date => {
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const dd = String(date.getDate()).padStart(2, '0');
@@ -449,12 +451,12 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     const sort = prod.sort;
     const rpType = prod.repay_type;
     const rate = Number(prod.rate);
-    const dRate = (rate / 100) / 365;
+    const dRate = rate / 100 / 365;
     let price = calcPrice.replace(/,/g, '');
     price = Number(price);
     const period = Number(prod.period);
     const comm = Number(option.i_comm_1 || 0);
-    const dComm = (comm / 100) / 365;
+    const dComm = comm / 100 / 365;
     const iTaxPer = Number(option.i_tax || 0);
     const rTaxPer = Number(option.r_tax || 0);
     let startDate = getCurrentDate();
@@ -465,7 +467,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
     for (let i = 1; i <= period; i++) {
       let endDate;
-      
+
       if (sort === 'BRIDGE' || sort === 'bridge') {
         endDate = addMonths(startDate, 1);
       } else if (sort === 'PF' || sort === 'pf') {
@@ -485,16 +487,16 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
         }
       }
 
-      const ri = (tBal * dRate) * diffDt;
+      const ri = tBal * dRate * diffDt;
       const rti = Math.floor((ri * (iTaxPer / 100)) / 10) * 10;
       const rtr = Math.floor((ri * (rTaxPer / 100)) / 10) * 10;
-      const rc = (price * dComm) * diffDt;
+      const rc = price * dComm * diffDt;
 
       rp = Math.floor(rp);
       const riFloor = Math.floor(ri);
       const rcFloor = Math.floor(rc);
 
-      const rrp = (rp + riFloor) - (rti + rtr + rcFloor);
+      const rrp = rp + riFloor - (rti + rtr + rcFloor);
       const rrpFloor = Math.floor(rrp);
 
       schedule.push({
@@ -506,7 +508,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
         incomeTax: rti,
         residentTax: rtr,
         commission: rcFloor,
-        actualPayment: rrpFloor
+        actualPayment: rrpFloor,
       });
 
       startDate = endDate;
@@ -524,15 +526,15 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
       totalInterest: tInt,
       totalTax: tTax,
       totalComm: tComm,
-      schedule: schedule
+      schedule: schedule,
     });
   };
 
-  const formatNumber = (num) => {
+  const formatNumber = num => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
-  const handleCalcPriceChange = (text) => {
+  const handleCalcPriceChange = text => {
     const numOnly = text.replace(/[^0-9]/g, '');
     setCalcPrice(numOnly);
   };
@@ -541,7 +543,10 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     // 커스텀 스킴 사용 - 앱이 설치된 기기에서만 작동
     const url = `rootfund://product/${orderKey}`;
     Clipboard.setString(url);
-    Alert.alert('알림', 'URL이 복사되었습니다.\n앱이 설치된 기기에서만 열립니다.');
+    Alert.alert(
+      '알림',
+      'URL이 복사되었습니다.\n앱이 설치된 기기에서만 열립니다.',
+    );
   };
 
   const handleGoToInvestList = async () => {
@@ -551,7 +556,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     navigation.navigate('MyPage', {
       user: currentUser,
       member_id: memberId,
-      initialTab: 'invest'
+      initialTab: 'invest',
     });
   };
 
@@ -559,7 +564,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     console.log('로그인하기 클릭');
     navigation.navigate('Login', {
       returnTo: 'ProductDetailOld1',
-      returnParams: { orderKey }
+      returnParams: { orderKey },
     });
   };
 
@@ -567,31 +572,37 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     // 로그인하지 않은 경우
     if (!isLoggedIn) {
       return (
-        <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleLogin}>
+        <TouchableOpacity
+          style={[styles.btnStyle, styles.btnBlue]}
+          onPress={handleLogin}
+        >
           <Text style={styles.btnText}>로그인하기</Text>
         </TouchableOpacity>
       );
     }
 
     // 로그인한 경우 - 투자현황 바로가기만 표시
-        return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
-            <Text style={styles.btnText}>투자현황 바로가기</Text>
-          </TouchableOpacity>
-        );
+    return (
+      <TouchableOpacity
+        style={[styles.btnStyle, styles.btnBlue]}
+        onPress={handleGoToInvestList}
+      >
+        <Text style={styles.btnText}>투자현황 바로가기</Text>
+      </TouchableOpacity>
+    );
   };
 
-  const renderOrderTypeIcon = (orderType) => {
+  const renderOrderTypeIcon = orderType => {
     const iconMap = {
-      '태양광': require('../assets/images/img_product01_s.png'),
-      '풍력': require('../assets/images/img_product03_s.png'),
-      'ESS': require('../assets/images/img_product02_s.png'),
-      '전기차충전소': require('../assets/images/img_product02_s.png'),
+      태양광: require('../assets/images/img_product01_s.png'),
+      풍력: require('../assets/images/img_product02_s.png'),
+      ESS: require('../assets/images/img_product03_s.png'),
+      전기차충전소: require('../assets/images/img_product03_s.png'),
     };
-    
+
     const icon = iconMap[orderType];
     if (!icon) return null;
-    
+
     return <Image source={icon} style={styles.sImg} resizeMode="contain" />;
   };
 
@@ -609,94 +620,110 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>상품 정보를 불러올 수 없습니다.</Text>
+          <Text style={styles.loadingText}>
+            상품 정보를 불러올 수 없습니다.
+          </Text>
         </View>
       </View>
     );
   }
 
-  const { 
-    prod, 
-    option, 
-    contents, 
-    expertopinion, 
+  const {
+    prod,
+    option,
+    contents,
+    expertopinion,
     expert_file,
-    circle_thumbnail, 
-    file_thumbnail, 
+    circle_thumbnail,
+    file_thumbnail,
     completion,
-    summary, 
+    summary,
     schedule,
-    intro, 
+    intro,
     structure,
     structure_file,
     place,
     place_file,
-    borrower, 
-    invest, 
-    invest_file, 
+    borrower,
+    invest,
+    invest_file,
     protect,
-    risk, 
+    risk,
     caution,
-    file_attachment
+    file_attachment,
   } = productData;
 
   return (
     <View style={styles.container}>
       {/* Back 버튼과 공유 버튼 */}
       <View style={styles.topButtonContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Image 
-            source={require('../assets/images/ico_back.png')} 
+          <Image
+            source={require('../assets/images/ico_back.png')}
             style={styles.backIcon}
           />
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.shareButton}
-          onPress={handleShareUrl}
-        >
-          <Image 
+
+        <TouchableOpacity style={styles.shareButton} onPress={handleShareUrl}>
+          <Image
             source={require('../assets/images/ico_share_m.png')}
             style={styles.shareIcon}
             resizeMode="contain"
           />
         </TouchableOpacity>
       </View>
-      
+
       <ScrollView style={styles.content}>
         <View style={styles.productView}>
           {/* 상품 번호 */}
-          <Text style={styles.prdNum}>{prod.orderType} {prod.orderNum}호 [{prod.orderCode}]</Text>
-          
+          <Text style={styles.prdNum}>
+            {prod.orderType} {prod.orderNum}호 [{prod.orderCode}]
+          </Text>
+
           {/* 상품명 */}
           <Text style={styles.prdName}>{prod.orderName}</Text>
-          
+
           {/* 모집기간 */}
           <Text style={styles.prdDate}>
-            모집기간 {prod.start_date}({prod.start_week}) ~ {prod.end_date}({prod.end_week})
+            모집기간 {prod.start_date}({prod.start_week}) ~ {prod.end_date}(
+            {prod.end_week})
           </Text>
-          
+
           {/* 이미지 박스 */}
-          <View style={styles.prdImgbox}>
-            {circle_thumbnail && circle_thumbnail.length > 0 ? (
-              <>
-                <Image source={{ uri: circle_thumbnail[0].filePath }} style={styles.img} resizeMode="cover" />
-                <View style={styles.imageOverlay} />
-              </>
-            ) : file_thumbnail && file_thumbnail.length > 0 ? (
-              <>
-                <Image source={{ uri: file_thumbnail[0].filePath }} style={styles.img} resizeMode="cover" />
-                <View style={styles.imageOverlay} />
-              </>
-            ) : (
-              <>
-                <Image source={require('../assets/images/re_bc5_custom.png')} style={styles.img} resizeMode="cover" />
-                <View style={styles.imageOverlay} />
-              </>
-            )}
+          <View style={styles.prdImgboxWrap}>
+            <View style={styles.prdImgbox}>
+              {circle_thumbnail && circle_thumbnail.length > 0 ? (
+                <>
+                  <Image
+                    source={{ uri: circle_thumbnail[0].filePath }}
+                    style={styles.img}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.imageOverlay} />
+                </>
+              ) : file_thumbnail && file_thumbnail.length > 0 ? (
+                <>
+                  <Image
+                    source={{ uri: file_thumbnail[0].filePath }}
+                    style={styles.img}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.imageOverlay} />
+                </>
+              ) : (
+                <>
+                  <Image
+                    source={require('../assets/images/re_bc5_custom.png')}
+                    style={styles.img}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.imageOverlay} />
+                </>
+              )}
+            </View>
             {renderOrderTypeIcon(prod.orderType)}
           </View>
 
@@ -714,13 +741,17 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
               <View style={styles.dl}>
                 <Text style={styles.dt}>상환방식</Text>
                 <Text style={[styles.dd, styles.small]}>
-                  {prod.repay_type === '1' ? '원금균등상환' :
-                   prod.repay_type === '2' ? '만기일시상환' :
-                   prod.repay_type === '3' ? '원리금균등상환' : '-'}
+                  {prod.repay_type === '1'
+                    ? '원금균등상환'
+                    : prod.repay_type === '2'
+                    ? '만기일시상환'
+                    : prod.repay_type === '3'
+                    ? '원리금균등상환'
+                    : '-'}
                 </Text>
               </View>
             </View>
-            
+
             <View style={styles.progressBar}>
               <LinearGradient
                 colors={['#8FC5FF', '#5DA7FF', '#2C7FE8', '#2c3db8']}
@@ -729,10 +760,12 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
                 style={[styles.progressVal, { width: `${prod.percent}%` }]}
               />
             </View>
-            
+
             <View style={styles.progressInfo}>
               <Text style={styles.totalText}>
-                <Text style={styles.totalEm}>{parseInt(prod.investment || 0).toLocaleString()}원</Text>
+                <Text style={styles.totalEm}>
+                  {parseInt(prod.investment || 0).toLocaleString()}원
+                </Text>
                 {' / '}
                 {parseInt(prod.price || 0).toLocaleString()}원
               </Text>
@@ -741,37 +774,39 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
           </View>
 
           {/* 투자하기 버튼 */}
-          <View style={styles.btnBox}>
-            {renderInvestButton()}
-          </View>
+          <View style={styles.btnBox}>{renderInvestButton()}</View>
 
           {/* 전문가 의견 */}
           {expertopinion && expertopinion.note && (
-            <Text style={styles.prdExpert}>{expertopinion.note.replace(/\n/g, '\n')}</Text>
+            <Text style={styles.prdExpert}>
+              {expertopinion.note.replace(/\n/g, '\n')}
+            </Text>
           )}
 
           {/* 수익 안내 박스 */}
           <View style={styles.detailIntrobox}>
             <View style={styles.detailIntro}>
-
-            <Image 
-                source={require('../assets/images/bg_detail_intro.png')} 
+              <Image
+                source={require('../assets/images/bg_detail_intro.png')}
                 style={styles.detailIntroBg}
                 resizeMode="contain"
               />
               <Text style={styles.title}>
                 100만원 투자하면{'\n'}
-                <Text style={styles.titleEm}>세후 {formatNumber(estimatedProfit)}원</Text>이 쌓여요
+                <Text style={styles.titleEm}>
+                  세후 {formatNumber(estimatedProfit)}원
+                </Text>
+                이 쌓여요
               </Text>
-              
+
               <View style={styles.revenueDl}>
                 <Text style={styles.revenueDt}>세전 수익률</Text>
                 <Text style={styles.revenueDd}>{prod.rate || '-'}%</Text>
                 <Text style={styles.revenueDt}>순수 수익률</Text>
                 <Text style={styles.revenueDd}>{contents?.etxt_7 || '-'}</Text>
               </View>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.btnStyleSmall}
                 onPress={() => {
                   setShowCalcModal(true);
@@ -781,80 +816,115 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
                 <Text style={styles.btnTextSmall}>수익금 지급 예정표</Text>
               </TouchableOpacity>
             </View>
-            
+
             {/* 환경적 성과 */}
-            {contents && contents.etxt_2 && contents.etxt_4 && contents.etxt_5 && (
-              <View style={styles.detailEco}>
-              <Text style={styles.titleEco}>환경적 성과까지 함께!</Text>
-              <View style={styles.ecoList}>
-                <View style={styles.ecoItem}>
-                  <View style={styles.ecoImgbox}>
-                    <Image source={require('../assets/images/ico_detail_eco01.png')} style={styles.ecoIcon1} resizeMode="contain" />
+            {contents &&
+              contents.etxt_2 &&
+              contents.etxt_4 &&
+              contents.etxt_5 && (
+                <View style={styles.detailEco}>
+                  <Text style={styles.titleEco}>환경적 성과까지 함께!</Text>
+                  <View style={styles.ecoList}>
+                    <View style={styles.ecoItem}>
+                      <View style={styles.ecoImgbox}>
+                        <Image
+                          source={require('../assets/images/ico_detail_eco01.png')}
+                          style={styles.ecoIcon1}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <Text style={styles.ecoTit}>연간 전력생산</Text>
+                      <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
+                    </View>
+                    <View style={styles.ecoItem}>
+                      <View style={styles.ecoImgbox}>
+                        <Image
+                          source={require('../assets/images/ico_detail_eco02.png')}
+                          style={styles.ecoIcon2}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <Text style={styles.ecoTit}>화석 에너지</Text>
+                      <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
+                    </View>
+                    <View style={styles.ecoItem}>
+                      <View style={styles.ecoImgbox}>
+                        <Image
+                          source={require('../assets/images/ico_detail_eco03.png')}
+                          style={styles.ecoIcon3}
+                        />
+                      </View>
+                      <Text style={styles.ecoTit}>대기 오염물질</Text>
+                      <Text style={styles.ecoVal}>{contents.etxt_5} 감소</Text>
+                    </View>
                   </View>
-                  <Text style={styles.ecoTit}>연간 전력생산</Text>
-                  <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
                 </View>
-                <View style={styles.ecoItem}>
-                  <View style={styles.ecoImgbox}>
-                    <Image source={require('../assets/images/ico_detail_eco02.png')} style={styles.ecoIcon2} resizeMode="contain" />
-                  </View>
-                  <Text style={styles.ecoTit}>화석 에너지</Text>
-                  <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
-                </View>
-                <View style={styles.ecoItem}>
-                  <View style={styles.ecoImgbox}>
-                    <Image source={require('../assets/images/ico_detail_eco03.png')} style={styles.ecoIcon3} />
-                  </View>
-                  <Text style={styles.ecoTit}>대기 오염물질</Text>
-                  <Text style={styles.ecoVal}>{contents.etxt_5} 감소</Text>
-                </View>
-              </View>
-            </View>
-            )}
+              )}
           </View>
 
           {/* 안내 문구 */}
           <View style={styles.mt16pr20pl20}>
-            <Text style={styles.starNotif}>* 플랫폼 이용료(월 0.1%), 세금(개인15.4% 기준) 제외한 순 수익금</Text>
-            <Text style={styles.starNotif}>* 위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서 변경될 수 있습니다.</Text>
-            <Text style={styles.starNotif}>* 또한 중도상환, 연체 등으로 지급일자와 지급액에 차이가 있을 수 있습니다.</Text>
+            <Text style={styles.starNotif}>
+              * 플랫폼 이용료(월 0.1%), 세금(개인15.4% 기준) 제외한 순 수익금
+            </Text>
+            <Text style={styles.starNotif}>
+              * 위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서 변경될 수
+              있습니다.
+            </Text>
+            <Text style={styles.starNotif}>
+              * 또한 중도상환, 연체 등으로 지급일자와 지급액에 차이가 있을 수
+              있습니다.
+            </Text>
           </View>
 
           {/* 상품 유형 정보 박스 */}
           <View style={styles.detailInfobox}>
             {/* 상단 텍스트 */}
-            {completion && completion.map((item, index) => (
-              item.text_type === 'TOP_TEXT' && item.top_text && (
-                <Text key={index} style={styles.infoTitle}>{item.top_text}</Text>
-              )
-            ))}
-
+            {completion &&
+              completion.map(
+                (item, index) =>
+                  item.text_type === 'TOP_TEXT' &&
+                  item.top_text && (
+                    <Text key={index} style={styles.infoTitle}>
+                      {item.top_text}
+                    </Text>
+                  ),
+              )}
           </View>
 
           {/* 안정성이 확보된 상품 토글박스 (contents_4가 있을 때만 표시) */}
           {contents?.contents_4 && (
             <View style={styles.detailTogglebox}>
-              <TouchableOpacity 
-                style={[styles.inTitle, expandedSections.stability && styles.inTitleOn]}
+              <TouchableOpacity
+                style={[
+                  styles.inTitle,
+                  expandedSections.stability && styles.inTitleOn,
+                ]}
                 onPress={() => toggleSection('stability')}
               >
                 <Text style={styles.inTitleText}>안정성이 확보된 상품</Text>
               </TouchableOpacity>
-              
+
               {expandedSections.stability && (
                 <View style={styles.inCont}>
                   <WebView
                     originWhitelist={['*']}
                     source={{ html: createHtmlContent(contents.contents_4) }}
-                    style={[styles.webView, { height: webViewHeights.contents4 }]}
+                    style={[
+                      styles.webView,
+                      { height: webViewHeights.contents4 },
+                    ]}
                     scrollEnabled={false}
                     showsVerticalScrollIndicator={false}
                     showsHorizontalScrollIndicator={false}
-                    onMessage={(event) => {
+                    onMessage={event => {
                       try {
                         const data = JSON.parse(event.nativeEvent.data);
                         if (data.type === 'height' && data.height) {
-                          setWebViewHeights(prev => ({ ...prev, contents4: data.height + 20 }));
+                          setWebViewHeights(prev => ({
+                            ...prev,
+                            contents4: data.height + 20,
+                          }));
                         }
                       } catch (e) {
                         console.log('WebView message parse error:', e);
@@ -868,28 +938,37 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
           {/* 상세 내용 토글박스 */}
           <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.detail && styles.inTitleOn]}
+            <TouchableOpacity
+              style={[
+                styles.inTitle,
+                expandedSections.detail && styles.inTitleOn,
+              ]}
               onPress={() => toggleSection('detail')}
             >
               <Text style={styles.inTitleText}>상세 내용</Text>
             </TouchableOpacity>
-            
+
             {expandedSections.detail && (
               <View style={styles.inCont}>
                 {contents?.contents_2 ? (
                   <WebView
                     originWhitelist={['*']}
                     source={{ html: createHtmlContent(contents.contents_2) }}
-                    style={[styles.webView, { height: webViewHeights.contents2 }]}
+                    style={[
+                      styles.webView,
+                      { height: webViewHeights.contents2 },
+                    ]}
                     scrollEnabled={false}
                     showsVerticalScrollIndicator={false}
                     showsHorizontalScrollIndicator={false}
-                    onMessage={(event) => {
+                    onMessage={event => {
                       try {
                         const data = JSON.parse(event.nativeEvent.data);
                         if (data.type === 'height' && data.height) {
-                          setWebViewHeights(prev => ({ ...prev, contents2: data.height + 20 }));
+                          setWebViewHeights(prev => ({
+                            ...prev,
+                            contents2: data.height + 20,
+                          }));
                         }
                       } catch (e) {
                         console.log('WebView message parse error:', e);
@@ -903,28 +982,37 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
           {/* 상품 리포트 토글박스 */}
           <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.report && styles.inTitleOn]}
+            <TouchableOpacity
+              style={[
+                styles.inTitle,
+                expandedSections.report && styles.inTitleOn,
+              ]}
               onPress={() => toggleSection('report')}
             >
               <Text style={styles.inTitleText}>상품 리포트</Text>
             </TouchableOpacity>
-            
+
             {expandedSections.report && (
               <View style={styles.inCont}>
                 {contents?.contents_1 ? (
                   <WebView
                     originWhitelist={['*']}
                     source={{ html: createHtmlContent(contents.contents_1) }}
-                    style={[styles.webView, { height: webViewHeights.contents1 }]}
+                    style={[
+                      styles.webView,
+                      { height: webViewHeights.contents1 },
+                    ]}
                     scrollEnabled={false}
                     showsVerticalScrollIndicator={false}
                     showsHorizontalScrollIndicator={false}
-                    onMessage={(event) => {
+                    onMessage={event => {
                       try {
                         const data = JSON.parse(event.nativeEvent.data);
                         if (data.type === 'height' && data.height) {
-                          setWebViewHeights(prev => ({ ...prev, contents1: data.height + 20 }));
+                          setWebViewHeights(prev => ({
+                            ...prev,
+                            contents1: data.height + 20,
+                          }));
                         }
                       } catch (e) {
                         console.log('WebView message parse error:', e);
@@ -938,21 +1026,25 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
           {/* 증빙서류 토글박스 */}
           <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.evidence && styles.inTitleOn]}
+            <TouchableOpacity
+              style={[
+                styles.inTitle,
+                expandedSections.evidence && styles.inTitleOn,
+              ]}
               onPress={() => toggleSection('evidence')}
             >
               <Text style={styles.inTitleText}>증빙서류</Text>
             </TouchableOpacity>
-            
+
             {expandedSections.evidence && (
               <View style={styles.inCont}>
                 <View style={styles.docEvidence}>
-                  {file_attachment && file_attachment.map((file, index) => (
-                    <TouchableOpacity key={index} style={styles.fileLink}>
-                      <Text style={styles.fileLinkText}>{file.fileName}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {file_attachment &&
+                    file_attachment.map((file, index) => (
+                      <TouchableOpacity key={index} style={styles.fileLink}>
+                        <Text style={styles.fileLinkText}>{file.fileName}</Text>
+                      </TouchableOpacity>
+                    ))}
                 </View>
               </View>
             )}
@@ -960,28 +1052,37 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
 
           {/* 강화된 투자자 보호 방안 토글박스 */}
           <View style={[styles.detailTogglebox, styles.mb40]}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.protect && styles.inTitleOn]}
+            <TouchableOpacity
+              style={[
+                styles.inTitle,
+                expandedSections.protect && styles.inTitleOn,
+              ]}
               onPress={() => toggleSection('protect')}
             >
               <Text style={styles.inTitleText}>강화된 투자자 보호 방안</Text>
             </TouchableOpacity>
-            
+
             {expandedSections.protect && (
               <View style={styles.inCont}>
                 {contents?.contents_3 ? (
                   <WebView
                     originWhitelist={['*']}
                     source={{ html: createHtmlContent(contents.contents_3) }}
-                    style={[styles.webView, { height: webViewHeights.contents3 }]}
+                    style={[
+                      styles.webView,
+                      { height: webViewHeights.contents3 },
+                    ]}
                     scrollEnabled={false}
                     showsVerticalScrollIndicator={false}
                     showsHorizontalScrollIndicator={false}
-                    onMessage={(event) => {
+                    onMessage={event => {
                       try {
                         const data = JSON.parse(event.nativeEvent.data);
                         if (data.type === 'height' && data.height) {
-                          setWebViewHeights(prev => ({ ...prev, contents3: data.height + 20 }));
+                          setWebViewHeights(prev => ({
+                            ...prev,
+                            contents3: data.height + 20,
+                          }));
                         }
                       } catch (e) {
                         console.log('WebView message parse error:', e);
@@ -1003,16 +1104,21 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
         onRequestClose={() => setShowCalcModal(false)}
       >
         <View style={styles.popContainer}>
-          <TouchableOpacity 
-            style={styles.popMask} 
+          <TouchableOpacity
+            style={styles.popMask}
             activeOpacity={1}
             onPress={() => setShowCalcModal(false)}
           />
           <View style={styles.popWrapper}>
             <View style={styles.popBox}>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.popTitle}>예상 수익계산</Text>
-                
+              <Text style={styles.popTitle}>예상 수익계산</Text>
+              <View style={styles.popTitleBorder} />
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.popScrollView}
+                contentContainerStyle={styles.popScrollContent}
+              >
                 <View style={styles.pr4pl4}>
                   <View style={styles.flexTit}>
                     <Text style={styles.titText}>투자예정 금액</Text>
@@ -1025,7 +1131,7 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
                       keyboardType="numeric"
                     />
                     <Text style={styles.txtUnit}>원</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.btnCalc}
                       onPress={calculateInterest}
                     >
@@ -1039,19 +1145,27 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
                 <View style={styles.boxCalc}>
                   <View style={styles.dlTotal}>
                     <Text style={styles.dtTotal}>예상 투자수익</Text>
-                    <Text style={styles.ddTotal}>{formatNumber(calcResult.totalProfit)} 원</Text>
+                    <Text style={styles.ddTotal}>
+                      {formatNumber(calcResult.totalProfit)} 원
+                    </Text>
                   </View>
                   <View style={styles.dlModal}>
                     <Text style={styles.dtModal}>세전 총 수익</Text>
-                    <Text style={styles.ddModal}>{formatNumber(calcResult.totalInterest)} 원</Text>
+                    <Text style={styles.ddModal}>
+                      {formatNumber(calcResult.totalInterest)} 원
+                    </Text>
                   </View>
                   <View style={styles.dlModal}>
                     <Text style={styles.dtModal}>세금(이자소득세+주민세)</Text>
-                    <Text style={styles.ddModal}>{formatNumber(calcResult.totalTax)} 원</Text>
+                    <Text style={styles.ddModal}>
+                      {formatNumber(calcResult.totalTax)} 원
+                    </Text>
                   </View>
                   <View style={styles.dlModal}>
                     <Text style={styles.dtModal}>플랫폼 수수료</Text>
-                    <Text style={styles.ddModal}>{formatNumber(calcResult.totalComm)} 원</Text>
+                    <Text style={styles.ddModal}>
+                      {formatNumber(calcResult.totalComm)} 원
+                    </Text>
                   </View>
                 </View>
 
@@ -1059,21 +1173,32 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
                 <View style={styles.repayList}>
                   {calcResult.schedule.map((item, index) => (
                     <View key={index} style={styles.repayItem}>
-                      <TouchableOpacity 
-                        style={[styles.inHead, expandedSchedule[index] && styles.inHeadOn]}
+                      <TouchableOpacity
+                        style={[
+                          styles.inHead,
+                          expandedSchedule[index] && styles.inHeadOn,
+                        ]}
                         onPress={() => toggleSchedule(index)}
                       >
                         <Text style={styles.inHeadDt}>{item.round}회차</Text>
                         <Text style={styles.inHeadDd}>
-                          세후 <Text style={styles.cnt}>{formatNumber(item.afterTax)}</Text> 원
+                          세후{' '}
+                          <Text style={styles.cnt}>
+                            {formatNumber(item.afterTax)}
+                          </Text>{' '}
+                          원
                         </Text>
-                        <Image 
-                          source={require('../assets/images/arrow_select.png')} 
-                          style={[styles.scheduleArrow, expandedSchedule[index] && styles.scheduleArrowRotated]}
+                        <Image
+                          source={require('../assets/images/arrow_select.png')}
+                          style={[
+                            styles.scheduleArrow,
+                            expandedSchedule[index] &&
+                              styles.scheduleArrowRotated,
+                          ]}
                           resizeMode="contain"
                         />
                       </TouchableOpacity>
-                      
+
                       {expandedSchedule[index] && (
                         <View style={styles.inContModal}>
                           <View style={styles.dlRow}>
@@ -1082,27 +1207,39 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>원금</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.principal)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.principal)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>이자</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.interest)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.interest)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>이자소득세</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.incomeTax)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.incomeTax)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>주민세</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.residentTax)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.residentTax)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>플랫폼수수료</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.commission)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.commission)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>실지급액</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.actualPayment)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.actualPayment)} 원
+                            </Text>
                           </View>
                         </View>
                       )}
@@ -1114,20 +1251,21 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
                   <Text style={styles.excIcon}>ⓘ</Text>
                   <Text style={styles.txtNote}>
                     위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
-                    변경될 수 있습니다. 또한 중도상환, 연체 등으로 지급일자와{'\n'}
+                    변경될 수 있습니다. 또한 중도상환, 연체 등으로 지급일자와
+                    {'\n'}
                     지급액에 차이가 있을 수 있습니다.
                   </Text>
                 </View>
-
-                <View style={styles.btnBoxModal}>
-                  <TouchableOpacity 
-                    style={styles.btnStyleModal}
-                    onPress={() => setShowCalcModal(false)}
-                  >
-                    <Text style={styles.btnTextModal}>확인</Text>
-                  </TouchableOpacity>
-                </View>
               </ScrollView>
+
+              <View style={styles.btnBoxModal}>
+                <TouchableOpacity
+                  style={styles.btnStyleModal}
+                  onPress={() => setShowCalcModal(false)}
+                >
+                  <Text style={styles.btnTextModal}>확인</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -1215,13 +1353,18 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     textAlign: 'center',
   },
-  prdImgbox: {
+  prdImgboxWrap: {
     position: 'relative',
     width: 102,
     height: 102,
     marginTop: 24,
     marginLeft: 'auto',
     marginRight: 'auto',
+  },
+  prdImgbox: {
+    position: 'relative',
+    width: 102,
+    height: 102,
     overflow: 'hidden',
     borderRadius: 51,
   },
@@ -1764,15 +1907,30 @@ const styles = StyleSheet.create({
   popBox: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
     maxHeight: '90%',
+    overflow: 'hidden',
   },
   popTitle: {
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '700',
     textAlign: 'center',
+    marginBottom: 10,
+  },
+  popTitleBorder: {
+    height: 1,
+    backgroundColor: '#f6f6f6',
     marginBottom: 20,
+    marginHorizontal: -20,
+  },
+  popScrollView: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  popScrollContent: {
+    paddingBottom: 8,
   },
   pr4pl4: {
     paddingHorizontal: 4,
@@ -1949,7 +2107,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   btnBoxModal: {
-    marginTop: 24,
+    paddingTop: 16,
+    backgroundColor: '#fff',
   },
   btnStyleModal: {
     height: 48,

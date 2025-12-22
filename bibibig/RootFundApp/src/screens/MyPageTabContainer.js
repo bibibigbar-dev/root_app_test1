@@ -25,7 +25,7 @@ const MyPageTabContainer = ({ navigation, route }) => {
 
   // route.params.initialTab이 변경될 때 activeTab 업데이트 및 스크롤
   useEffect(() => {
-    if (initialTab && initialTab !== activeTab) {
+    if (initialTab) {
       setActiveTab(initialTab);
       scrollToTab(initialTab);
     }
@@ -34,44 +34,32 @@ const MyPageTabContainer = ({ navigation, route }) => {
   // 화면이 포커스될 때마다 initialTab 확인
   useFocusEffect(
     React.useCallback(() => {
-      if (route.params?.initialTab && route.params.initialTab !== activeTab) {
+      if (route.params?.initialTab) {
         setActiveTab(route.params.initialTab);
         scrollToTab(route.params.initialTab);
       }
-    }, [route.params?.initialTab])
+    }, [route.params?.initialTab]),
   );
 
   // 탭으로 스크롤하는 함수
-  const scrollToTab = (tabKey) => {
-    const tabs = [
-      { key: 'assets', label: '자산관리' },
-      { key: 'loan', label: '대출내역' },
-      { key: 'invest', label: '투자현황' },
-      { key: 'review', label: '투자후기' },
-      { key: 'schedule', label: '상환스케줄' },
-      { key: 'info', label: '개인정보관리' },
-    ];
-    
+  const scrollToTab = tabKey => {
     const tabIndex = tabs.findIndex(tab => tab.key === tabKey);
-    if (tabIndex !== -1 && tabScrollViewRef.current) {
-      // 마지막 탭이면 끝까지 스크롤
-      if (tabIndex === tabs.length - 1) {
-        setTimeout(() => {
-          tabScrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      } else {
-        // 각 탭의 너비를 대략 120px로 가정
-        const tabWidth = 100;
-        const scrollPosition = tabIndex * tabWidth;
-        
-        setTimeout(() => {
-          tabScrollViewRef.current?.scrollTo({
-            x: scrollPosition,
-            animated: true,
-          });
-        }, 100);
+    if (tabIndex === -1 || !tabScrollViewRef.current) return;
+
+    // '개인정보관리' 탭은 오른쪽 끝에 딱 보이도록
+    const shouldScrollToEnd = tabKey === 'info' || tabIndex === tabs.length - 1;
+
+    setTimeout(() => {
+      if (shouldScrollToEnd) {
+        tabScrollViewRef.current?.scrollToEnd({ animated: true });
+        return;
       }
-    }
+
+      // 간단한 보정: 탭 하나당 대략 100px 가정
+      const tabWidth = 100;
+      const scrollPosition = Math.max(0, tabIndex * tabWidth);
+      tabScrollViewRef.current?.scrollTo({ x: scrollPosition, animated: true });
+    }, 50);
   };
 
   useEffect(() => {
@@ -81,7 +69,7 @@ const MyPageTabContainer = ({ navigation, route }) => {
   const loadMemberData = async () => {
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      
+
       // 먼저 user 세션에서 기본 정보 설정
       if (user?.session) {
         setMemberData({
@@ -89,16 +77,16 @@ const MyPageTabContainer = ({ navigation, route }) => {
           f_member_class_kr: user.session.f_member_class_kr || '개인<br>투자자',
         });
       }
-      
+
       // API로 최신 정보 가져오기
       const response = await ApiService.api.get('/app/my/info', {
-        params: { member_id: memberId }
+        params: { member_id: memberId },
       });
-      
+
       if (response.data && response.data.member) {
         setMemberData(response.data.member);
       }
-      
+
       // repay_count 설정
       if (response.data && response.data.repay_count !== undefined) {
         setRepayCount(response.data.repay_count || 0);
@@ -122,20 +110,75 @@ const MyPageTabContainer = ({ navigation, route }) => {
     { key: 'info', label: '개인정보관리' },
   ];
 
+  // activeTab이 바뀌면 해당 탭이 화면에 보이도록 자동 스크롤
+  useEffect(() => {
+    scrollToTab(activeTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, tabs.length]);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'assets':
-        return <AssetsContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
+        return (
+          <AssetsContent
+            navigation={navigation}
+            route={route}
+            user={user}
+            member_id={member_id}
+            repay_count={repayCount}
+          />
+        );
       case 'loan':
-        return <LoanListContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
+        return (
+          <LoanListContent
+            navigation={navigation}
+            route={route}
+            user={user}
+            member_id={member_id}
+            repay_count={repayCount}
+          />
+        );
       case 'invest':
-        return <InvestStatusContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
+        return (
+          <InvestStatusContent
+            navigation={navigation}
+            route={route}
+            user={user}
+            member_id={member_id}
+            repay_count={repayCount}
+          />
+        );
       case 'review':
-        return <InvestReviewContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
+        return (
+          <InvestReviewContent
+            navigation={navigation}
+            route={route}
+            user={user}
+            member_id={member_id}
+            repay_count={repayCount}
+          />
+        );
       case 'info':
-        return <MyPageContent navigation={navigation} route={route} user={user} member_id={member_id} memberData={memberData} repay_count={repayCount} />;
+        return (
+          <MyPageContent
+            navigation={navigation}
+            route={route}
+            user={user}
+            member_id={member_id}
+            memberData={memberData}
+            repay_count={repayCount}
+          />
+        );
       case 'schedule':
-        return <RepaymentScheduleContent navigation={navigation} route={route} user={user} member_id={member_id} repay_count={repayCount} />;
+        return (
+          <RepaymentScheduleContent
+            navigation={navigation}
+            route={route}
+            user={user}
+            member_id={member_id}
+            repay_count={repayCount}
+          />
+        );
       default:
         return (
           <View style={styles.emptyContainer}>
@@ -148,24 +191,27 @@ const MyPageTabContainer = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       {/* Back 버튼 - 고정 */}
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Image 
-            source={require('../assets/images/ico_back.png')} 
-            style={styles.backIcon}
-          />
-        </TouchableOpacity>
-      
-      <ScrollView style={styles.content}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Image
+          source={require('../assets/images/ico_back.png')}
+          style={styles.backIcon}
+        />
+      </TouchableOpacity>
 
+      <ScrollView style={styles.content}>
         {/* 헤더 */}
         <View style={styles.mypageHead}>
           <View style={styles.txtWelcomeContainer}>
             <Text style={styles.txtWelcome}>
               <Text style={styles.txtWelcomeEm}>
-                {memberData?.r_name || user?.session?.r_name || user?.name || '사용자'}님,
+                {memberData?.r_name ||
+                  user?.session?.r_name ||
+                  user?.name ||
+                  '사용자'}
+                님,
               </Text>
               {'\n부자되세요!'}
             </Text>
@@ -180,32 +226,35 @@ const MyPageTabContainer = ({ navigation, route }) => {
               <Text style={styles.tipText}>상향신청</Text>
             </TouchableOpacity>
             <Text style={styles.userTypeText}>
-              {memberData?.f_member_class_kr?.replace(/<br\s*\/?>/gi, '\n') || '개인\n투자자'}
+              {memberData?.f_member_class_kr?.replace(/<br\s*\/?>/gi, '\n') ||
+                '개인\n투자자'}
             </Text>
           </View>
         </View>
 
         {/* 탭 메뉴 */}
-        <ScrollView 
+        <ScrollView
           ref={tabScrollViewRef}
-          horizontal 
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.tabMenu}
         >
-          {tabs.map((tab) => (
+          {tabs.map(tab => (
             <TouchableOpacity
               key={tab.key}
               style={[
                 styles.tabItem,
-                activeTab === tab.key && styles.tabItemActive
+                activeTab === tab.key && styles.tabItemActive,
               ]}
               onPress={() => setActiveTab(tab.key)}
             >
               <View style={styles.tabItemContent}>
-                <Text style={[
-                  styles.tabText,
-                  activeTab === tab.key && styles.tabTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === tab.key && styles.tabTextActive,
+                  ]}
+                >
                   {tab.label}
                 </Text>
                 {tab.key === 'schedule' && repayCount > 0 && (
@@ -214,9 +263,7 @@ const MyPageTabContainer = ({ navigation, route }) => {
                   </View>
                 )}
               </View>
-              {activeTab === tab.key && (
-                <View style={styles.tabActiveBar} />
-              )}
+              {activeTab === tab.key && <View style={styles.tabActiveBar} />}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -237,8 +284,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backButton: {
-    paddingTop: 16,
-    paddingLeft: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 16,
+    marginTop: 5,
   },
   backIcon: {
     width: 24,
@@ -373,4 +424,3 @@ const styles = StyleSheet.create({
 });
 
 export default MyPageTabContainer;
-

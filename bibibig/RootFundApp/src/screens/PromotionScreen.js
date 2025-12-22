@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   galleryImgFull: {
     width: '100%',
-    height: 200,
+    height: 250,
     borderRadius: 10,
   },
   galleryImgPlaceholder: {
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   galleryTxtbox: {
-    marginTop: 12,
+    marginTop: 10,
     paddingHorizontal: 4,
   },
   galleryTitFull: {

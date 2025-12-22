@@ -9,22 +9,23 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Modal,
   Linking,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const SignUpPrivateForeignerScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { okname, kakaoCi, bc5jsencpublickey, marketing, f_joinType } = route.params || {};
+  const { okname, kakaoCi, bc5jsencpublickey, marketing, f_joinType } =
+    route.params || {};
 
   const [loading, setLoading] = useState(false);
   const [verificationCompleted, setVerificationCompleted] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
-  
+
   // 폼 데이터
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,7 +37,7 @@ const SignUpPrivateForeignerScreen = () => {
   const [joinRootEtc, setJoinRootEtc] = useState('');
   const [jobCode, setJobCode] = useState('00');
   const [foreignerUseCode, setForeignerUseCode] = useState('');
-  
+
   // 에러 메시지
   const [errors, setErrors] = useState({});
 
@@ -51,7 +52,10 @@ const SignUpPrivateForeignerScreen = () => {
     { value: '인터넷 검색', label: '인터넷 검색' },
     { value: '구글 광고', label: '구글 광고' },
     { value: '네이버 광고', label: '네이버 광고' },
-    { value: 'SNS(페이스북/인스타그램) 광고', label: 'SNS(페이스북/인스타그램) 광고' },
+    {
+      value: 'SNS(페이스북/인스타그램) 광고',
+      label: 'SNS(페이스북/인스타그램) 광고',
+    },
     { value: '뉴스/기사', label: '뉴스/기사' },
     { value: '인터넷 커뮤니티', label: '인터넷 커뮤니티' },
     { value: '세미나/교육/포럼', label: '세미나/교육/포럼' },
@@ -89,10 +93,8 @@ const SignUpPrivateForeignerScreen = () => {
   ];
 
   useEffect(() => {
-
     // Deep Link 처리 (KCB 본인인증 콜백)
     const handleDeepLink = ({ url }) => {
-      
       if (url && url.includes('kcb-callback')) {
         try {
           const params = new URLSearchParams(url.split('?')[1]);
@@ -107,7 +109,6 @@ const SignUpPrivateForeignerScreen = () => {
           const di = params.get('di');
           const ci = params.get('ci');
 
-
           if (rtnvalue === '0') {
             setVerificationData({
               authtype,
@@ -120,9 +121,15 @@ const SignUpPrivateForeignerScreen = () => {
               ci,
             });
             setVerificationCompleted(true);
-            Alert.alert('본인인증 완료', '본인인증이 완료되었습니다.\n회원가입을 계속 진행해주세요.');
+            Alert.alert(
+              '본인인증 완료',
+              '본인인증이 완료되었습니다.\n회원가입을 계속 진행해주세요.',
+            );
           } else {
-            Alert.alert('본인인증 실패', rtnmessage || '본인인증에 실패했습니다.');
+            Alert.alert(
+              '본인인증 실패',
+              rtnmessage || '본인인증에 실패했습니다.',
+            );
           }
         } catch (error) {
           console.error('❌ Deep Link 파싱 오류:', error);
@@ -133,7 +140,7 @@ const SignUpPrivateForeignerScreen = () => {
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
     // 앱이 닫힌 상태에서 딥링크로 열린 경우
-    Linking.getInitialURL().then((url) => {
+    Linking.getInitialURL().then(url => {
       if (url) {
         handleDeepLink({ url });
       }
@@ -144,14 +151,15 @@ const SignUpPrivateForeignerScreen = () => {
     };
   }, []);
 
-  const validateEmail = (email) => {
+  const validateEmail = email => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  const validatePassword = (password) => {
+  const validatePassword = password => {
     // 영문, 숫자, 특수문자 최소 10자리 이상
-    const passwordRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])[a-z\d!@#$%^&*]{10,20}$/i;
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])[a-z\d!@#$%^&*]{10,20}$/i;
     return passwordRegex.test(password);
   };
 
@@ -159,7 +167,7 @@ const SignUpPrivateForeignerScreen = () => {
     setShowAddressModal(true);
   };
 
-  const handleAddressSelect = (data) => {
+  const handleAddressSelect = data => {
     try {
       const addressData = typeof data === 'string' ? JSON.parse(data) : data;
       setZipcode(addressData.zonecode || '');
@@ -210,16 +218,17 @@ const SignUpPrivateForeignerScreen = () => {
         foreigner_use_code: foreignerUseCode,
       };
 
-
-      const response = await ApiService.api.post('/app/certJoinProcess', signUpData);
-
+      const response = await ApiService.api.post(
+        '/app/certJoinProcess',
+        signUpData,
+      );
 
       const rtnvalue = String(response.data.rtnvalue).trim();
 
       if (rtnvalue === '0') {
         // 회원가입 성공 - 서비스 이용신청 화면으로 이동
         const member_id = response.data.member_id || '';
-        
+
         navigation.replace('MyCert', {
           use_tf_join: 'Y',
           f_joinType: f_joinType || 'foreigner',
@@ -228,7 +237,10 @@ const SignUpPrivateForeignerScreen = () => {
       } else if (rtnvalue === '1') {
         Alert.alert('회원가입', '입력정보를 확인해주세요.');
       } else if (rtnvalue === '2') {
-        Alert.alert('회원가입', '인증정보가 올바르지 않습니다.\n(법인휴대전화의 경우 실 사용자 등록이 되어야 합니다.)');
+        Alert.alert(
+          '회원가입',
+          '인증정보가 올바르지 않습니다.\n(법인휴대전화의 경우 실 사용자 등록이 되어야 합니다.)',
+        );
       } else if (rtnvalue === '3') {
         Alert.alert('회원가입', '이미 가입된 이메일 입니다.');
       } else if (rtnvalue === '4') {
@@ -261,7 +273,8 @@ const SignUpPrivateForeignerScreen = () => {
     if (!password) {
       newErrors.password = '* 비밀번호를 입력해주세요.';
     } else if (!validatePassword(password)) {
-      newErrors.password = '* 비밀번호는 영문,숫자,특수문자를 포함한 최소 10자, 최대 20자 입니다.';
+      newErrors.password =
+        '* 비밀번호는 영문,숫자,특수문자를 포함한 최소 10자, 최대 20자 입니다.';
     }
 
     if (!passwordConfirm) {
@@ -285,7 +298,10 @@ const SignUpPrivateForeignerScreen = () => {
 
     // 외국인 실지 명의 구분 검증
     if (!foreignerUseCode) {
-      Alert.alert('외국인 실지 명의 구분', '외국인 실지 명의 구분을 선택해주세요.');
+      Alert.alert(
+        '외국인 실지 명의 구분',
+        '외국인 실지 명의 구분을 선택해주세요.',
+      );
       return;
     }
 
@@ -296,13 +312,15 @@ const SignUpPrivateForeignerScreen = () => {
 
     try {
       setLoading(true);
-      
-      // 이메일 중복 확인
-      const emailCheckResponse = await ApiService.api.post('/app/check/email/use', {
-        web_id: email,
-        email: email,
-      });
 
+      // 이메일 중복 확인
+      const emailCheckResponse = await ApiService.api.post(
+        '/app/check/email/use',
+        {
+          web_id: email,
+          email: email,
+        },
+      );
 
       // 응답 데이터를 문자열로 변환하여 비교
       const responseValue = String(emailCheckResponse.data).trim();
@@ -310,29 +328,32 @@ const SignUpPrivateForeignerScreen = () => {
       if (responseValue === '0') {
         // 이메일 사용 가능 - 본인인증 진행
         setLoading(false);
-        
+
         // okname 데이터 확인
         const oknameData = okname;
-        
+
         if (!oknameData) {
-          Alert.alert('오류', '본인인증 정보를 가져올 수 없습니다.\n관리자에게 문의해주세요.');
+          Alert.alert(
+            '오류',
+            '본인인증 정보를 가져올 수 없습니다.\n관리자에게 문의해주세요.',
+          );
           return;
         }
-        
+
         if (oknameData.okname === 'Y') {
           const okname_url = oknameData.okname_url;
           const cp_cd = oknameData.cp_cd;
           const token = oknameData.token;
-          
+
           // Form 데이터를 URL 파라미터로 변환
           const formParams = new URLSearchParams({
             tc: 'kcb.oknm.online.safehscert.popup.cmd.P931_CertChoiceCmd',
             cp_cd: cp_cd || '',
             mdl_tkn: token || '',
           });
-          
+
           const fullUrl = `${okname_url}?${formParams.toString()}`;
-          
+
           // 외부 브라우저로 본인인증 페이지 열기
           Alert.alert(
             '휴대전화 본인인증',
@@ -340,7 +361,7 @@ const SignUpPrivateForeignerScreen = () => {
             [
               {
                 text: '취소',
-                style: 'cancel'
+                style: 'cancel',
               },
               {
                 text: '확인',
@@ -356,13 +377,14 @@ const SignUpPrivateForeignerScreen = () => {
                     console.error('URL 열기 오류:', error);
                     Alert.alert('오류', '브라우저를 열 수 없습니다.');
                   }
-                }
-              }
-            ]
+                },
+              },
+            ],
           );
         } else {
           const rslt_cd = oknameData.rslt_cd || '';
-          const rslt_msg = oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
+          const rslt_msg =
+            oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
           Alert.alert('휴대전화 본인인증', `[${rslt_cd}] ${rslt_msg}`);
         }
       } else if (responseValue === '1' || responseValue === '2') {
@@ -422,8 +444,9 @@ const SignUpPrivateForeignerScreen = () => {
             <TextInput
               style={[styles.input, errors.email && styles.inputError]}
               placeholder="이메일 입력"
+              placeholderTextColor="#999"
               value={email}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setEmail(text);
                 setErrors({ ...errors, email: '' });
               }}
@@ -432,7 +455,9 @@ const SignUpPrivateForeignerScreen = () => {
               autoCorrect={false}
             />
             <Text style={styles.notif}>* 이메일 주소는 변경이 불가합니다.</Text>
-            <Text style={styles.notif}>* 실사용 이메일 주소로 기입해주시기 바랍니다.</Text>
+            <Text style={styles.notif}>
+              * 실사용 이메일 주소로 기입해주시기 바랍니다.
+            </Text>
             {errors.email ? (
               <Text style={styles.errorText}>{errors.email}</Text>
             ) : null}
@@ -444,8 +469,9 @@ const SignUpPrivateForeignerScreen = () => {
             <TextInput
               style={[styles.input, errors.password && styles.inputError]}
               placeholder="비밀번호 입력"
+              placeholderTextColor="#999"
               value={password}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setPassword(text);
                 setErrors({ ...errors, password: '' });
               }}
@@ -454,10 +480,14 @@ const SignUpPrivateForeignerScreen = () => {
               autoCorrect={false}
             />
             <TextInput
-              style={[styles.input, styles.mt8, errors.passwordConfirm && styles.inputError]}
+              style={[
+                styles.input,
+                styles.mt8,
+                errors.passwordConfirm && styles.inputError,
+              ]}
               placeholder="비밀번호 재입력"
               value={passwordConfirm}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setPasswordConfirm(text);
                 setErrors({ ...errors, passwordConfirm: '' });
               }}
@@ -466,7 +496,8 @@ const SignUpPrivateForeignerScreen = () => {
               autoCorrect={false}
             />
             <Text style={styles.notif}>
-              * 영문, 숫자, 특수문자(숫자키 상단 특수문자만 가능) 최소 10자리 이상으로 입력해 주셔야 합니다.
+              * 영문, 숫자, 특수문자(숫자키 상단 특수문자만 가능) 최소 10자리
+              이상으로 입력해 주셔야 합니다.
             </Text>
             {errors.password ? (
               <Text style={styles.errorText}>{errors.password}</Text>
@@ -481,8 +512,12 @@ const SignUpPrivateForeignerScreen = () => {
             <Text style={styles.label}>주소</Text>
             <View style={styles.addressRow}>
               <TextInput
-                style={[styles.addressInput, errors.address && styles.inputError]}
+                style={[
+                  styles.addressInput,
+                  errors.address && styles.inputError,
+                ]}
                 placeholder="우편번호"
+                placeholderTextColor="#999"
                 value={zipcode}
                 editable={false}
               />
@@ -494,7 +529,11 @@ const SignUpPrivateForeignerScreen = () => {
               </TouchableOpacity>
             </View>
             <TextInput
-              style={[styles.input, styles.mt8, errors.address && styles.inputError]}
+              style={[
+                styles.input,
+                styles.mt8,
+                errors.address && styles.inputError,
+              ]}
               placeholder="기본주소"
               value={address1}
               editable={false}
@@ -503,13 +542,17 @@ const SignUpPrivateForeignerScreen = () => {
               style={[styles.input, styles.mt8]}
               placeholder="상세주소"
               value={address2}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setAddress2(text);
                 setErrors({ ...errors, address: '' });
               }}
             />
-            <Text style={styles.notif}>* 이웃 우대 금리를 신청하시려면 등본상 주소를 입력하세요.</Text>
-            <Text style={styles.notif}>* 인근지역 상품 오픈 시 이웃등록 사전등록 혜택을 알려드립니다.</Text>
+            <Text style={styles.notif}>
+              * 이웃 우대 금리를 신청하시려면 등본상 주소를 입력하세요.
+            </Text>
+            <Text style={styles.notif}>
+              * 인근지역 상품 오픈 시 이웃등록 사전등록 혜택을 알려드립니다.
+            </Text>
             {errors.address ? (
               <Text style={styles.errorText}>{errors.address}</Text>
             ) : null}
@@ -570,7 +613,10 @@ const SignUpPrivateForeignerScreen = () => {
         <View style={styles.btnBox}>
           {!verificationCompleted ? (
             <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              style={[
+                styles.submitButton,
+                loading && styles.submitButtonDisabled,
+              ]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -582,7 +628,11 @@ const SignUpPrivateForeignerScreen = () => {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.submitButton, styles.submitButtonSuccess, loading && styles.submitButtonDisabled]}
+              style={[
+                styles.submitButton,
+                styles.submitButtonSuccess,
+                loading && styles.submitButtonDisabled,
+              ]}
               onPress={handleCompleteSignUp}
               disabled={loading}
             >
@@ -597,130 +647,117 @@ const SignUpPrivateForeignerScreen = () => {
       </View>
 
       {/* 직업 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showJobModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowJobModal(false)}
+        title="직업 선택"
+        onClose={() => setShowJobModal(false)}
+        primaryAction={{ text: '닫기', onPress: () => setShowJobModal(false) }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>직업 선택</Text>
-              <TouchableOpacity onPress={() => setShowJobModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              {jobOptions.filter(job => job.value !== '00').map((job) => (
-                <TouchableOpacity
-                  key={job.value}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setJobCode(job.value);
-                    setShowJobModal(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, jobCode === job.value && styles.modalItemTextSelected]}>
-                    {job.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        {jobOptions
+          .filter(job => job.value !== '00')
+          .map(job => (
+            <TouchableOpacity
+              key={job.value}
+              style={styles.modalItem}
+              onPress={() => {
+                setJobCode(job.value);
+                setShowJobModal(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.modalItemText,
+                  jobCode === job.value && styles.modalItemTextSelected,
+                ]}
+              >
+                {job.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+      </AppModal>
 
       {/* 외국인 실지 명의 구분 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showForeignerModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowForeignerModal(false)}
+        title="외국인 실지 명의 구분"
+        onClose={() => setShowForeignerModal(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowForeignerModal(false),
+        }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>외국인 실지 명의 구분</Text>
-              <TouchableOpacity onPress={() => setShowForeignerModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              {foreignerOptions.filter(foreigner => foreigner.value !== '').map((foreigner) => (
-                <TouchableOpacity
-                  key={foreigner.value}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setForeignerUseCode(foreigner.value);
-                    setShowForeignerModal(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, foreignerUseCode === foreigner.value && styles.modalItemTextSelected]}>
-                    {foreigner.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        {foreignerOptions
+          .filter(foreigner => foreigner.value !== '')
+          .map(foreigner => (
+            <TouchableOpacity
+              key={foreigner.value}
+              style={styles.modalItem}
+              onPress={() => {
+                setForeignerUseCode(foreigner.value);
+                setShowForeignerModal(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.modalItemText,
+                  foreignerUseCode === foreigner.value &&
+                    styles.modalItemTextSelected,
+                ]}
+              >
+                {foreigner.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+      </AppModal>
 
       {/* 가입 경로 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showJoinRootModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowJoinRootModal(false)}
+        title="가입 경로 선택"
+        onClose={() => setShowJoinRootModal(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowJoinRootModal(false),
+        }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>가입 경로 선택</Text>
-              <TouchableOpacity onPress={() => setShowJoinRootModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              {joinRootOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setJoinRoot(option.value);
-                    setShowJoinRootModal(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, joinRoot === option.value && styles.modalItemTextSelected]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        {joinRootOptions.map((option, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.modalItem}
+            onPress={() => {
+              setJoinRoot(option.value);
+              setShowJoinRootModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalItemText,
+                joinRoot === option.value && styles.modalItemTextSelected,
+              ]}
+            >
+              {option.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </AppModal>
 
       {/* 주소 검색 모달 */}
-      <Modal
+      <AppModal
         visible={showAddressModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddressModal(false)}
+        title="주소검색"
+        onClose={() => setShowAddressModal(false)}
+        backdropClose={false}
+        scroll={false}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowAddressModal(false),
+        }}
       >
-        <View style={styles.addressModalOverlay}>
-          <View style={styles.addressModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>주소검색</Text>
-              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.webViewContainer}>
-              <WebView
-                source={{
-                  baseUrl: 'https://rootenergy.co.kr',
-                  html: `
+        <View style={styles.webViewContainer}>
+          <WebView
+            source={{
+              baseUrl: 'https://rootenergy.co.kr',
+              html: `
                     <!DOCTYPE html>
                     <html>
                       <head>
@@ -820,37 +857,37 @@ const SignUpPrivateForeignerScreen = () => {
                         </script>
                       </body>
                     </html>
-                  `
-                }}
-                onMessage={(event) => {
-                  const data = event.nativeEvent.data;
-                  try {
-                    const parsed = JSON.parse(data);
-                    if (parsed?.__type === 'address') {
-                      handleAddressSelect(parsed.payload);
-                      return;
-                    }
-                  } catch (_) {}
-                  handleAddressSelect(data);
-                }}
-                onShouldStartLoadWithRequest={(request) => {
-                  if (request.url.startsWith('postcode://')) {
-                    const payload = decodeURIComponent(request.url.replace('postcode://', ''));
-                    handleAddressSelect(payload);
-                    return false;
-                  }
-                  return true;
-                }}
-                style={styles.webView}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                mixedContentMode="always"
-                originWhitelist={['*']}
-              />
-            </View>
-          </View>
+                  `,
+            }}
+            onMessage={event => {
+              const data = event.nativeEvent.data;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed?.__type === 'address') {
+                  handleAddressSelect(parsed.payload);
+                  return;
+                }
+              } catch (_) {}
+              handleAddressSelect(data);
+            }}
+            onShouldStartLoadWithRequest={request => {
+              if (request.url.startsWith('postcode://')) {
+                const payload = decodeURIComponent(
+                  request.url.replace('postcode://', ''),
+                );
+                handleAddressSelect(payload);
+                return false;
+              }
+              return true;
+            }}
+            style={styles.webView}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            mixedContentMode="always"
+            originWhitelist={['*']}
+          />
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 };
@@ -1091,4 +1128,3 @@ const styles = StyleSheet.create({
 });
 
 export default SignUpPrivateForeignerScreen;
-

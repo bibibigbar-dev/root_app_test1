@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Modal,
   Linking,
   Image,
   Platform,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const RepaymentHistoryScreen = ({ navigation, route }) => {
   const { user, member_id } = route.params || {};
@@ -59,14 +59,15 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
   const loadRepaymentData = async () => {
     setLoading(true);
     try {
-      const memberId = member_id || currentUser?.session?.member_id || currentUser?.id;
-      
+      const memberId =
+        member_id || currentUser?.session?.member_id || currentUser?.id;
+
       // GET 요청으로 쿼리 파라미터 전송
       const response = await ApiService.api.get('/app/my/repayment', {
         params: {
           member_id: memberId,
-          cur_yyyy: selectedYear
-        }
+          cur_yyyy: selectedYear,
+        },
       });
 
       // 응답 데이터 처리
@@ -86,14 +87,14 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = value => {
     if (!value && value !== 0) return '0';
     const stringValue = typeof value === 'string' ? value : String(value);
     const numericValue = stringValue.replace(/[^0-9]/g, '');
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = dateString => {
     if (!dateString) return '-';
     return dateString.substring(0, 10);
   };
@@ -103,10 +104,13 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
       // Android 권한 확인
       if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('권한 필요', '파일 다운로드를 위해 저장 권한이 필요합니다.');
+          Alert.alert(
+            '권한 필요',
+            '파일 다운로드를 위해 저장 권한이 필요합니다.',
+          );
           return;
         }
       }
@@ -115,19 +119,20 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
 
       const baseURL = ApiService.baseURL;
       const excelUrl = `${baseURL}/my/repayment/excel?cur_yyyy=${selectedYear}`;
-      
+
       // 토큰 가져오기
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const AsyncStorage =
+        require('@react-native-async-storage/async-storage').default;
       const token = await AsyncStorage.getItem('userToken');
-      
+
       // 파일 다운로드
       const downloadDest = `${RNFS.DownloadDirectoryPath}/연도별_지급액_내역_${selectedYear}.xls`;
-      
+
       const downloadResult = await RNFS.downloadFile({
         fromUrl: excelUrl,
         toFile: downloadDest,
         headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
+          Authorization: token ? `Bearer ${token}` : '',
         },
       }).promise;
 
@@ -135,21 +140,24 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
         Alert.alert(
           '다운로드 완료',
           `엑셀 파일이 다운로드되었습니다.\n\n파일 위치: ${downloadDest}`,
-          [{ text: '확인' }]
+          [{ text: '확인' }],
         );
       } else {
         throw new Error(`다운로드 실패: ${downloadResult.statusCode}`);
       }
     } catch (error) {
       console.error('엑셀 다운로드 오류:', error);
-      Alert.alert('오류', `엑셀 다운로드 중 오류가 발생했습니다.\n${error.message}`);
+      Alert.alert(
+        '오류',
+        `엑셀 다운로드 중 오류가 발생했습니다.\n${error.message}`,
+      );
     }
   };
 
   if (loading && repaymentData.length === 0) {
     return (
       <View style={styles.container}>
-      <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2c3db8" />
         </View>
       </View>
@@ -173,7 +181,6 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
       </View>
 
       <ScrollView style={styles.scrollView}>
-
         {/* 제목 */}
         <View style={styles.titleBox}>
           <Text style={styles.title}>연도별 지급액 내역</Text>
@@ -188,7 +195,7 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
             <Text style={styles.yearPickerText}>{selectedYear}년</Text>
             <Text style={styles.yearPickerArrow}>▼</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.excelButton}
             onPress={handleExcelDownload}
@@ -217,10 +224,12 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
                   <Text style={styles.headerText}>세율</Text>
                 </View>
               </View>
-              
+
               <View style={styles.tableHeader}>
                 <View style={[styles.headerCell, styles.headerCell1]}>
-                  <Text style={styles.headerText}>지급대상기간{'\n'}(연체대상기간)</Text>
+                  <Text style={styles.headerText}>
+                    지급대상기간{'\n'}(연체대상기간)
+                  </Text>
                 </View>
                 <View style={[styles.headerCell, styles.headerCell2]}>
                   <Text style={styles.headerText}>지급액</Text>
@@ -263,7 +272,7 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
                       <Text style={styles.cellText}></Text>
                     </View>
                   </View>
-                  
+
                   {/* 두 번째 행 */}
                   <View style={styles.tableRow}>
                     <View style={[styles.tableCell, styles.tableCell1]}>
@@ -293,7 +302,8 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
                     </View>
                     <View style={[styles.tableCell, styles.tableCell5]}>
                       <Text style={[styles.cellText, styles.numberText]}>
-                        {formatCurrency((item.i_tax || 0) + (item.r_tax || 0))}원
+                        {formatCurrency((item.i_tax || 0) + (item.r_tax || 0))}
+                        원
                       </Text>
                     </View>
                   </View>
@@ -305,46 +315,38 @@ const RepaymentHistoryScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* 연도 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showYearPicker}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowYearPicker(false)}
+        title="연도 선택"
+        onClose={() => setShowYearPicker(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowYearPicker(false),
+        }}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowYearPicker(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>연도 선택</Text>
-            <ScrollView style={styles.yearList}>
-              {years.map((year) => (
-                <TouchableOpacity
-                  key={year}
-                  style={[
-                    styles.yearOption,
-                    selectedYear === year && styles.yearOptionActive
-                  ]}
-                  onPress={() => {
-                    setSelectedYear(year);
-                    setShowYearPicker(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.yearOptionText,
-                      selectedYear === year && styles.yearOptionTextActive
-                    ]}
-                  >
-                    {year}년
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        {years.map(year => (
+          <TouchableOpacity
+            key={year}
+            style={[
+              styles.yearOption,
+              selectedYear === year && styles.yearOptionActive,
+            ]}
+            onPress={() => {
+              setSelectedYear(year);
+              setShowYearPicker(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.yearOptionText,
+                selectedYear === year && styles.yearOptionTextActive,
+              ]}
+            >
+              {year}년
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </AppModal>
     </View>
   );
 };
@@ -587,4 +589,3 @@ const styles = StyleSheet.create({
 });
 
 export default RepaymentHistoryScreen;
-

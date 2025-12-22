@@ -37,7 +37,7 @@ const BondMarketScreen = ({ navigation, route }) => {
     totalInterest: 0,
     totalTax: 0,
     totalComm: 0,
-    schedule: []
+    schedule: [],
   });
   const [expandedSchedule, setExpandedSchedule] = useState({});
   const [calcBondData, setCalcBondData] = useState(null);
@@ -46,11 +46,56 @@ const BondMarketScreen = ({ navigation, route }) => {
     loadBondData();
   }, [activeTab, selectedArea]);
 
+  // 모달이 열릴 때 상세 데이터 로드
+  useEffect(() => {
+    if (showCalcModal && calcBondData && calcBondData.orderNumber) {
+      loadInterestData();
+    }
+  }, [showCalcModal]);
+
+  const loadInterestData = async () => {
+    try {
+      const response = await ApiService.api.post('/market/interest', {
+        orderNumber: calcBondData.orderNumber,
+      });
+
+      if (response.data) {
+        // 상세 데이터로 calcBondData 업데이트
+        const prod = response.data.prod;
+        const option = response.data.option;
+
+        setCalcBondData({
+          ...calcBondData,
+          sort: prod.sort,
+          repayType: prod.repay_type,
+          rate: prod.rate,
+          period: prod.period,
+          orderNumber: prod.orderNumber,
+          iComm1: option.i_comm_1,
+          iTax: option.i_tax,
+          rTax: option.r_tax,
+        });
+
+        // 판매금액으로 초기화
+        const tradePrice =
+          calcBondData.trade_price || calcBondData.price || '1000000';
+        setCalcPrice(String(tradePrice));
+
+        // 초기 계산 실행
+        setTimeout(() => {
+          calculateInterest();
+        }, 100);
+      }
+    } catch (error) {
+      console.error('이자 관련 데이터 호출 실패:', error);
+    }
+  };
+
   const loadBondData = async () => {
     setLoading(true);
     try {
       const memberId = user?.session?.member_id || user?.id;
-      
+
       const params = {
         orderName: searchText || '',
         area: selectedArea || '',
@@ -65,11 +110,11 @@ const BondMarketScreen = ({ navigation, route }) => {
       if (memberId) {
         params.member_id = memberId;
       }
-      
+
       const response = await ApiService.api.get('/app/market', {
-        params: params
+        params: params,
       });
-      
+
       // 백엔드 응답 처리
       if (response.data) {
         // list: 채권 목록
@@ -82,8 +127,7 @@ const BondMarketScreen = ({ navigation, route }) => {
         // classType: 지역 선택 목록
         if (response.data.classType && Array.isArray(response.data.classType)) {
           setAreaList(response.data.classType);
-        } 
-
+        }
       } else {
         setBondList([]);
       }
@@ -104,20 +148,37 @@ const BondMarketScreen = ({ navigation, route }) => {
     setCurrentPage(currentPage + 1);
   };
 
-  const getOrderTypeImage = (orderType) => {
-    if (orderType === '태양광') {
-      return require('../assets/images/img_product01_s.png');
-    } else if (orderType === 'ESS') {
-      return require('../assets/images/img_product02_s.png');
-    } else if (orderType === '풍력') {
-      return require('../assets/images/img_product03_s.png');
-    } else if (orderType === '전기차충전소') {
-      return require('../assets/images/img_product02_s.png');
+  const navigateToProductDetail = item => {
+    const idx = item.idx;
+    let screenName = 'ProductDetail'; // 기본값 (idx > 498)
+
+    if (idx > 498) {
+      screenName = 'ProductDetail';
+    } else if (idx > 415) {
+      screenName = 'ProductDetailOld4';
+    } else if (idx > 309) {
+      screenName = 'ProductDetailOld1';
+    } else if (idx > 242) {
+      screenName = 'ProductDetailOld2';
+    } else if (idx <= 242) {
+      screenName = 'ProductDetailOld3';
     }
-    return null;
+
+    navigation.navigate(screenName, { orderKey: item.orderNumber });
   };
 
-  const getStatusText = (item) => {
+  const getOrderTypeImage = orderType => {
+    const iconMap = {
+      태양광: require('../assets/images/img_product01_s.png'),
+      풍력: require('../assets/images/img_product02_s.png'),
+      ESS: require('../assets/images/img_product03_s.png'),
+      전기차충전소: require('../assets/images/img_product03_s.png'),
+    };
+
+    return iconMap[orderType] || null;
+  };
+
+  const getStatusText = item => {
     if (!user) return '로그인';
     if (item.pseq) return '신청완료';
     if (item.status === 'N') return '진행중';
@@ -125,7 +186,7 @@ const BondMarketScreen = ({ navigation, route }) => {
     return '진행중';
   };
 
-  const formatNumber = (value) => {
+  const formatNumber = value => {
     return parseInt(value || 0).toLocaleString();
   };
 
@@ -148,11 +209,12 @@ const BondMarketScreen = ({ navigation, route }) => {
   };
 
   const calcDateDiff = (startDate, endDate) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    const sdArr = startDate.split('-');
+    const edArr = endDate.split('-');
+    const sDate = new Date(sdArr[0], Number(sdArr[1]) - 1, sdArr[2]);
+    const eDate = new Date(edArr[0], Number(edArr[1]) - 1, edArr[2]);
+    const diffDt = (eDate.getTime() - sDate.getTime()) / 1000 / 60 / 60 / 24;
+    return diffDt;
   };
 
   // 수익 계산
@@ -168,12 +230,12 @@ const BondMarketScreen = ({ navigation, route }) => {
     const sort = calcBondData.sort;
     const rpType = calcBondData.repayType;
     const rate = Number(calcBondData.rate);
-    const dRate = (rate / 100) / 365;
+    const dRate = rate / 100 / 365;
     let price = calcPrice.replace(/,/g, '');
     price = Number(price);
     const period = Number(calcBondData.period);
     const comm = Number(calcBondData.iComm1 || 0);
-    const dComm = (comm / 100) / 365;
+    const dComm = comm / 100 / 365;
     const iTaxPer = Number(calcBondData.iTax || 0);
     const rTaxPer = Number(calcBondData.rTax || 0);
     let startDate = getCurrentDate();
@@ -184,14 +246,27 @@ const BondMarketScreen = ({ navigation, route }) => {
 
     for (let i = 1; i <= period; i++) {
       let endDate;
-      
+
       if (sort === 'BRIDGE' || sort === 'bridge') {
         endDate = addMonths(startDate, 1);
       } else if (sort === 'PF' || sort === 'pf') {
         endDate = addMonths(startDate, 3);
       } else {
-        // innovation 등
-        endDate = addMonths(startDate, 3);
+        // innovation 등 - 특정 상품은 6개월
+        const orderNumber = calcBondData.orderNumber;
+        if (
+          orderNumber === 'R000278' ||
+          orderNumber === 'R000280' ||
+          orderNumber === 'R000281' ||
+          orderNumber === 'R000282' ||
+          orderNumber === 'R000286' ||
+          orderNumber === 'R000287' ||
+          orderNumber === 'R000288'
+        ) {
+          endDate = addMonths(startDate, 6);
+        } else {
+          endDate = addMonths(startDate, 3);
+        }
       }
 
       const diffDt = calcDateDiff(startDate, endDate) - 1;
@@ -205,16 +280,16 @@ const BondMarketScreen = ({ navigation, route }) => {
         }
       }
 
-      const ri = (tBal * dRate) * diffDt;
+      const ri = tBal * dRate * diffDt;
       const rti = Math.floor((ri * (iTaxPer / 100)) / 10) * 10;
       const rtr = Math.floor((ri * (rTaxPer / 100)) / 10) * 10;
-      const rc = (price * dComm) * diffDt;
+      const rc = price * dComm * diffDt;
 
       rp = Math.floor(rp);
       const riFloor = Math.floor(ri);
       const rcFloor = Math.floor(rc);
 
-      const rrp = (rp + riFloor) - (rti + rtr + rcFloor);
+      const rrp = rp + riFloor - (rti + rtr + rcFloor);
       const rrpFloor = Math.floor(rrp);
 
       schedule.push({
@@ -226,7 +301,7 @@ const BondMarketScreen = ({ navigation, route }) => {
         incomeTax: rti,
         residentTax: rtr,
         commission: rcFloor,
-        actualPayment: rrpFloor
+        actualPayment: rrpFloor,
       });
 
       startDate = endDate;
@@ -244,11 +319,11 @@ const BondMarketScreen = ({ navigation, route }) => {
       totalInterest: tInt,
       totalTax: tTax,
       totalComm: tComm,
-      schedule: schedule
+      schedule: schedule,
     });
   };
 
-  const handleCalcPriceChange = (text) => {
+  const handleCalcPriceChange = text => {
     const numOnly = text.replace(/[^0-9]/g, '');
     setCalcPrice(numOnly);
   };
@@ -260,17 +335,17 @@ const BondMarketScreen = ({ navigation, route }) => {
       navigation.navigate('Login');
       return;
     }
-    
+
     if (!selectedBond) return;
 
     try {
       const memberId = user?.session?.member_id || user?.id;
-      
+
       const response = await ApiService.api.post('/app/market/process/buy', {
         member_id: memberId,
-        _mknum: selectedBond.seq.toString()
+        _mknum: selectedBond.seq.toString(),
       });
-      
+
       setShowBuyModal(false);
       setSelectedBond(null);
 
@@ -286,7 +361,7 @@ const BondMarketScreen = ({ navigation, route }) => {
                 loadBondData(); // 데이터 새로고침
               },
             },
-          ]
+          ],
         );
       } else if (response.data === '1' || response.data === 1) {
         // 로그인 필요
@@ -296,49 +371,37 @@ const BondMarketScreen = ({ navigation, route }) => {
         loadBondData();
       } else if (response.data === '4' || response.data === 4) {
         // 본인 판매 채권
-        Alert.alert(
-          '원리금수취권 구매신청',
-          '본인 판매 채권입니다.',
-          [{ text: '확인' }]
-        );
+        Alert.alert('원리금수취권 구매신청', '본인 판매 채권입니다.', [
+          { text: '확인' },
+        ]);
       } else if (response.data === '5' || response.data === 5) {
         // 이미 구매신청한 채권
-        Alert.alert(
-          '원리금수취권 구매신청',
-          '이미 구매신청한 채권입니다.',
-          [{ text: '확인' }]
-        );
+        Alert.alert('원리금수취권 구매신청', '이미 구매신청한 채권입니다.', [
+          { text: '확인' },
+        ]);
       } else {
         // 기타 오류
-        Alert.alert(
-          '오류',
-          '처리도중 오류가 발생하였습니다.',
-          [
-            {
-              text: '확인',
-              onPress: () => {
-                loadBondData();
-              },
-            },
-          ]
-        );
-      }
-    } catch (error) {
-      console.error('구매 신청 오류:', error);
-      setShowBuyModal(false);
-      setSelectedBond(null);
-      Alert.alert(
-        '오류',
-        '처리도중 오류가 발생하였습니다.',
-        [
+        Alert.alert('오류', '처리도중 오류가 발생하였습니다.', [
           {
             text: '확인',
             onPress: () => {
               loadBondData();
             },
           },
-        ]
-      );
+        ]);
+      }
+    } catch (error) {
+      console.error('구매 신청 오류:', error);
+      setShowBuyModal(false);
+      setSelectedBond(null);
+      Alert.alert('오류', '처리도중 오류가 발생하였습니다.', [
+        {
+          text: '확인',
+          onPress: () => {
+            loadBondData();
+          },
+        },
+      ]);
     }
   };
 
@@ -354,18 +417,20 @@ const BondMarketScreen = ({ navigation, route }) => {
         </View>
 
         {/* 이용방법 링크 */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.linkTip}
           onPress={() => {
-              navigation.navigate('BondMarketHowToUse', { user });
+            navigation.navigate('BondMarketHowToUse', { user });
           }}
         >
           <View style={styles.linkTipDt}>
             <Text style={styles.linkTipDtText}>이용방법</Text>
           </View>
-          <Text style={styles.linkTipDd}>내 지역 원리금수취권 거래하는 방법!</Text>
-          <Image 
-            source={require('../assets/images/arrow_right_white.png')} 
+          <Text style={styles.linkTipDd}>
+            내 지역 원리금수취권 거래하는 방법!
+          </Text>
+          <Image
+            source={require('../assets/images/arrow_right_white.png')}
             style={styles.linkTipArrow}
             resizeMode="contain"
           />
@@ -374,46 +439,60 @@ const BondMarketScreen = ({ navigation, route }) => {
         {/* 탭 메뉴 */}
         <View style={styles.tabSwiper}>
           <View style={styles.tabSwiperWrapper}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.tabItem, activeTab === 0 && styles.tabItemActive]}
               onPress={() => {
                 setActiveTab(0);
                 setCurrentPage(1);
               }}
             >
-              <Text style={[styles.tabText, activeTab === 0 && styles.tabTextActive]}>거래중</Text>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 0 && styles.tabTextActive,
+                ]}
+              >
+                거래중
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.tabItem, activeTab === 1 && styles.tabItemActive]}
               onPress={() => {
                 setActiveTab(1);
                 setCurrentPage(1);
               }}
             >
-              <Text style={[styles.tabText, activeTab === 1 && styles.tabTextActive]}>거래완료</Text>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 1 && styles.tabTextActive,
+                ]}
+              >
+                거래완료
+              </Text>
             </TouchableOpacity>
           </View>
           {activeTab === 0 && <View style={styles.tabActiveBar} />}
-          {activeTab === 1 && <View style={[styles.tabActiveBar, { left: '50%' }]} />}
+          {activeTab === 1 && (
+            <View style={[styles.tabActiveBar, { left: '50%' }]} />
+          )}
         </View>
 
         {/* 검색 필터 */}
         <View style={styles.choiceChips}>
           {/* 지역 선택 */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.selectArea}
             onPress={() => setShowAreaPicker(true)}
           >
-            <Image 
-              source={require('../assets/images/ico_local.png')} 
+            <Image
+              source={require('../assets/images/ico_local.png')}
               style={styles.areaIconLeft}
               resizeMode="contain"
             />
-            <Text style={styles.areaSelectText}>
-              {selectedArea || '전체'}
-            </Text>
-            <Image 
-              source={require('../assets/images/ico_select.png')} 
+            <Text style={styles.areaSelectText}>{selectedArea || '전체'}</Text>
+            <Image
+              source={require('../assets/images/ico_select.png')}
               style={styles.areaIconRight}
               resizeMode="contain"
             />
@@ -431,9 +510,12 @@ const BondMarketScreen = ({ navigation, route }) => {
               onChangeText={setSearchText}
               onSubmitEditing={handleSearch}
             />
-            <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-              <Image 
-                source={require('../assets/images/ico_search.png')} 
+            <TouchableOpacity
+              onPress={handleSearch}
+              style={styles.searchButton}
+            >
+              <Image
+                source={require('../assets/images/ico_search.png')}
                 style={styles.searchIcon}
                 resizeMode="contain"
               />
@@ -448,8 +530,8 @@ const BondMarketScreen = ({ navigation, route }) => {
           </View>
         ) : bondList.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Image 
-              source={require('../assets/images/loading1.png')} 
+            <Image
+              source={require('../assets/images/loading1.png')}
               style={styles.emptyImage}
               resizeMode="contain"
             />
@@ -462,109 +544,137 @@ const BondMarketScreen = ({ navigation, route }) => {
           <>
             <View style={styles.bondList}>
               {visibleItems.map((item, index) => (
-                <View key={index} style={styles.invItem}>
-                  {/* 헤더: 거래중은 파란색, 거래완료는 회색 */}
-                  <View style={[styles.inHead, activeTab === 0 ? styles.bgBlue : styles.bgGray]}>
-                    <Text style={styles.inHeadTitle}>
-                      채권번호 <Text style={styles.inHeadEm}>{item.seq}</Text>
-                    </Text>
-                    <Text style={styles.txtRight}>{item.area} 인근 주민 구매가능</Text>
-                  </View>
-                  
-                  <View style={styles.inCont}>
-                    <View style={styles.prdInfobox}>
-                      <View style={styles.prdInfo}>
-                        <View style={styles.imgbox}>
-                          <Image 
-                            source={getOrderTypeImage(item.orderType)} 
-                            style={styles.prdImg}
-                            resizeMode="contain"
-                          />
+                <View key={index} style={styles.invItemWrap}>
+                  <View style={styles.invItem}>
+                    {/* 헤더: 거래중은 파란색, 거래완료는 회색 */}
+                    <View
+                      style={[
+                        styles.inHead,
+                        activeTab === 0 ? styles.bgBlue : styles.bgGray,
+                      ]}
+                    >
+                      <Text style={styles.inHeadTitle}>
+                        채권번호 <Text style={styles.inHeadEm}>{item.seq}</Text>
+                      </Text>
+                      <Text style={styles.txtRight}>
+                        {item.area} 인근 주민 구매가능
+                      </Text>
+                    </View>
+
+                    <View style={styles.inCont}>
+                      <View style={styles.prdInfobox}>
+                        <View style={styles.prdInfo}>
+                          <View style={styles.imgbox}>
+                            <Image
+                              source={getOrderTypeImage(item.orderType)}
+                              style={styles.prdImg}
+                              resizeMode="contain"
+                            />
+                          </View>
+                          <TouchableOpacity
+                            style={styles.txtbox}
+                            onPress={() => navigateToProductDetail(item)}
+                          >
+                            <Text
+                              style={styles.tit}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                            >
+                              {item.orderName}
+                            </Text>
+                            <Text style={styles.txt}>
+                              {item.orderType} {item.orderNum}호
+                            </Text>
+                          </TouchableOpacity>
                         </View>
-                        <TouchableOpacity 
-                          style={styles.txtbox}
+
+                        {/* 가격 표시: 거래중과 거래완료 다른 레이아웃 */}
+                        {activeTab === 0 ? (
+                          // 거래중: 한 줄로 표시
+                          <View style={styles.prdPrice}>
+                            <Text style={styles.prdPriceDt}>
+                              채권금액 / 판매금액
+                            </Text>
+                            <Text style={styles.prdPriceDd}>
+                              <Text style={styles.colorBlue}>
+                                {formatNumber(item.price)}원
+                              </Text>{' '}
+                              / {formatNumber(item.trade_price)}원
+                            </Text>
+                          </View>
+                        ) : (
+                          // 거래완료: 두 줄로 표시
+                          <View style={styles.prdPrice2}>
+                            <View style={styles.prdPrice2Item}>
+                              <Text style={styles.prdPrice2Dt}>채권금액</Text>
+                              <Text style={styles.prdPrice2Dd}>
+                                {formatNumber(item.price)}원
+                              </Text>
+                            </View>
+                            <View style={styles.prdPrice2Item}>
+                              <Text style={styles.prdPrice2Dt}>판매금액</Text>
+                              <Text style={styles.prdPrice2Dd}>
+                                {formatNumber(item.trade_price)}원
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.prdDatabox}>
+                        <View style={[styles.prdDataDl, styles.prdDataDlFirst]}>
+                          <Text style={styles.prdDataDt}>연 수익률</Text>
+                          <Text style={styles.prdDataDd}>{item.rate}%</Text>
+                        </View>
+                        <View style={styles.prdDataDl}>
+                          <Text style={styles.prdDataDt}>상환회차</Text>
+                          <Text style={styles.prdDataDd}>
+                            {item.instalment}/{item.period}
+                          </Text>
+                        </View>
+                        <View style={styles.prdDataDl}>
+                          <Text style={styles.prdDataDt}>상환일</Text>
+                          <Text style={styles.prdDataDd}>
+                            {item.repay_date}
+                          </Text>
+                        </View>
+                        <View style={styles.prdDataDl}>
+                          <Text style={styles.prdDataDt}>상태</Text>
+                          <Text style={styles.prdDataDd}>
+                            {activeTab === 1 ? '거래완료' : getStatusText(item)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* 버튼: 거래중일 때만 표시 */}
+                    {activeTab === 0 && (
+                      <View style={styles.inBtnbox}>
+                        <TouchableOpacity
+                          style={styles.btn}
                           onPress={() => {
-                            navigation.navigate('ProductDetail', { orderKey: item.orderNumber });
+                            setCalcBondData(item);
+                            setShowCalcModal(true);
+                            setTimeout(() => calculateInterest(), 100);
                           }}
                         >
-                          <Text style={styles.tit} numberOfLines={1} ellipsizeMode="tail">
-                            {item.orderName}
+                          <Text style={styles.btnText}>수익금 지급 예정표</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.btn, styles.btnColorBlue]}
+                          onPress={() => {
+                            // 모달을 먼저 열고, 신청하기 버튼에서 로그인 체크
+                            setSelectedBond(item);
+                            setShowBuyModal(true);
+                          }}
+                        >
+                          <Text style={[styles.btnText, styles.btnTextBlue]}>
+                            원리금수취권 구매
                           </Text>
-                          <Text style={styles.txt}>{item.orderType} {item.orderNum}호</Text>
                         </TouchableOpacity>
                       </View>
-                      
-                      {/* 가격 표시: 거래중과 거래완료 다른 레이아웃 */}
-                      {activeTab === 0 ? (
-                        // 거래중: 한 줄로 표시
-                        <View style={styles.prdPrice}>
-                          <Text style={styles.prdPriceDt}>채권금액 / 판매금액</Text>
-                          <Text style={styles.prdPriceDd}>
-                            <Text style={styles.colorBlue}>{formatNumber(item.price)}원</Text> / {formatNumber(item.trade_price)}원
-                          </Text>
-                        </View>
-                      ) : (
-                        // 거래완료: 두 줄로 표시
-                        <View style={styles.prdPrice2}>
-                          <View style={styles.prdPrice2Item}>
-                            <Text style={styles.prdPrice2Dt}>채권금액</Text>
-                            <Text style={styles.prdPrice2Dd}>{formatNumber(item.price)}원</Text>
-                          </View>
-                          <View style={styles.prdPrice2Item}>
-                            <Text style={styles.prdPrice2Dt}>판매금액</Text>
-                            <Text style={styles.prdPrice2Dd}>{formatNumber(item.trade_price)}원</Text>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.prdDatabox}>
-                      <View style={[styles.prdDataDl, styles.prdDataDlFirst]}>
-                        <Text style={styles.prdDataDt}>연 수익률</Text>
-                        <Text style={styles.prdDataDd}>{item.rate}%</Text>
-                      </View>
-                      <View style={styles.prdDataDl}>
-                        <Text style={styles.prdDataDt}>상환회차</Text>
-                        <Text style={styles.prdDataDd}>{item.instalment}/{item.period}</Text>
-                      </View>
-                      <View style={styles.prdDataDl}>
-                        <Text style={styles.prdDataDt}>상환일</Text>
-                        <Text style={styles.prdDataDd}>{item.repay_date}</Text>
-                      </View>
-                      <View style={styles.prdDataDl}>
-                        <Text style={styles.prdDataDt}>상태</Text>
-                        <Text style={styles.prdDataDd}>
-                          {activeTab === 1 ? '거래완료' : getStatusText(item)}
-                        </Text>
-                      </View>
-                    </View>
+                    )}
                   </View>
-
-                  {/* 버튼: 거래중일 때만 표시 */}
-                  {activeTab === 0 && (
-                    <View style={styles.inBtnbox}>
-                      <TouchableOpacity 
-                        style={styles.btn}
-                        onPress={() => {
-                          setCalcBondData(item);
-                          setShowCalcModal(true);
-                          setTimeout(() => calculateInterest(), 100);
-                        }}
-                      >
-                        <Text style={styles.btnText}>수익금 지급 예정표</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.btn, styles.btnColorBlue]}
-                        onPress={() => {
-                          // 모달을 먼저 열고, 신청하기 버튼에서 로그인 체크
-                          setSelectedBond(item);
-                          setShowBuyModal(true);
-                        }}
-                      >
-                        <Text style={[styles.btnText, styles.btnTextBlue]}>원리금수취권 구매</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
                 </View>
               ))}
             </View>
@@ -572,8 +682,13 @@ const BondMarketScreen = ({ navigation, route }) => {
             {/* 더보기 버튼 */}
             {currentPage < totalPages && (
               <View style={styles.loadMoreContainer}>
-                <TouchableOpacity style={styles.loadMoreButton} onPress={handleLoadMore}>
-                  <Text style={styles.loadMoreText}>더보기 ({currentPage}/{totalPages})</Text>
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={handleLoadMore}
+                >
+                  <Text style={styles.loadMoreText}>
+                    더보기 ({currentPage}/{totalPages})
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -592,7 +707,7 @@ const BondMarketScreen = ({ navigation, route }) => {
           <View style={styles.modalContainer}>
             <View style={styles.modalBox}>
               <Text style={styles.modalTitle}>원리금수취권 구매신청</Text>
-              
+
               <View style={styles.modalContent}>
                 <Text style={styles.modalSubTitle}>투자위험 안내고지</Text>
                 <Text style={styles.modalWarningText}>
@@ -608,8 +723,8 @@ const BondMarketScreen = ({ navigation, route }) => {
               <View style={styles.hrLine} />
 
               <View style={styles.modalNotice}>
-                <Image 
-                  source={require('../assets/images/ico_exc.png')} 
+                <Image
+                  source={require('../assets/images/ico_exc.png')}
                   style={styles.modalNoticeIcon}
                   resizeMode="contain"
                 />
@@ -623,7 +738,9 @@ const BondMarketScreen = ({ navigation, route }) => {
               </View>
 
               <View style={styles.modalGrayBox}>
-                <Text style={styles.modalProductName}>{selectedBond?.orderName}</Text>
+                <Text style={styles.modalProductName}>
+                  {selectedBond?.orderName}
+                </Text>
               </View>
 
               <Text style={styles.modalConfirmText}>
@@ -631,7 +748,7 @@ const BondMarketScreen = ({ navigation, route }) => {
               </Text>
 
               <View style={styles.modalButtonBox}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.modalButton, styles.modalButtonGray]}
                   onPress={() => {
                     setShowBuyModal(false);
@@ -640,7 +757,7 @@ const BondMarketScreen = ({ navigation, route }) => {
                 >
                   <Text style={styles.modalButtonTextGray}>취소</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.modalButton, styles.modalButtonBlue]}
                   onPress={handleBuyRequest}
                 >
@@ -663,7 +780,7 @@ const BondMarketScreen = ({ navigation, route }) => {
           <View style={styles.areaModalContainer}>
             <View style={styles.areaModalBox}>
               <Text style={styles.areaModalTitle}>지역 선택</Text>
-              
+
               <ScrollView style={styles.areaModalList}>
                 <TouchableOpacity
                   style={styles.areaModalItem}
@@ -672,7 +789,12 @@ const BondMarketScreen = ({ navigation, route }) => {
                     setShowAreaPicker(false);
                   }}
                 >
-                  <Text style={[styles.areaModalItemText, selectedArea === '' && styles.areaModalItemTextActive]}>
+                  <Text
+                    style={[
+                      styles.areaModalItemText,
+                      selectedArea === '' && styles.areaModalItemTextActive,
+                    ]}
+                  >
                     전체
                   </Text>
                   {selectedArea === '' && (
@@ -683,32 +805,39 @@ const BondMarketScreen = ({ navigation, route }) => {
                     />
                   )}
                 </TouchableOpacity>
-                
-                {areaList && areaList.map((area, index) => {
-                  const areaName = area.name || area.type;
-                  const areaValue = area.type || area.name;
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.areaModalItem}
-                      onPress={() => {
-                        setSelectedArea(areaValue);
-                        setShowAreaPicker(false);
-                      }}
-                    >
-                      <Text style={[styles.areaModalItemText, selectedArea === areaValue && styles.areaModalItemTextActive]}>
-                        {areaName}
-                      </Text>
-                      {selectedArea === areaValue && (
-                        <Image
-                          source={require('../assets/images/icon_check.png')}
-                          style={styles.areaModalCheckIcon}
-                          resizeMode="contain"
-                        />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
+
+                {areaList &&
+                  areaList.map((area, index) => {
+                    const areaName = area.name || area.type;
+                    const areaValue = area.type || area.name;
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.areaModalItem}
+                        onPress={() => {
+                          setSelectedArea(areaValue);
+                          setShowAreaPicker(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.areaModalItemText,
+                            selectedArea === areaValue &&
+                              styles.areaModalItemTextActive,
+                          ]}
+                        >
+                          {areaName}
+                        </Text>
+                        {selectedArea === areaValue && (
+                          <Image
+                            source={require('../assets/images/icon_check.png')}
+                            style={styles.areaModalCheckIcon}
+                            resizeMode="contain"
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
               </ScrollView>
 
               <View style={styles.areaModalButtonBox}>
@@ -731,48 +860,71 @@ const BondMarketScreen = ({ navigation, route }) => {
         animationType="fade"
         onRequestClose={() => setShowCalcModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.calcModalContainer}>
-            <ScrollView style={styles.calcModalBox} showsVerticalScrollIndicator={false}>
-              <Text style={styles.calcModalTitle}>수익금 지급 예정표</Text>
-              
-              <View style={styles.calcInputBox}>
-                <Text style={styles.calcInputLabel}>투자금액</Text>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formatNumber(calcPrice)}
-                    onChangeText={handleCalcPriceChange}
-                    keyboardType="numeric"
-                  />
-                  <Text style={styles.txtUnit}>원</Text>
-                  <TouchableOpacity 
-                    style={styles.btnCalc}
-                    onPress={calculateInterest}
-                  >
-                    <Text style={styles.btnCalcText}>계산하기</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+        <View style={styles.popContainer}>
+          <TouchableOpacity
+            style={styles.popMask}
+            activeOpacity={1}
+            onPress={() => setShowCalcModal(false)}
+          />
+          <View style={styles.popWrapper}>
+            <View style={styles.popBox}>
+              <Text style={styles.popTitle}>예상 수익계산</Text>
+              <View style={styles.popTitleBorder} />
 
-              <View style={styles.calcResultBox}>
-                <Text style={styles.calcResultTitle}>예상 수익 정보</Text>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.popScrollView}
+                contentContainerStyle={styles.popScrollContent}
+              >
+                {/* 투자예정 금액 입력 */}
+                <View style={styles.pr4pl4}>
+                  <View style={styles.flexTit}>
+                    <Text style={styles.titText}>투자예정 금액</Text>
+                  </View>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.textInput}
+                      value={formatNumber(calcPrice)}
+                      onChangeText={handleCalcPriceChange}
+                      keyboardType="numeric"
+                    />
+                    <Text style={styles.txtUnit}>원</Text>
+                    <TouchableOpacity
+                      style={styles.btnCalc}
+                      onPress={calculateInterest}
+                    >
+                      <Text style={styles.btnCalcText}>계산하기</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.hrLine} />
+
+                {/* 예상 투자수익 */}
                 <View style={styles.boxCalc}>
                   <View style={styles.dlTotal}>
                     <Text style={styles.dtTotal}>예상 투자수익</Text>
-                    <Text style={styles.ddTotal}>{formatNumber(calcResult.totalProfit)} 원</Text>
+                    <Text style={styles.ddTotal}>
+                      {formatNumber(calcResult.totalProfit)} 원
+                    </Text>
                   </View>
                   <View style={styles.dl}>
                     <Text style={styles.dt}>세전 총 수익</Text>
-                    <Text style={styles.dd}>{formatNumber(calcResult.totalInterest)} 원</Text>
+                    <Text style={styles.dd}>
+                      {formatNumber(calcResult.totalInterest)} 원
+                    </Text>
                   </View>
                   <View style={styles.dl}>
                     <Text style={styles.dt}>세금(이자소득세+주민세)</Text>
-                    <Text style={styles.dd}>{formatNumber(calcResult.totalTax)} 원</Text>
+                    <Text style={styles.dd}>
+                      {formatNumber(calcResult.totalTax)} 원
+                    </Text>
                   </View>
                   <View style={styles.dl}>
                     <Text style={styles.dt}>플랫폼 수수료</Text>
-                    <Text style={styles.dd}>{formatNumber(calcResult.totalComm)} 원</Text>
+                    <Text style={styles.dd}>
+                      {formatNumber(calcResult.totalComm)} 원
+                    </Text>
                   </View>
                 </View>
 
@@ -781,62 +933,106 @@ const BondMarketScreen = ({ navigation, route }) => {
                 <View style={styles.repayList}>
                   {calcResult.schedule.map((item, index) => (
                     <View key={index} style={styles.repayItem}>
-                      <TouchableOpacity 
-                        style={[styles.inHead, expandedSchedule[index] && styles.inHeadOn]}
+                      <TouchableOpacity
+                        style={[
+                          styles.repayHead,
+                          expandedSchedule[index] && styles.repayHeadOn,
+                        ]}
                         onPress={() => {
                           setExpandedSchedule(prev => ({
                             ...prev,
-                            [index]: !prev[index]
+                            [index]: !prev[index],
                           }));
                         }}
                       >
-                        <Text style={styles.inHeadNum}>{item.round}회차</Text>
-                        <Text style={styles.inHeadDate}>{item.paymentDate}</Text>
-                        <Text style={styles.inHeadPrice}>{formatNumber(item.actualPayment)} 원</Text>
-                        <Image 
+                        <Text style={styles.repayHeadDt}>{item.round}회차</Text>
+                        <Text style={styles.repayHeadDd}>
+                          세후{' '}
+                          <Text style={styles.cnt}>
+                            {formatNumber(item.afterTax)}
+                          </Text>{' '}
+                          원
+                        </Text>
+                        <Image
                           source={require('../assets/images/arrow_select.png')}
-                          style={[styles.inHeadArrow, expandedSchedule[index] && styles.inHeadArrowOn]}
+                          style={[
+                            styles.scheduleArrow,
+                            expandedSchedule[index] &&
+                              styles.scheduleArrowRotated,
+                          ]}
                           resizeMode="contain"
                         />
                       </TouchableOpacity>
+
                       {expandedSchedule[index] && (
-                        <View style={styles.inBody}>
-                          <View style={styles.inBodyRow}>
-                            <Text style={styles.inBodyLabel}>원금</Text>
-                            <Text style={styles.inBodyValue}>{formatNumber(item.principal)} 원</Text>
+                        <View style={styles.repayCont}>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>지급일</Text>
+                            <Text style={styles.ddRow}>{item.paymentDate}</Text>
                           </View>
-                          <View style={styles.inBodyRow}>
-                            <Text style={styles.inBodyLabel}>이자</Text>
-                            <Text style={styles.inBodyValue}>{formatNumber(item.interest)} 원</Text>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>원금</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.principal)} 원
+                            </Text>
                           </View>
-                          <View style={styles.inBodyRow}>
-                            <Text style={styles.inBodyLabel}>이자소득세</Text>
-                            <Text style={styles.inBodyValue}>{formatNumber(item.incomeTax)} 원</Text>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>이자</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.interest)} 원
+                            </Text>
                           </View>
-                          <View style={styles.inBodyRow}>
-                            <Text style={styles.inBodyLabel}>주민세</Text>
-                            <Text style={styles.inBodyValue}>{formatNumber(item.residentTax)} 원</Text>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>이자소득세</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.incomeTax)} 원
+                            </Text>
                           </View>
-                          <View style={styles.inBodyRow}>
-                            <Text style={styles.inBodyLabel}>수수료</Text>
-                            <Text style={styles.inBodyValue}>{formatNumber(item.commission)} 원</Text>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>주민세</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.residentTax)} 원
+                            </Text>
+                          </View>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>플랫폼수수료</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.commission)} 원
+                            </Text>
+                          </View>
+                          <View style={styles.dlRow}>
+                            <Text style={styles.dtRow}>실지급액</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.actualPayment)} 원
+                            </Text>
                           </View>
                         </View>
                       )}
                     </View>
                   ))}
                 </View>
-              </View>
 
-              <View style={styles.calcModalButtonBox}>
+                {/* 안내 문구 */}
+                <View style={styles.flexText}>
+                  <Text style={styles.excIcon}>ⓘ</Text>
+                  <Text style={styles.txtNote}>
+                    위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
+                    변경될 수 있습니다. 또한 중도상환, 연체 등으로{'\n'}
+                    지급일자와 지급액에 차이가 있을 수 있습니다.
+                  </Text>
+                </View>
+              </ScrollView>
+
+              {/* 확인 버튼 (고정) */}
+              <View style={styles.btnBoxModal}>
                 <TouchableOpacity
-                  style={styles.calcModalButton}
+                  style={styles.btnStyleModal}
                   onPress={() => setShowCalcModal(false)}
                 >
-                  <Text style={styles.calcModalButtonText}>닫기</Text>
+                  <Text style={styles.btnTextModal}>확인</Text>
                 </TouchableOpacity>
               </View>
-            </ScrollView>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1053,19 +1249,24 @@ const styles = StyleSheet.create({
   },
   bondList: {
     paddingHorizontal: 16,
-    marginBottom: 40,
+    marginBottom: 20,
   },
-  invItem: {
+  invItemWrap: {
     marginTop: 20,
-    flexDirection: 'column',
-    position: 'relative',
     borderRadius: 10,
-    backgroundColor: '#fff',
     shadowColor: 'rgba(104, 111, 115, 0.15)',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 10,
     elevation: 3,
+    backgroundColor: 'transparent',
+  },
+  invItem: {
+    flexDirection: 'column',
+    position: 'relative',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
   },
   inHead: {
     flexDirection: 'row',
@@ -1221,6 +1422,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#f6f6f6',
+    backgroundColor: '#fff',
   },
   btn: {
     flex: 1,
@@ -1284,7 +1486,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   modalTitle: {
-    paddingVertical: 20,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     fontSize: 18,
     lineHeight: 24,
@@ -1477,226 +1679,243 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   // 수익금 계산 모달 스타일
-  calcModalContainer: {
+  popContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    paddingVertical: 48,
+    paddingHorizontal: 16,
+  },
+  popMask: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(34, 34, 34, 0.7)',
+  },
+  popWrapper: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
   },
-  calcModalBox: {
-    width: '100%',
-    maxHeight: '90%',
+  popBox: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingTop: 24,
+    borderRadius: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    maxHeight: '90%',
+    overflow: 'hidden',
   },
-  calcModalTitle: {
-    fontSize: 18,
-    lineHeight: 24,
+  popTitle: {
+    fontSize: 20,
+    lineHeight: 28,
     fontWeight: '700',
-    color: '#222',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 10,
   },
-  calcInputBox: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
+  popTitleBorder: {
+    height: 1,
+    backgroundColor: '#f6f6f6',
+    marginBottom: 20,
+    marginHorizontal: -20,
   },
-  calcInputLabel: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: '#222',
+  popScrollView: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  popScrollContent: {
+    paddingBottom: 8,
+  },
+  pr4pl4: {
+    paddingHorizontal: 4,
+  },
+  flexTit: {
     marginBottom: 8,
+  },
+  titText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
   },
   flexInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 48,
   },
   textInput: {
     flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 8,
+    paddingHorizontal: 12,
     fontSize: 15,
-    lineHeight: 21,
-    fontWeight: '400',
-    color: '#222',
-    padding: 0,
+    color: '#333',
   },
   txtUnit: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '400',
-    color: '#666',
     marginLeft: 8,
-    marginRight: 8,
+    fontSize: 15,
+    color: '#666',
   },
   btnCalc: {
-    paddingVertical: 8,
+    height: 44,
     paddingHorizontal: 16,
+    marginLeft: 20,
     backgroundColor: '#2c3db8',
-    borderRadius: 6,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   btnCalcText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 15,
     fontWeight: '600',
     color: '#fff',
   },
-  calcResultBox: {
-    paddingHorizontal: 16,
-  },
-  calcResultTitle: {
-    fontSize: 15,
-    lineHeight: 21,
-    fontWeight: '600',
-    color: '#222',
-    marginBottom: 12,
+  hrLine: {
+    height: 1,
+    backgroundColor: '#e0e1e2',
+    marginVertical: 20,
   },
   boxCalc: {
-    backgroundColor: '#f6f6f6',
-    borderRadius: 8,
-    padding: 16,
+    paddingVertical: 16,
   },
   dlTotal: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 12,
-    marginBottom: 12,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#e0e1e2',
+    marginBottom: 12,
   },
   dtTotal: {
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#222',
+    color: '#333',
   },
   ddTotal: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#2c3db8',
+    color: '#197cff',
   },
   dl: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    paddingVertical: 8,
   },
   dt: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '400',
+    fontSize: 14,
     color: '#666',
   },
   dd: {
     fontSize: 14,
-    lineHeight: 20,
     fontWeight: '600',
-    color: '#222',
+    color: '#333',
   },
   repayTit: {
-    fontSize: 15,
-    lineHeight: 21,
-    fontWeight: '600',
-    color: '#222',
-    marginTop: 24,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginTop: 20,
     marginBottom: 12,
   },
   repayList: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   repayItem: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
     marginBottom: 8,
     overflow: 'hidden',
   },
-  inHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-  },
-  inHeadOn: {
-    backgroundColor: '#f6f6f6',
-  },
-  inHeadNum: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: '#222',
-    width: 50,
-  },
-  inHeadDate: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '400',
-    color: '#666',
-  },
-  inHeadPrice: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: '#2c3db8',
-    marginRight: 8,
-  },
-  inHeadArrow: {
-    width: 16,
-    height: 16,
-  },
-  inHeadArrowOn: {
-    transform: [{ rotate: '180deg' }],
-  },
-  inBody: {
-    padding: 16,
-    paddingTop: 0,
-    backgroundColor: '#f6f6f6',
-  },
-  inBodyRow: {
+  repayHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    padding: 16,
+    backgroundColor: '#f6f6f6',
+    position: 'relative',
   },
-  inBodyLabel: {
+  repayHeadOn: {
+    backgroundColor: '#e8eeff',
+  },
+  repayHeadDt: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  repayHeadDd: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+    marginLeft: 12,
+  },
+  scheduleArrow: {
+    width: 12,
+    height: 12,
+    marginLeft: 8,
+  },
+  scheduleArrowRotated: {
+    transform: [{ rotate: '180deg' }],
+  },
+  cnt: {
+    fontWeight: '700',
+    color: '#2c3db8',
+  },
+  repayCont: {
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  dlRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  dtRow: {
     fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '400',
     color: '#666',
   },
-  inBodyValue: {
+  ddRow: {
     fontSize: 13,
-    lineHeight: 18,
     fontWeight: '600',
-    color: '#222',
+    color: '#333',
   },
-  calcModalButtonBox: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    marginTop: 8,
+  flexText: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 8,
+    marginBottom: 20,
   },
-  calcModalButton: {
+  excIcon: {
+    fontSize: 16,
+    color: '#197cff',
+    marginRight: 8,
+    marginTop: 2,
+  },
+  txtNote: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#666',
+  },
+  btnBoxModal: {
+    paddingTop: 16,
+    backgroundColor: '#fff',
+  },
+  btnStyleModal: {
     height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#2c3db8',
     borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  calcModalButtonText: {
-    fontSize: 15,
-    lineHeight: 21,
+  btnTextModal: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#fff',
   },
 });
 
 export default BondMarketScreen;
-

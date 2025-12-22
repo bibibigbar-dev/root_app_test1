@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-  Modal,
 } from 'react-native';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const NeighborStatusScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,7 @@ const NeighborStatusScreen = ({ navigation, route }) => {
   const loadNeighborStatus = async () => {
     try {
       setLoading(true);
-      
+
       const currentUser = await ApiService.getCurrentUser();
       const memberId = currentUser?.session?.member_id || currentUser?.id;
 
@@ -36,7 +36,7 @@ const NeighborStatusScreen = ({ navigation, route }) => {
       const response = await ApiService.api.get('/app/my/neighbor', {
         params: {
           member_id: memberId,
-        }
+        },
       });
 
       if (response.data) {
@@ -49,23 +49,23 @@ const NeighborStatusScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleMemoPopup = (memo) => {
+  const handleMemoPopup = memo => {
     setSelectedMemo(memo);
     setShowMemoModal(true);
   };
 
-  const formatDate = (dateStr) => {
+  const formatDate = dateStr => {
     if (!dateStr) return '-';
     return dateStr.substring(0, 10);
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = status => {
     if (status === 'Y') return '승인완료';
     if (status === 'X') return '승인거절';
     return '승인대기';
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = status => {
     if (status === 'Y') return styles.colorBlue;
     if (status === 'X') return styles.colorRed;
     return styles.colorMint;
@@ -120,13 +120,17 @@ const NeighborStatusScreen = ({ navigation, route }) => {
                       <View style={styles.dl}>
                         <Text style={styles.dt}>승인일자</Text>
                         <Text style={styles.dd}>
-                          {item.status === 'Y' ? formatDate(item.certdate) : '-'}
+                          {item.status === 'Y'
+                            ? formatDate(item.certdate)
+                            : '-'}
                         </Text>
                       </View>
                       <View style={styles.dl}>
                         <Text style={styles.dt}>비고</Text>
                         {item.status === 'X' ? (
-                          <TouchableOpacity onPress={() => handleMemoPopup(item.memo)}>
+                          <TouchableOpacity
+                            onPress={() => handleMemoPopup(item.memo)}
+                          >
                             <Text style={styles.memoLink}>사유보기</Text>
                           </TouchableOpacity>
                         ) : (
@@ -143,27 +147,14 @@ const NeighborStatusScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* 거절 사유 모달 */}
-      <Modal
+      <AppModal
         visible={showMemoModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowMemoModal(false)}
+        title="거절 사유"
+        onClose={() => setShowMemoModal(false)}
+        primaryAction={{ text: '확인', onPress: () => setShowMemoModal(false) }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.popTitle}>거절 사유</Text>
-            <Text style={styles.popMsg}>{selectedMemo}</Text>
-            <View style={styles.btnBox}>
-              <TouchableOpacity
-                style={styles.btnStyle}
-                onPress={() => setShowMemoModal(false)}
-              >
-                <Text style={styles.btnText}>확인</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.popMsg}>{selectedMemo}</Text>
+      </AppModal>
     </View>
   );
 };

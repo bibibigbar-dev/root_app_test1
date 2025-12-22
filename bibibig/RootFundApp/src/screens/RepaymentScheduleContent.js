@@ -6,11 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Modal,
   ActivityIndicator,
   Image,
 } from 'react-native';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
   const [loading, setLoading] = useState(true);
@@ -19,7 +19,7 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
   const [selectedRepayment, setSelectedRepayment] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAllRepayments, setShowAllRepayments] = useState(false);
-  
+
   // 현재 날짜
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
@@ -35,16 +35,16 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
     setLoading(true);
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      
+
       // GET 요청으로 쿼리 파라미터 전송
       const response = await ApiService.api.get('/app/my/invest/calendar', {
         params: {
           member_id: memberId,
           yyyy: currentYear,
           mm: currentMonth.toString().padStart(2, '0'),
-        }
+        },
       });
-      
+
       if (response.data) {
         setCalendarData(response.data);
       } else {
@@ -59,7 +59,7 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = value => {
     if (!value) return '0';
     const stringValue = typeof value === 'string' ? value : String(value);
     const numericValue = stringValue.replace(/[^0-9]/g, '');
@@ -84,16 +84,18 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
     }
   };
 
-  const handleDatePress = (date) => {
+  const handleDatePress = date => {
     if (!calendarData || !calendarData.list) return;
-    
-    const dateStr = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${date.toString().padStart(2, '0')}`;
+
+    const dateStr = `${currentYear}-${currentMonth
+      .toString()
+      .padStart(2, '0')}-${date.toString().padStart(2, '0')}`;
     const repayments = calendarData.list.filter(item => {
       const itemDate = item.repay_date || item.repayDate;
       if (!itemDate) return false;
       return itemDate.startsWith(dateStr);
     });
-    
+
     if (repayments.length > 0) {
       setSelectedDate(date);
       setSelectedRepayment(repayments[0]);
@@ -135,7 +137,10 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
             const parts = repayDate.split('.');
             if (parts.length >= 3) {
               const year = parts[0].length === 2 ? `20${parts[0]}` : parts[0];
-              dateStr = `${year}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+              dateStr = `${year}-${parts[1].padStart(
+                2,
+                '0',
+              )}-${parts[2].padStart(2, '0')}`;
             }
           } else if (repayDate.includes('-')) {
             // YYYY-MM-DD 형식은 그대로 사용
@@ -152,20 +157,24 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
 
     // 날짜 추가
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      const dateStr = `${currentYear}-${currentMonth
+        .toString()
+        .padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
       const hasRepayment = calendarData.list?.some(item => {
         const itemDate = item.repay_date || item.repayDate;
         if (!itemDate) return false;
         return itemDate.startsWith(dateStr);
       });
-      
+
       // 상환일 날짜인지 확인
-      const isRepaymentDate = repaymentDates.has(dateStr) || 
+      const isRepaymentDate =
+        repaymentDates.has(dateStr) ||
         Array.from(repaymentDates).some(date => date.startsWith(dateStr));
-      
-      const isToday = currentYear === today.getFullYear() && 
-                      currentMonth === today.getMonth() + 1 && 
-                      day === todayDate;
+
+      const isToday =
+        currentYear === today.getFullYear() &&
+        currentMonth === today.getMonth() + 1 &&
+        day === todayDate;
 
       calendarDays.push({
         day,
@@ -178,29 +187,41 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
     return (
       <View style={styles.calendarContainer}>
         <View style={styles.calendarHeader}>
-          <TouchableOpacity style={styles.monthButton} onPress={handlePrevMonth}>
+          <TouchableOpacity
+            style={styles.monthButton}
+            onPress={handlePrevMonth}
+          >
             <Text style={styles.monthButtonText}>‹</Text>
           </TouchableOpacity>
           <View style={styles.monthTitleContainer}>
-            <Text style={styles.monthTitle}>{currentYear}년 {currentMonth}월</Text>
+            <Text style={styles.monthTitle}>
+              {currentYear}년 {currentMonth}월
+            </Text>
             {calendarData.repay_count > 0 && (
               <View style={styles.scheduleNotif}>
-                <Image 
-                  source={require('../assets/images/ico_schedule_notif.png')} 
+                <Image
+                  source={require('../assets/images/ico_schedule_notif.png')}
                   style={styles.scheduleNotifIco}
                   resizeMode="contain"
                 />
                 <Text style={styles.scheduleNotifText}>
-                  {currentMonth}월 상환 상품이 <Text style={styles.scheduleCount}>{calendarData.repay_count}</Text>건 있습니다.
+                  {currentMonth}월 상환 상품이{' '}
+                  <Text style={styles.scheduleCount}>
+                    {calendarData.repay_count}
+                  </Text>
+                  건 있습니다.
                 </Text>
               </View>
             )}
           </View>
-          <TouchableOpacity style={styles.monthButton} onPress={handleNextMonth}>
+          <TouchableOpacity
+            style={styles.monthButton}
+            onPress={handleNextMonth}
+          >
             <Text style={styles.monthButtonText}>›</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.calendarContent}>
           {/* 요일 헤더 */}
           <View style={styles.weekRow}>
@@ -210,36 +231,42 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
               </View>
             ))}
           </View>
-          
+
           {/* 날짜 그리드 */}
           <View style={styles.dateGrid}>
             {calendarDays.map((dateItem, index) => {
               if (dateItem === null) {
                 return <View key={index} style={styles.dateCell} />;
               }
-              
+
               return (
                 <TouchableOpacity
                   key={index}
                   style={styles.dateCell}
                   onPress={() => handleDatePress(dateItem.day)}
                 >
-                  <View style={[
-                    styles.dateBox,
-                    dateItem.isToday && styles.dateBoxToday,
-                    dateItem.hasRepayment && styles.dateBoxHasRepayment,
-                  ]}>
-                    <Text style={[
-                      styles.dateText,
-                      dateItem.isToday && styles.dateTextToday,
-                    ]}>
+                  <View
+                    style={[
+                      styles.dateBox,
+                      dateItem.isToday && styles.dateBoxToday,
+                      dateItem.hasRepayment && styles.dateBoxHasRepayment,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dateText,
+                        dateItem.isToday && styles.dateTextToday,
+                      ]}
+                    >
                       {dateItem.day}
                     </Text>
                     {dateItem.hasRepayment && (
-                      <View style={[
-                        styles.repaymentIndicator,
-                        dateItem.isToday && styles.repaymentIndicatorToday
-                      ]} />
+                      <View
+                        style={[
+                          styles.repaymentIndicator,
+                          dateItem.isToday && styles.repaymentIndicatorToday,
+                        ]}
+                      />
                     )}
                     {dateItem.isRepaymentDate && (
                       <View style={styles.repaymentDateIndicator} />
@@ -274,25 +301,33 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
       <View style={styles.summaryContainer}>
         <View style={styles.summaryBox}>
           <Text style={styles.summaryLabel}>총 상환건수</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(totalCount)}건</Text>
+          <Text style={styles.summaryValue}>
+            {formatCurrency(totalCount)}건
+          </Text>
         </View>
         <View style={styles.summaryBox}>
           <Text style={styles.summaryLabel}>총 상환금액 (세후)</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(totalPrice)}원</Text>
+          <Text style={styles.summaryValue}>
+            {formatCurrency(totalPrice)}원
+          </Text>
         </View>
         <View style={styles.summaryBox}>
           <Text style={styles.summaryLabel}>상환원금</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(totalPrincipal)}원</Text>
+          <Text style={styles.summaryValue}>
+            {formatCurrency(totalPrincipal)}원
+          </Text>
         </View>
         <View style={styles.summaryBox}>
           <Text style={styles.summaryLabel}>세전 수익금</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(totalInterest)}원</Text>
+          <Text style={styles.summaryValue}>
+            {formatCurrency(totalInterest)}원
+          </Text>
         </View>
       </View>
     );
   };
 
-  const getProductImage = (orderType) => {
+  const getProductImage = orderType => {
     if (orderType === '태양광') {
       return require('../assets/images/img_product01_s.png');
     } else if (orderType === 'ESS') {
@@ -305,7 +340,7 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
     return null;
   };
 
-  const getStatusBgColor = (o_status) => {
+  const getStatusBgColor = o_status => {
     if (o_status === 'FUNDING' || o_status === 'SUCCESS') {
       return '#2c3db8'; // bg_blue
     } else if (o_status === 'REPAY' || o_status === 'OVERDUE') {
@@ -331,10 +366,14 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
       );
     }
 
-    const displayList = showAllRepayments ? calendarData.list : calendarData.list.slice(0, 2);
-    const hasMore = calendarData.list.length > 2;
-    const currentCount = displayList.length;
+    const ITEMS_PER_PAGE = 2;
+    const displayList = showAllRepayments
+      ? calendarData.list
+      : calendarData.list.slice(0, ITEMS_PER_PAGE);
+    const hasMore = calendarData.list.length > ITEMS_PER_PAGE;
     const totalCount = calendarData.list.length;
+    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+    const currentPage = showAllRepayments ? totalPages : 1;
 
     return (
       <View style={styles.listContainer}>
@@ -345,44 +384,61 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
           const orderType = item.orderType || item.order_type || '';
           const productImage = getProductImage(orderType);
           const statusBg = getStatusBgColor(item.o_status || item.oStatus);
-          
+
           return (
             <View key={index} style={styles.invItem}>
               <View style={[styles.invItemHead, { backgroundColor: statusBg }]}>
                 <Text style={styles.invItemHeadTitle}>
-                  채권번호 <Text style={styles.invItemHeadTitleEm}>RB-{item.idx || item.orderNumber || index + 1}</Text>
+                  채권번호{' '}
+                  <Text style={styles.invItemHeadTitleEm}>
+                    RB-{item.idx || item.orderNumber || index + 1}
+                  </Text>
                 </Text>
               </View>
-              
+
               <View style={styles.invItemCont}>
                 <View style={styles.prdInfoBox}>
                   <View style={styles.prdInfo}>
                     {productImage && (
                       <View style={styles.prdInfoImgBox}>
-                        <Image source={productImage} style={styles.prdInfoImg} resizeMode="contain" />
+                        <Image
+                          source={productImage}
+                          style={styles.prdInfoImg}
+                          resizeMode="contain"
+                        />
                       </View>
                     )}
                     <View style={styles.prdInfoTxtBox}>
                       <Text style={styles.prdInfoTit} numberOfLines={1}>
-                        {item.orderName || item.order_name || item.product_name || '상품명 없음'}
+                        {item.orderName ||
+                          item.order_name ||
+                          item.product_name ||
+                          '상품명 없음'}
                       </Text>
                       <Text style={styles.prdInfoTxt}>
                         {orderType} {item.orderNum || item.order_num || ''}호
                       </Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.prdPrice}>
                     <Text style={styles.prdPriceDt}>투자금액</Text>
-                    <Text style={styles.prdPriceDd}>{formatCurrency(item.price || 0)}원</Text>
+                    <Text style={styles.prdPriceDd}>
+                      {formatCurrency(item.price || 0)}원
+                    </Text>
                   </View>
-                  
+
                   <View style={styles.prdPrice}>
                     <Text style={styles.prdPriceDt}>실지급액</Text>
-                    <Text style={styles.prdPriceDd}>{formatCurrency(item.r_return_price || item.repay_amount || 0)}원</Text>
+                    <Text style={styles.prdPriceDd}>
+                      {formatCurrency(
+                        item.r_return_price || item.repay_amount || 0,
+                      )}
+                      원
+                    </Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.prdDataBox}>
                   <View style={styles.prdDataBoxDl}>
                     <Text style={styles.prdDataBoxDt}>연 수익률</Text>
@@ -390,24 +446,34 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
                   </View>
                   <View style={styles.prdDataBoxDl}>
                     <Text style={styles.prdDataBoxDt}>상환회차</Text>
-                    <Text style={styles.prdDataBoxDd}>{item.repay_num || 0}/{item.period || 0}</Text>
+                    <Text style={styles.prdDataBoxDd}>
+                      {item.repay_num || 0}/{item.period || 0}
+                    </Text>
                   </View>
                   <View style={styles.prdDataBoxDl}>
                     <Text style={styles.prdDataBoxDt}>상환일</Text>
-                    <Text style={styles.prdDataBoxDd}>{item.repay_date || item.repayDate || '-'}</Text>
+                    <Text style={styles.prdDataBoxDd}>
+                      {item.repay_date || item.repayDate || '-'}
+                    </Text>
                   </View>
                   <View style={styles.prdDataBoxDl}>
                     <Text style={styles.prdDataBoxDt}>상태</Text>
-                    <Text style={[
-                      styles.prdDataBoxDd,
-                      (item.status === 'N' || item.status === '예정') ? styles.colorBlue : {}
-                    ]}>
-                      {(item.status === 'N' || item.status === '예정') ? '지급 예정' : '지급 완료'}
+                    <Text
+                      style={[
+                        styles.prdDataBoxDd,
+                        item.status === 'N' || item.status === '예정'
+                          ? styles.colorBlue
+                          : {},
+                      ]}
+                    >
+                      {item.status === 'N' || item.status === '예정'
+                        ? '지급 예정'
+                        : '지급 완료'}
                     </Text>
                   </View>
                 </View>
               </View>
-              
+
               <View style={styles.invItemBtnBox}>
                 <TouchableOpacity
                   style={styles.invItemBtn}
@@ -424,14 +490,17 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
         })}
         {hasMore && !showAllRepayments && (
           <View style={styles.loadMoreContainer}>
-          <TouchableOpacity
+            <TouchableOpacity
               style={styles.loadMoreButton}
-            onPress={() => setShowAllRepayments(true)}
-          >
-              <Text style={styles.loadMoreText}>더보기 ({currentCount}/{totalCount})</Text>
-          </TouchableOpacity>
+              onPress={() => setShowAllRepayments(true)}
+            >
+              <Text style={styles.loadMoreText}>
+                더보기 ({currentPage}/{totalPages})
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
+        {(!hasMore || showAllRepayments) && <View style={{ height: 20 }} />}
       </View>
     );
   };
@@ -451,94 +520,112 @@ const RepaymentScheduleContent = ({ navigation, route, user, member_id }) => {
       )}
 
       {/* 상세 정보 모달 */}
-      <Modal
+      <AppModal
         visible={showDetailModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowDetailModal(false)}
+        title="상환 스케줄"
+        onClose={() => setShowDetailModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowDetailModal(false),
+        }}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowDetailModal(false)}
-        >
-          <TouchableOpacity 
-            style={styles.modalContent}
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
-            {selectedRepayment && (
-              <View style={styles.modalBody}>
-                <View style={styles.boxCalc}>
-                  <View style={styles.boxCalcTotal}>
-                    <Text style={styles.boxCalcTotalDt}>
-                      상환 스케줄(<Text style={styles.boxCalcTotalDtSpan}>{selectedRepayment.repay_num || 0}회차</Text>)
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.boxCalcDl}>
-                    <Text style={styles.boxCalcDt}>지급일</Text>
-                    <Text style={styles.boxCalcDd}>
-                      <Text style={styles.boxCalcDdCnt}>{selectedRepayment.repay_date || selectedRepayment.repayDate || '-'}</Text>
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.boxCalcDl}>
-                    <Text style={styles.boxCalcDt}>원금</Text>
-                    <Text style={styles.boxCalcDd}>
-                      <Text style={styles.boxCalcDdCnt}>{formatCurrency(selectedRepayment.principal || 0)}</Text> 원
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.boxCalcDl}>
-                    <Text style={styles.boxCalcDt}>이자</Text>
-                    <Text style={styles.boxCalcDd}>
-                      <Text style={styles.boxCalcDdCnt}>{formatCurrency(selectedRepayment.interest || 0)}</Text> 원
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.boxCalcDl}>
-                    <Text style={styles.boxCalcDt}>이자소득세</Text>
-                    <Text style={styles.boxCalcDd}>
-                      <Text style={styles.boxCalcDdCnt}>{formatCurrency(selectedRepayment.i_tax || selectedRepayment.iTax || 0)}</Text> 원
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.boxCalcDl}>
-                    <Text style={styles.boxCalcDt}>주민세</Text>
-                    <Text style={styles.boxCalcDd}>
-                      <Text style={styles.boxCalcDdCnt}>{formatCurrency(selectedRepayment.r_tax || selectedRepayment.rTax || 0)}</Text> 원
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.boxCalcDl}>
-                    <Text style={styles.boxCalcDt}>플랫폼수수료</Text>
-                    <Text style={styles.boxCalcDd}>
-                      <Text style={styles.boxCalcDdCnt}>{formatCurrency(selectedRepayment.i_commission || selectedRepayment.iCommission || 0)}</Text> 원
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.boxCalcDl}>
-                    <Text style={styles.boxCalcDt}>실지급액</Text>
-                    <Text style={styles.boxCalcDd}>
-                      <Text style={styles.boxCalcDdCnt}>{formatCurrency(selectedRepayment.r_return_price || selectedRepayment.repay_amount || 0)}</Text> 원
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.modalBtnBox}>
-                  <TouchableOpacity
-                    style={styles.modalBtn}
-                    onPress={() => setShowDetailModal(false)}
-                  >
-                    <Text style={styles.modalBtnText}>확인</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        {selectedRepayment && (
+          <View style={styles.boxCalc}>
+            <View style={styles.boxCalcTotal}>
+              <Text style={styles.boxCalcTotalDt}>
+                (
+                <Text style={styles.boxCalcTotalDtSpan}>
+                  {selectedRepayment.repay_num || 0}회차
+                </Text>
+                )
+              </Text>
+            </View>
+
+            <View style={styles.boxCalcDl}>
+              <Text style={styles.boxCalcDt}>지급일</Text>
+              <Text style={styles.boxCalcDd}>
+                <Text style={styles.boxCalcDdCnt}>
+                  {selectedRepayment.repay_date ||
+                    selectedRepayment.repayDate ||
+                    '-'}
+                </Text>
+              </Text>
+            </View>
+
+            <View style={styles.boxCalcDl}>
+              <Text style={styles.boxCalcDt}>원금</Text>
+              <Text style={styles.boxCalcDd}>
+                <Text style={styles.boxCalcDdCnt}>
+                  {formatCurrency(selectedRepayment.principal || 0)}
+                </Text>{' '}
+                원
+              </Text>
+            </View>
+
+            <View style={styles.boxCalcDl}>
+              <Text style={styles.boxCalcDt}>이자</Text>
+              <Text style={styles.boxCalcDd}>
+                <Text style={styles.boxCalcDdCnt}>
+                  {formatCurrency(selectedRepayment.interest || 0)}
+                </Text>{' '}
+                원
+              </Text>
+            </View>
+
+            <View style={styles.boxCalcDl}>
+              <Text style={styles.boxCalcDt}>이자소득세</Text>
+              <Text style={styles.boxCalcDd}>
+                <Text style={styles.boxCalcDdCnt}>
+                  {formatCurrency(
+                    selectedRepayment.i_tax || selectedRepayment.iTax || 0,
+                  )}
+                </Text>{' '}
+                원
+              </Text>
+            </View>
+
+            <View style={styles.boxCalcDl}>
+              <Text style={styles.boxCalcDt}>주민세</Text>
+              <Text style={styles.boxCalcDd}>
+                <Text style={styles.boxCalcDdCnt}>
+                  {formatCurrency(
+                    selectedRepayment.r_tax || selectedRepayment.rTax || 0,
+                  )}
+                </Text>{' '}
+                원
+              </Text>
+            </View>
+
+            <View style={styles.boxCalcDl}>
+              <Text style={styles.boxCalcDt}>플랫폼수수료</Text>
+              <Text style={styles.boxCalcDd}>
+                <Text style={styles.boxCalcDdCnt}>
+                  {formatCurrency(
+                    selectedRepayment.i_commission ||
+                      selectedRepayment.iCommission ||
+                      0,
+                  )}
+                </Text>{' '}
+                원
+              </Text>
+            </View>
+
+            <View style={styles.boxCalcDl}>
+              <Text style={styles.boxCalcDt}>실지급액</Text>
+              <Text style={styles.boxCalcDd}>
+                <Text style={styles.boxCalcDdCnt}>
+                  {formatCurrency(
+                    selectedRepayment.r_return_price ||
+                      selectedRepayment.repay_amount ||
+                      0,
+                  )}
+                </Text>{' '}
+                원
+              </Text>
+            </View>
+          </View>
+        )}
+      </AppModal>
     </View>
   );
 };
@@ -563,10 +650,10 @@ const styles = StyleSheet.create({
     borderColor: '#2c3db8',
     borderRadius: 10,
     shadowColor: '#68738f',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
     overflow: 'hidden',
   },
   calendarHeader: {
@@ -703,7 +790,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#ff0000',
+    backgroundColor: '#2c3db8',
   },
   summaryContainer: {
     flexDirection: 'row',
@@ -1043,4 +1130,3 @@ const styles = StyleSheet.create({
 });
 
 export default RepaymentScheduleContent;
-

@@ -52,7 +52,7 @@ const MainScreen = ({ navigation }) => {
   useEffect(() => {
     loadUserData();
     loadMainData();
-    loadFCMToken();
+    // loadFCMToken(); // 푸시 알림 초기화 임시 비활성화
   }, []);
 
   useEffect(() => {
@@ -86,12 +86,6 @@ const MainScreen = ({ navigation }) => {
 
   const loadFCMToken = async () => {
     try {
-      // 시뮬레이터에서는 FCM 토큰 로드 스킵 (실제 디바이스에서만 동작)
-      if (__DEV__) {
-        console.log('🧪 개발 환경: FCM 토큰 로드 스킵');
-        return;
-      }
-      
       console.log('🔍 FCM 토큰 로드 시도...');
       
       // 1. AsyncStorage에서 직접 토큰 가져오기
@@ -344,7 +338,7 @@ const MainScreen = ({ navigation }) => {
           <View style={styles.slideInbox}>
             <View style={styles.slideCont}>
               <LinearGradient
-                colors={['#F5F7FA', 'rgba(241,242,255,0.5)']}
+                colors={['#E5E7FF', '#F1F2FF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
                 style={styles.slideGradient}
@@ -1434,7 +1428,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 6,
     backgroundColor: '#FFFFFF',
     marginBottom: 10,
@@ -1443,7 +1437,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     paddingBottom: '63.1%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     overflow: 'hidden',
@@ -1563,7 +1557,7 @@ const styles = StyleSheet.create({
     marginRight: 36,
   },
   rateValue: {
-    fontSize: 36,
+    fontSize: 38,
     fontWeight: '700',
     color: '#333',
   },
@@ -1572,7 +1566,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   periodValue: {
-    fontSize: 36,
+    fontSize: 38,
     fontWeight: '700',
   },
   progressBar: {
@@ -1692,7 +1686,7 @@ const styles = StyleSheet.create({
     //marginBottom: ,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
     color: '#333333',
     lineHeight: 28,
@@ -1789,6 +1783,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     left: 24,
+    alignItems: 'flex-end',
   },
   dataBoxTitle: {
     fontSize: 16,
@@ -1798,6 +1793,7 @@ const styles = StyleSheet.create({
   },
   dataBoxCon: {
     marginTop: 2,
+    alignItems: 'flex-end',
   },
   dataBoxText: {
     fontSize: 19,
@@ -1909,7 +1905,7 @@ const styles = StyleSheet.create({
   reviewTxtText: {
     color: '#666',
     fontSize: 13,
-    lineHeight: 19.5,
+    lineHeight: 18,
   },
   infoName: {
     marginTop: 15,

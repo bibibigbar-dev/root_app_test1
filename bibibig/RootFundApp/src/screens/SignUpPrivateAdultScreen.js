@@ -9,12 +9,12 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Modal,
   Linking,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const joinRootOptions = [
   '선택해주세요',
@@ -53,14 +53,15 @@ const jobOptions = [
 const SignUpPrivateAdultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { okname, kakaoCi, bc5jsencpublickey, marketing, f_joinType } = route.params || {};
+  const { okname, kakaoCi, bc5jsencpublickey, marketing, f_joinType } =
+    route.params || {};
 
   const [loading, setLoading] = useState(false);
   const [verificationCompleted, setVerificationCompleted] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
   const [authToken, setAuthToken] = useState(null);
   const [waitingForAuth, setWaitingForAuth] = useState(false);
-  
+
   // 폼 데이터
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -71,7 +72,7 @@ const SignUpPrivateAdultScreen = () => {
   const [joinRoot, setJoinRoot] = useState('선택해주세요');
   const [joinRootEtc, setJoinRootEtc] = useState('');
   const [jobCode, setJobCode] = useState('00');
-  
+
   // 에러 메시지
   const [errors, setErrors] = useState({});
 
@@ -80,8 +81,7 @@ const SignUpPrivateAdultScreen = () => {
   const [showJoinRootModal, setShowJoinRootModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
 
-  useEffect(() => {
-  }, [route.params]);
+  useEffect(() => {}, [route.params]);
 
   // 본인인증 완료 확인
   const handleCheckAuthResult = async () => {
@@ -92,16 +92,14 @@ const SignUpPrivateAdultScreen = () => {
 
     try {
       setLoading(true);
-      
+
       const response = await ApiService.api.get('/app/kcb/auth/result', {
-        params: { token: authToken }
+        params: { token: authToken },
       });
-      
-      
+
       if (response.data.status === 'success') {
         const authData = response.data.data;
-        
-        
+
         if (authData.rtnvalue === '0') {
           setVerificationData({
             authtype: authData.authtype,
@@ -115,14 +113,20 @@ const SignUpPrivateAdultScreen = () => {
           });
           setVerificationCompleted(true);
           setWaitingForAuth(false);
-          Alert.alert('본인인증 완료', '본인인증이 완료되었습니다.\n회원가입을 계속 진행해주세요.');
+          Alert.alert(
+            '본인인증 완료',
+            '본인인증이 완료되었습니다.\n회원가입을 계속 진행해주세요.',
+          );
         } else {
-          Alert.alert('본인인증 실패', authData.rtnmessage || '본인인증에 실패했습니다.');
+          Alert.alert(
+            '본인인증 실패',
+            authData.rtnmessage || '본인인증에 실패했습니다.',
+          );
         }
       } else {
         Alert.alert(
           '본인인증 대기 중',
-          '아직 본인인증이 완료되지 않았습니다.\n외부 브라우저에서 본인인증을 완료한 후 다시 확인해주세요.'
+          '아직 본인인증이 완료되지 않았습니다.\n외부 브라우저에서 본인인증을 완료한 후 다시 확인해주세요.',
         );
       }
     } catch (error) {
@@ -133,14 +137,15 @@ const SignUpPrivateAdultScreen = () => {
     }
   };
 
-  const validateEmail = (email) => {
+  const validateEmail = email => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     return emailRegex.test(email);
   };
 
-  const validatePassword = (password) => {
+  const validatePassword = password => {
     // 영문, 숫자, 특수문자 최소 10자리 이상
-    const passwordRegex = /^(?=.*[0-9])(?=.*[a-z])(?=.*[!@#$%^&*])[a-z\d!@#$%^&*]{10,20}$/i;
+    const passwordRegex =
+      /^(?=.*[0-9])(?=.*[a-z])(?=.*[!@#$%^&*])[a-z\d!@#$%^&*]{10,20}$/i;
     return passwordRegex.test(password);
   };
 
@@ -148,7 +153,7 @@ const SignUpPrivateAdultScreen = () => {
     setShowAddressModal(true);
   };
 
-  const handleAddressSelect = (data) => {
+  const handleAddressSelect = data => {
     try {
       const addressData = typeof data === 'string' ? JSON.parse(data) : data;
       setZipcode(addressData.zonecode || '');
@@ -192,16 +197,17 @@ const SignUpPrivateAdultScreen = () => {
         jobCode: jobCode,
       };
 
-
-      const response = await ApiService.api.post('/app/certJoinProcess', signUpData);
-
+      const response = await ApiService.api.post(
+        '/app/certJoinProcess',
+        signUpData,
+      );
 
       const rtnvalue = String(response.data.rtnvalue).trim();
 
       if (rtnvalue === '0') {
         // 회원가입 성공 - 서비스 이용신청 화면으로 이동
         const member_id = response.data.member_id || '';
-        
+
         navigation.replace('MyCert', {
           use_tf_join: 'Y',
           f_joinType: f_joinType || 'adult',
@@ -210,7 +216,10 @@ const SignUpPrivateAdultScreen = () => {
       } else if (rtnvalue === '1') {
         Alert.alert('회원가입', '입력정보를 확인해주세요.');
       } else if (rtnvalue === '2') {
-        Alert.alert('회원가입', '인증정보가 올바르지 않습니다.\n(법인휴대전화의 경우 실 사용자 등록이 되어야 합니다.)');
+        Alert.alert(
+          '회원가입',
+          '인증정보가 올바르지 않습니다.\n(법인휴대전화의 경우 실 사용자 등록이 되어야 합니다.)',
+        );
       } else if (rtnvalue === '3') {
         Alert.alert('회원가입', '이미 가입된 이메일 입니다.');
       } else if (rtnvalue === '4') {
@@ -243,7 +252,8 @@ const SignUpPrivateAdultScreen = () => {
     if (!password) {
       newErrors.password = '* 비밀번호를 입력해주세요.';
     } else if (!validatePassword(password)) {
-      newErrors.password = '* 비밀번호는 영문,숫자,특수문자를 포함한 최소 10자, 최대 20자 입니다.';
+      newErrors.password =
+        '* 비밀번호는 영문,숫자,특수문자를 포함한 최소 10자, 최대 20자 입니다.';
     }
 
     if (!passwordConfirm) {
@@ -272,13 +282,15 @@ const SignUpPrivateAdultScreen = () => {
 
     try {
       setLoading(true);
-      
-      // 이메일 중복 확인
-      const emailCheckResponse = await ApiService.api.post('/app/check/email/use', {
-        web_id: email,
-        email: email,
-      });
 
+      // 이메일 중복 확인
+      const emailCheckResponse = await ApiService.api.post(
+        '/app/check/email/use',
+        {
+          web_id: email,
+          email: email,
+        },
+      );
 
       // 응답 데이터를 문자열로 변환하여 비교
       const responseValue = String(emailCheckResponse.data).trim();
@@ -286,25 +298,27 @@ const SignUpPrivateAdultScreen = () => {
       if (responseValue === '0') {
         // 이메일 사용 가능 - 본인인증 진행
         setLoading(false);
-        
+
         // okname 데이터 확인
         const oknameData = okname;
-        
-        
+
         if (!oknameData) {
           console.error('❌ okname 데이터가 없습니다');
-          Alert.alert('오류', '본인인증 정보를 가져올 수 없습니다.\n관리자에게 문의해주세요.');
+          Alert.alert(
+            '오류',
+            '본인인증 정보를 가져올 수 없습니다.\n관리자에게 문의해주세요.',
+          );
           setLoading(false);
           return;
         }
-        
+
         // okname 응답 체크
         if (oknameData.okname === 'Y' && oknameData.rslt_cd === 'B000') {
           // 정상: 본인인증 진행
           const okname_url = oknameData.okname_url;
           const cp_cd = oknameData.cp_cd;
           const token = oknameData.token;
-          
+
           // Form 데이터를 URL 파라미터로 변환
           const formParams = new URLSearchParams({
             tc: 'kcb.oknm.online.safehscert.popup.cmd.P931_CertChoiceCmd',
@@ -312,10 +326,9 @@ const SignUpPrivateAdultScreen = () => {
             mdl_tkn: token || '',
             platform: 'app',
           });
-          
+
           const fullUrl = `${okname_url}?${formParams.toString()}`;
-          
-          
+
           // 외부 브라우저로 본인인증 페이지 열기
           Alert.alert(
             '휴대전화 본인인증',
@@ -324,7 +337,7 @@ const SignUpPrivateAdultScreen = () => {
               {
                 text: '취소',
                 style: 'cancel',
-                onPress: () => setLoading(false)
+                onPress: () => setLoading(false),
               },
               {
                 text: '확인',
@@ -336,7 +349,7 @@ const SignUpPrivateAdultScreen = () => {
                       setAuthToken(token);
                       setWaitingForAuth(true);
                       setLoading(false);
-                      
+
                       await Linking.openURL(fullUrl);
                     } else {
                       Alert.alert('오류', 'URL을 열 수 없습니다.');
@@ -347,15 +360,20 @@ const SignUpPrivateAdultScreen = () => {
                     Alert.alert('오류', '브라우저를 열 수 없습니다.');
                     setLoading(false);
                   }
-                }
-              }
-            ]
+                },
+              },
+            ],
           );
         } else {
           // 오류: 에러 메시지 표시
           const rslt_cd = oknameData.rslt_cd || 'ERROR';
-          const rslt_msg = oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
-          console.error('❌ 본인인증 오류:', { rslt_cd, rslt_msg, okname: oknameData.okname });
+          const rslt_msg =
+            oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
+          console.error('❌ 본인인증 오류:', {
+            rslt_cd,
+            rslt_msg,
+            okname: oknameData.okname,
+          });
           Alert.alert('휴대전화 본인인증', `[${rslt_cd}] ${rslt_msg}`);
           setLoading(false);
         }
@@ -409,8 +427,9 @@ const SignUpPrivateAdultScreen = () => {
               <TextInput
                 style={[styles.text, errors.email && styles.textError]}
                 placeholder="이메일 입력"
+                placeholderTextColor="#999"
                 value={email}
-                onChangeText={(text) => {
+                onChangeText={text => {
                   setEmail(text);
                   setErrors({ ...errors, email: '' });
                 }}
@@ -419,8 +438,12 @@ const SignUpPrivateAdultScreen = () => {
                 autoCorrect={false}
               />
             </View>
-            <Text style={styles.starNotif}>* 이메일 주소는 변경이 불가합니다.</Text>
-            <Text style={styles.starNotif}>* 실사용 이메일 주소로 기입해주시기 바랍니다.</Text>
+            <Text style={styles.starNotif}>
+              * 이메일 주소는 변경이 불가합니다.
+            </Text>
+            <Text style={styles.starNotif}>
+              * 실사용 이메일 주소로 기입해주시기 바랍니다.
+            </Text>
             {errors.email ? (
               <Text style={styles.starNotif}>
                 <Text style={styles.txtDtErr}>{errors.email}</Text>
@@ -438,7 +461,7 @@ const SignUpPrivateAdultScreen = () => {
                 style={[styles.text, errors.password && styles.textError]}
                 placeholder="비밀번호 입력"
                 value={password}
-                onChangeText={(text) => {
+                onChangeText={text => {
                   setPassword(text);
                   setErrors({ ...errors, password: '' });
                 }}
@@ -452,10 +475,13 @@ const SignUpPrivateAdultScreen = () => {
             </View>
             <View style={styles.flexInput}>
               <TextInput
-                style={[styles.text, errors.passwordConfirm && styles.textError]}
+                style={[
+                  styles.text,
+                  errors.passwordConfirm && styles.textError,
+                ]}
                 placeholder="비밀번호 재입력"
                 value={passwordConfirm}
-                onChangeText={(text) => {
+                onChangeText={text => {
                   setPasswordConfirm(text);
                   setErrors({ ...errors, passwordConfirm: '' });
                 }}
@@ -468,7 +494,8 @@ const SignUpPrivateAdultScreen = () => {
               />
             </View>
             <Text style={styles.starNotif}>
-              * 영문, 숫자, 특수문자(숫자키 상단 특수문자만 가능) 최소 10자리 이상으로 입력해 주셔야 합니다.
+              * 영문, 숫자, 특수문자(숫자키 상단 특수문자만 가능) 최소 10자리
+              이상으로 입력해 주셔야 합니다.
             </Text>
             {errors.password ? (
               <Text style={styles.starNotif}>
@@ -489,7 +516,11 @@ const SignUpPrivateAdultScreen = () => {
             </View>
             <View style={styles.flexInput}>
               <TextInput
-                style={[styles.text, styles.flexText, errors.address && styles.textError]}
+                style={[
+                  styles.text,
+                  styles.flexText,
+                  errors.address && styles.textError,
+                ]}
                 placeholder="우편번호"
                 value={zipcode}
                 editable={false}
@@ -514,14 +545,18 @@ const SignUpPrivateAdultScreen = () => {
                 style={styles.text}
                 placeholder="상세주소"
                 value={address2}
-                onChangeText={(text) => {
+                onChangeText={text => {
                   setAddress2(text);
                   setErrors({ ...errors, address: '' });
                 }}
               />
             </View>
-            <Text style={styles.starNotif}>* 이웃 우대 금리를 신청하시려면 등본상 주소를 입력하세요.</Text>
-            <Text style={styles.starNotif}>* 인근지역 상품 오픈 시 이웃등록 사전등록 혜택을 알려드립니다.</Text>
+            <Text style={styles.starNotif}>
+              * 이웃 우대 금리를 신청하시려면 등본상 주소를 입력하세요.
+            </Text>
+            <Text style={styles.starNotif}>
+              * 인근지역 상품 오픈 시 이웃등록 사전등록 혜택을 알려드립니다.
+            </Text>
             {errors.address ? (
               <Text style={styles.starNotif}>
                 <Text style={styles.txtDtErr}>{errors.address}</Text>
@@ -573,14 +608,18 @@ const SignUpPrivateAdultScreen = () => {
         </View>
 
         <View style={styles.mb40} />
-        {waitingForAuth && !verificationCompleted && <View style={{ height: 150 }} />}
+        {waitingForAuth && !verificationCompleted && (
+          <View style={{ height: 150 }} />
+        )}
       </ScrollView>
 
       {/* 하단 버튼 */}
       <View style={styles.fixBtnWrap}>
         {waitingForAuth && !verificationCompleted && (
           <View style={styles.authNotice}>
-            <Text style={styles.authNoticeTitle}>📱 본인인증을 진행해주세요</Text>
+            <Text style={styles.authNoticeTitle}>
+              📱 본인인증을 진행해주세요
+            </Text>
             <Text style={styles.authNoticeText}>
               외부 브라우저에서 본인인증을 완료한 후{'\n'}
               아래 버튼을 눌러 인증을 확인해주세요.
@@ -591,19 +630,28 @@ const SignUpPrivateAdultScreen = () => {
           {!verificationCompleted ? (
             waitingForAuth ? (
               <TouchableOpacity
-                style={[styles.submitButton, styles.submitButtonCheck, loading && styles.submitButtonDisabled]}
+                style={[
+                  styles.submitButton,
+                  styles.submitButtonCheck,
+                  loading && styles.submitButtonDisabled,
+                ]}
                 onPress={handleCheckAuthResult}
                 disabled={loading}
               >
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.submitButtonText}>본인인증 완료 확인</Text>
+                  <Text style={styles.submitButtonText}>
+                    본인인증 완료 확인
+                  </Text>
                 )}
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                style={[
+                  styles.submitButton,
+                  loading && styles.submitButtonDisabled,
+                ]}
                 onPress={handleSubmit}
                 disabled={loading}
               >
@@ -616,7 +664,11 @@ const SignUpPrivateAdultScreen = () => {
             )
           ) : (
             <TouchableOpacity
-              style={[styles.submitButton, styles.submitButtonSuccess, loading && styles.submitButtonDisabled]}
+              style={[
+                styles.submitButton,
+                styles.submitButtonSuccess,
+                loading && styles.submitButtonDisabled,
+              ]}
               onPress={handleCompleteSignUp}
               disabled={loading}
             >
@@ -631,95 +683,81 @@ const SignUpPrivateAdultScreen = () => {
       </View>
 
       {/* 직업 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showJobModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowJobModal(false)}
+        title="직업 선택"
+        onClose={() => setShowJobModal(false)}
+        primaryAction={{ text: '닫기', onPress: () => setShowJobModal(false) }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>직업 선택</Text>
-              <TouchableOpacity onPress={() => setShowJobModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              {jobOptions.map((job) => (
-                <TouchableOpacity
-                  key={job.value}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setJobCode(job.value);
-                    setShowJobModal(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, jobCode === job.value && styles.modalItemTextSelected]}>
-                    {job.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        {jobOptions.map(job => (
+          <TouchableOpacity
+            key={job.value}
+            style={styles.modalItem}
+            onPress={() => {
+              setJobCode(job.value);
+              setShowJobModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalItemText,
+                jobCode === job.value && styles.modalItemTextSelected,
+              ]}
+            >
+              {job.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </AppModal>
 
       {/* 가입 경로 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showJoinRootModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowJoinRootModal(false)}
+        title="가입 경로 선택"
+        onClose={() => setShowJoinRootModal(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowJoinRootModal(false),
+        }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>가입 경로 선택</Text>
-              <TouchableOpacity onPress={() => setShowJoinRootModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              {joinRootOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setJoinRoot(option);
-                    setShowJoinRootModal(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, joinRoot === option && styles.modalItemTextSelected]}>
-                    {option}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        {joinRootOptions.map((option, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.modalItem}
+            onPress={() => {
+              setJoinRoot(option);
+              setShowJoinRootModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalItemText,
+                joinRoot === option && styles.modalItemTextSelected,
+              ]}
+            >
+              {option}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </AppModal>
 
       {/* 주소 검색 모달 */}
-      <Modal
+      <AppModal
         visible={showAddressModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddressModal(false)}
+        title="주소검색"
+        onClose={() => setShowAddressModal(false)}
+        backdropClose={false}
+        scroll={false}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowAddressModal(false),
+        }}
       >
-        <View style={styles.addressModalOverlay}>
-          <View style={styles.addressModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>주소검색</Text>
-              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.webViewContainer}>
-              <WebView
-                source={{
-                  baseUrl: 'https://rootenergy.co.kr',
-                  html: `
+        <View style={styles.webViewContainer}>
+          <WebView
+            source={{
+              baseUrl: 'https://rootenergy.co.kr',
+              html: `
                     <!DOCTYPE html>
                     <html>
                       <head>
@@ -819,37 +857,37 @@ const SignUpPrivateAdultScreen = () => {
                         </script>
                       </body>
                     </html>
-                  `
-                }}
-                onMessage={(event) => {
-                  const data = event.nativeEvent.data;
-                  try {
-                    const parsed = JSON.parse(data);
-                    if (parsed?.__type === 'address') {
-                      handleAddressSelect(parsed.payload);
-                      return;
-                    }
-                  } catch (_) {}
-                  handleAddressSelect(data);
-                }}
-                onShouldStartLoadWithRequest={(request) => {
-                  if (request.url.startsWith('postcode://')) {
-                    const payload = decodeURIComponent(request.url.replace('postcode://', ''));
-                    handleAddressSelect(payload);
-                    return false;
-                  }
-                  return true;
-                }}
-                style={styles.webView}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                mixedContentMode="always"
-                originWhitelist={['*']}
-              />
-            </View>
-          </View>
+                  `,
+            }}
+            onMessage={event => {
+              const data = event.nativeEvent.data;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed?.__type === 'address') {
+                  handleAddressSelect(parsed.payload);
+                  return;
+                }
+              } catch (_) {}
+              handleAddressSelect(data);
+            }}
+            onShouldStartLoadWithRequest={request => {
+              if (request.url.startsWith('postcode://')) {
+                const payload = decodeURIComponent(
+                  request.url.replace('postcode://', ''),
+                );
+                handleAddressSelect(payload);
+                return false;
+              }
+              return true;
+            }}
+            style={styles.webView}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            mixedContentMode="always"
+            originWhitelist={['*']}
+          />
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 };

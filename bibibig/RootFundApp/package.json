@@ -37,7 +37,8 @@
     "react-native-screens": "^4.18.0",
     "react-native-swiper": "^1.6.0",
     "react-native-view-shot": "^4.0.3",
-    "react-native-webview": "^13.16.0"
+    "react-native-webview": "^13.16.0",
+    "react-native-youtube-iframe": "^2.4.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

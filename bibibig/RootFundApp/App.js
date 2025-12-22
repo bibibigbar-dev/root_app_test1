@@ -48,16 +48,16 @@ function App() {
       'requestIdleCallback',
     ]);
 
-    // 푸시 알림 초기화
-    const initPushNotifications = async () => {
-      try {
-        await PushNotificationService.initialize();
-      } catch (error) {
-        console.error('푸시 알림 초기화 실패:', error);
-      }
-    };
+    // 푸시 알림 초기화 - 임시 비활성화
+    // const initPushNotifications = async () => {
+    //   try {
+    //     await PushNotificationService.initialize();
+    //   } catch (error) {
+    //     console.error('푸시 알림 초기화 실패:', error);
+    //   }
+    // };
 
-    initPushNotifications();
+    // initPushNotifications();
   }, []);
 
   return (

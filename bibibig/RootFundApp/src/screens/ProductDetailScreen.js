@@ -38,7 +38,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
     totalInterest: 0,
     totalTax: 0,
     totalComm: 0,
-    schedule: []
+    schedule: [],
   });
   const [expandedSchedule, setExpandedSchedule] = useState({});
   const [estimatedProfit, setEstimatedProfit] = useState(0);
@@ -79,9 +79,11 @@ const ProductDetailScreen = ({ navigation, route }) => {
   const loadProductDetail = async () => {
     try {
       setLoading(true);
-      
-      const response = await ApiService.api.get(`/app/product/detail/${orderKey}`);
-      
+
+      const response = await ApiService.api.get(
+        `/app/product/detail/${orderKey}`,
+      );
+
       if (response.data) {
         setProductData(response.data);
       }
@@ -92,17 +94,17 @@ const ProductDetailScreen = ({ navigation, route }) => {
     }
   };
 
-  const toggleSection = (section) => {
+  const toggleSection = section => {
     setExpandedSections(prev => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
-  const toggleSchedule = (index) => {
+  const toggleSchedule = index => {
     setExpandedSchedule(prev => ({
       ...prev,
-      [index]: !prev[index]
+      [index]: !prev[index],
     }));
   };
 
@@ -115,7 +117,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const getDateString = (date) => {
+  const getDateString = date => {
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const dd = String(date.getDate()).padStart(2, '0');
@@ -144,25 +146,25 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
     const prod = productData.prod;
     const option = productData.option;
-    
+
     const price = 1000000; // 100만원 고정
     const rate = Number(prod.rate);
     const period = Number(prod.period);
     const comm = Number(option.i_comm_1 || 0);
     const iTaxPer = Number(option.i_tax || 0);
-    
+
     // 총 이자 계산
     const totalInterest = Math.floor((price * rate * period) / 1200);
-    
+
     // 세금 계산
-    const tax = Math.floor(totalInterest * iTaxPer / 100);
-    
+    const tax = Math.floor((totalInterest * iTaxPer) / 100);
+
     // 수수료 계산
     const commission = Math.floor((price * comm * period) / 1200);
-    
+
     // 순수익 = 이자 - 세금 - 수수료
     const profit = totalInterest - tax - commission;
-    
+
     setEstimatedProfit(profit);
   };
 
@@ -179,12 +181,12 @@ const ProductDetailScreen = ({ navigation, route }) => {
     const sort = prod.sort;
     const rpType = prod.repay_type;
     const rate = Number(prod.rate);
-    const dRate = (rate / 100) / 365;
+    const dRate = rate / 100 / 365;
     let price = calcPrice.replace(/,/g, '');
     price = Number(price);
     const period = Number(prod.period);
     const comm = Number(option.i_comm_1 || 0);
-    const dComm = (comm / 100) / 365;
+    const dComm = comm / 100 / 365;
     const iTaxPer = Number(option.i_tax || 0);
     const rTaxPer = Number(option.r_tax || 0);
     let startDate = getCurrentDate();
@@ -195,7 +197,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
     for (let i = 1; i <= period; i++) {
       let endDate;
-      
+
       if (sort === 'BRIDGE' || sort === 'bridge') {
         endDate = addMonths(startDate, 1);
       } else if (sort === 'PF' || sort === 'pf') {
@@ -216,16 +218,16 @@ const ProductDetailScreen = ({ navigation, route }) => {
         }
       }
 
-      const ri = (tBal * dRate) * diffDt;
+      const ri = tBal * dRate * diffDt;
       const rti = Math.floor((ri * (iTaxPer / 100)) / 10) * 10;
       const rtr = Math.floor((ri * (rTaxPer / 100)) / 10) * 10;
-      const rc = (price * dComm) * diffDt;
+      const rc = price * dComm * diffDt;
 
       rp = Math.floor(rp);
       const riFloor = Math.floor(ri);
       const rcFloor = Math.floor(rc);
 
-      const rrp = (rp + riFloor) - (rti + rtr + rcFloor);
+      const rrp = rp + riFloor - (rti + rtr + rcFloor);
       const rrpFloor = Math.floor(rrp);
 
       schedule.push({
@@ -237,7 +239,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
         incomeTax: rti,
         residentTax: rtr,
         commission: rcFloor,
-        actualPayment: rrpFloor
+        actualPayment: rrpFloor,
       });
 
       startDate = endDate;
@@ -255,15 +257,15 @@ const ProductDetailScreen = ({ navigation, route }) => {
       totalInterest: tInt,
       totalTax: tTax,
       totalComm: tComm,
-      schedule: schedule
+      schedule: schedule,
     });
   };
 
-  const formatNumber = (num) => {
+  const formatNumber = num => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
-  const handleCalcPriceChange = (text) => {
+  const handleCalcPriceChange = text => {
     const numOnly = text.replace(/[^0-9]/g, '');
     setCalcPrice(numOnly);
   };
@@ -272,13 +274,16 @@ const ProductDetailScreen = ({ navigation, route }) => {
     // 커스텀 스킴 사용 - 앱이 설치된 기기에서만 작동
     const url = `rootfund://product/${orderKey}`;
     Clipboard.setString(url);
-    Alert.alert('알림', 'URL이 복사되었습니다.\n앱이 설치된 기기에서만 열립니다.');
+    Alert.alert(
+      '알림',
+      'URL이 복사되었습니다.\n앱이 설치된 기기에서만 열립니다.',
+    );
   };
 
   const handleInvestRequest = () => {
     navigation.navigate('InvestRequest', {
       orderKey: orderKey,
-      productData: productData
+      productData: productData,
     });
   };
 
@@ -287,12 +292,12 @@ const ProductDetailScreen = ({ navigation, route }) => {
       Alert.alert('알림', '상품 정보를 불러오는 중입니다.');
       return;
     }
-    
+
     navigation.navigate('NeighborRequest', {
       product: {
         orderNumber: productData.prod.orderNumber,
         orderName: productData.prod.orderName,
-      }
+      },
     });
   };
 
@@ -323,7 +328,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
     navigation.navigate('MyPage', {
       user: currentUser,
       member_id: memberId,
-      initialTab: 'invest'
+      initialTab: 'invest',
     });
   };
 
@@ -331,30 +336,20 @@ const ProductDetailScreen = ({ navigation, route }) => {
     console.log('로그인하기 클릭');
     navigation.navigate('Login', {
       returnTo: 'ProductDetail',
-      returnParams: { orderKey }
+      returnParams: { orderKey },
     });
   };
 
-  const renderOrderTypeIcon = (orderType) => {
-    const iconMap = {
-      '태양광': require('../assets/images/ico_status01.png'),
-      '풍력': require('../assets/images/ico_status02.png'),
-      'ESS': require('../assets/images/ico_status04.png'),
-      '전기차충전소': require('../assets/images/ico_status03.png'),
-    };
-    
-    const icon = iconMap[orderType];
-    if (!icon) return null;
-    
-    return <Image source={icon} style={styles.statusIco} resizeMode="contain" />;
-  };
-
-  const renderSortTag = (sort) => {
+  const renderSortTag = sort => {
     if (sort === 'bridge') {
       return (
         <View style={styles.overlapGroupWrapper}>
           <View style={styles.overlapGroup}>
-            <Image source={require('../assets/images/ico_detail_infotab01.png')} style={styles.icoDetail} resizeMode="contain" />
+            <Image
+              source={require('../assets/images/ico_detail_infotab01.png')}
+              style={styles.icoDetail}
+              resizeMode="contain"
+            />
             <Text style={styles.textWrapper}>수익집중</Text>
           </View>
         </View>
@@ -363,7 +358,11 @@ const ProductDetailScreen = ({ navigation, route }) => {
       return (
         <View style={styles.overlapGroupWrapper}>
           <View style={styles.overlapGroup}>
-            <Image source={require('../assets/images/ico_detail_infotab02.png')} style={styles.icoDetail} resizeMode="contain" />
+            <Image
+              source={require('../assets/images/ico_detail_infotab02.png')}
+              style={styles.icoDetail}
+              resizeMode="contain"
+            />
             <Text style={styles.textWrapper}>안정추구</Text>
           </View>
         </View>
@@ -372,7 +371,11 @@ const ProductDetailScreen = ({ navigation, route }) => {
       return (
         <View style={styles.overlapGroupWrapper}>
           <View style={styles.overlapGroup}>
-            <Image source={require('../assets/images/ico_detail_infotab03.png')} style={styles.icoDetail} resizeMode="contain" />
+            <Image
+              source={require('../assets/images/ico_detail_infotab03.png')}
+              style={styles.icoDetail}
+              resizeMode="contain"
+            />
             <Text style={styles.textWrapper}>주민참여</Text>
           </View>
         </View>
@@ -385,7 +388,10 @@ const ProductDetailScreen = ({ navigation, route }) => {
     // 로그인하지 않은 경우
     if (!isLoggedIn) {
       return (
-        <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleLogin}>
+        <TouchableOpacity
+          style={[styles.btnStyle, styles.btnBlue]}
+          onPress={handleLogin}
+        >
           <Text style={styles.btnText}>로그인하기</Text>
         </TouchableOpacity>
       );
@@ -393,18 +399,23 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
     // 로그인한 경우 checkInvest 값에 따라 버튼 변경
     const { checkInvest } = productData || {};
-    
+
     switch (checkInvest) {
       case '0': // 투자 가능
         return (
-          
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestRequest}>
+          <TouchableOpacity
+            style={[styles.btnStyle, styles.btnBlue]}
+            onPress={handleInvestRequest}
+          >
             <Text style={styles.btnText}>투자하기</Text>
           </TouchableOpacity>
         );
       case '22': // 이웃신청 필요
         return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleAreaProductRequest}>
+          <TouchableOpacity
+            style={[styles.btnStyle, styles.btnBlue]}
+            onPress={handleAreaProductRequest}
+          >
             <Text style={styles.btnText}>이웃신청하기</Text>
           </TouchableOpacity>
         );
@@ -416,13 +427,19 @@ const ProductDetailScreen = ({ navigation, route }) => {
         );
       case '8': // 투자 취소 가능
         return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleInvestCancelRequest}>
+          <TouchableOpacity
+            style={[styles.btnStyle, styles.btnBlue]}
+            onPress={handleInvestCancelRequest}
+          >
             <Text style={styles.btnText}>투자 취소 하기</Text>
           </TouchableOpacity>
         );
       default: // 그 외 (이미 투자한 경우)
         return (
-          <TouchableOpacity style={[styles.btnStyle, styles.btnBlue]} onPress={handleGoToInvestList}>
+          <TouchableOpacity
+            style={[styles.btnStyle, styles.btnBlue]}
+            onPress={handleGoToInvestList}
+          >
             <Text style={styles.btnText}>투자현황 바로가기</Text>
           </TouchableOpacity>
         );
@@ -443,82 +460,112 @@ const ProductDetailScreen = ({ navigation, route }) => {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>상품 정보를 불러올 수 없습니다.</Text>
+          <Text style={styles.loadingText}>
+            상품 정보를 불러올 수 없습니다.
+          </Text>
         </View>
       </View>
     );
   }
 
-  const { prod, option, contents, expertopinion, circle_thumbnail, file_thumbnail, summary, intro, borrower, invest, invest_file, risk, caution, checkInvest, ssoMemberId } = productData;
+  const {
+    prod,
+    option,
+    contents,
+    expertopinion,
+    circle_thumbnail,
+    file_thumbnail,
+    summary,
+    intro,
+    borrower,
+    invest,
+    invest_file,
+    risk,
+    caution,
+    checkInvest,
+    ssoMemberId,
+  } = productData;
   const isNewDesign = prod.idx > 498;
 
   return (
     <View style={styles.container}>
       {/* Back 버튼과 공유 버튼 */}
       <View style={styles.topButtonContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Image 
-            source={require('../assets/images/ico_back.png')} 
+          <Image
+            source={require('../assets/images/ico_back.png')}
             style={styles.backIcon}
           />
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.shareButton}
-          onPress={handleShareUrl}
-        >
-          <Image 
+
+        <TouchableOpacity style={styles.shareButton} onPress={handleShareUrl}>
+          <Image
             source={require('../assets/images/ico_share_m.png')}
             style={styles.shareIcon}
             resizeMode="contain"
           />
         </TouchableOpacity>
       </View>
-      
+
       <ScrollView style={styles.content}>
         <View style={styles.productViewN}>
           {/* 상품 번호 */}
-          <Text style={styles.prdNum}>{prod.orderType} {prod.orderNum}호 [{prod.orderCode}]</Text>
-          
+          <Text style={styles.prdNum}>
+            {prod.orderType} {prod.orderNum}호 [{prod.orderCode}]
+          </Text>
+
           {/* 상품명 */}
           <Text style={styles.prdName}>{prod.orderName}</Text>
-          
+
           {/* 썸네일 박스 */}
           <View style={styles.box}>
             <View style={styles.group}>
               <View style={styles.thumbnail}>
                 {circle_thumbnail && circle_thumbnail.length > 0 ? (
                   <>
-                    <Image source={{ uri: circle_thumbnail[0].filePath }} style={styles.thumbnailImage} resizeMode="cover" />
+                    <Image
+                      source={{ uri: circle_thumbnail[0].filePath }}
+                      style={styles.thumbnailImage}
+                      resizeMode="cover"
+                    />
                     <View style={styles.thumbnailOverlay} />
                   </>
                 ) : file_thumbnail && file_thumbnail.length > 0 ? (
                   <>
-                    <Image source={{ uri: file_thumbnail[0].filePath }} style={styles.thumbnailImage} resizeMode="cover" />
+                    <Image
+                      source={{ uri: file_thumbnail[0].filePath }}
+                      style={styles.thumbnailImage}
+                      resizeMode="cover"
+                    />
                     <View style={styles.thumbnailOverlay} />
                   </>
                 ) : (
                   <>
-                    <Image source={require('../assets/images/re_bc5_custom.png')} style={styles.thumbnailImage} resizeMode="cover" />
+                    <Image
+                      source={require('../assets/images/re_bc5_custom.png')}
+                      style={styles.thumbnailImage}
+                      resizeMode="cover"
+                    />
                     <View style={styles.thumbnailOverlay} />
                   </>
                 )}
               </View>
-              
+
               {/* 태그 */}
               {renderSortTag(prod.sort)}
-              
+
               {/* 전문가 의견 */}
               {expertopinion && expertopinion.note && (
                 <Text style={styles.div}>{expertopinion.note}</Text>
               )}
-              
+
               {/* 모집기간 */}
               <Text style={styles.element}>
-                모집기간 {prod.start_date}({prod.start_week}) ~ {prod.end_date}({prod.end_week})
+                모집기간 {prod.start_date}({prod.start_week}) ~ {prod.end_date}(
+                {prod.end_week})
               </Text>
             </View>
           </View>
@@ -537,7 +584,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 <Text style={styles.dt2}>상환방식</Text>
               </View>
             </View>
-            
+
             {/* 두 번째 줄: 값들 */}
             <View style={styles.flexDl}>
               <View style={styles.dl2}>
@@ -548,9 +595,13 @@ const ProductDetailScreen = ({ navigation, route }) => {
               </View>
               <View style={styles.dl2}>
                 <Text style={[styles.dd3]}>
-                  {prod.repay_type === '1' ? '원금균등상환' :
-                   prod.repay_type === '2' ? '만기일시상환' :
-                   prod.repay_type === '3' ? '원리금균등상환' : '-'}
+                  {prod.repay_type === '1'
+                    ? '원금균등상환'
+                    : prod.repay_type === '2'
+                    ? '만기일시상환'
+                    : prod.repay_type === '3'
+                    ? '원리금균등상환'
+                    : '-'}
                 </Text>
               </View>
             </View>
@@ -565,10 +616,12 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 style={[styles.progressVal, { width: `${prod.percent}%` }]}
               />
             </View>
-            
+
             <View style={styles.progressInfo}>
               <Text style={styles.totalText}>
-                <Text style={styles.totalEm}>{parseInt(prod.investment || 0).toLocaleString()}원</Text>
+                <Text style={styles.totalEm}>
+                  {parseInt(prod.investment || 0).toLocaleString()}원
+                </Text>
                 {' / '}
                 {parseInt(prod.price || 0).toLocaleString()}원
               </Text>
@@ -577,33 +630,36 @@ const ProductDetailScreen = ({ navigation, route }) => {
           </View>
 
           {/* 투자하기 버튼 */}
-          <View style={styles.btnBox}>
-            {renderInvestButton()}
-          </View>
+          <View style={styles.btnBox}>{renderInvestButton()}</View>
 
           {/* 수익 안내 박스 */}
           <View style={styles.detailIntrobox}>
             <View style={styles.detailIntro}>
               {/* 배경 이미지 */}
-              <Image 
-                source={require('../assets/images/bg_detail_intro.png')} 
+              <Image
+                source={require('../assets/images/bg_detail_intro.png')}
                 style={styles.detailIntroBg}
                 resizeMode="contain"
               />
-              
+
               <Text style={styles.title}>
                 100만원 투자하면{'\n'}
-                <Text style={styles.titleEm}>세후 {formatNumber(estimatedProfit)}원</Text>이 쌓여요
+                <Text style={styles.titleEm}>
+                  세후 {formatNumber(estimatedProfit)}원
+                </Text>
+                이 쌓여요
               </Text>
-              
+
               <View style={styles.revenueDl}>
                 <Text style={styles.revenueDt}>세전수익률</Text>
                 <Text style={styles.revenueDd}>연 {prod.rate}%</Text>
                 <Text style={styles.revenueDt}>순수익률</Text>
-                <Text style={styles.revenueDd}>연 {prod.net_return || '-'}%</Text>
+                <Text style={styles.revenueDd}>
+                  연 {prod.net_return || '-'}%
+                </Text>
               </View>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.btnStyleSmall}
                 onPress={() => {
                   setShowCalcModal(true);
@@ -613,36 +669,50 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 <Text style={styles.btnTextSmall}>수익금 지급 예정표</Text>
               </TouchableOpacity>
             </View>
-            
+
             {/* 환경적 성과 */}
-            {contents && contents.etxt_2 && contents.etxt_4 && contents.etxt_5 && (
-              <View style={styles.detailEco}>
-                <Text style={styles.titleEco}>환경적 성과까지 함께!</Text>
-                <View style={styles.ecoList}>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco01.png')} style={styles.ecoIcon1} resizeMode="contain" />
+            {contents &&
+              contents.etxt_2 &&
+              contents.etxt_4 &&
+              contents.etxt_5 && (
+                <View style={styles.detailEco}>
+                  <Text style={styles.titleEco}>환경적 성과까지 함께!</Text>
+                  <View style={styles.ecoList}>
+                    <View style={styles.ecoItem}>
+                      <View style={styles.ecoImgbox}>
+                        <Image
+                          source={require('../assets/images/ico_detail_eco01.png')}
+                          style={styles.ecoIcon1}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <Text style={styles.ecoTit}>연간 전력생산</Text>
+                      <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
                     </View>
-                    <Text style={styles.ecoTit}>연간 전력생산</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_2}</Text>
-                  </View>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco02.png')} style={styles.ecoIcon2} resizeMode="contain" />
+                    <View style={styles.ecoItem}>
+                      <View style={styles.ecoImgbox}>
+                        <Image
+                          source={require('../assets/images/ico_detail_eco02.png')}
+                          style={styles.ecoIcon2}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <Text style={styles.ecoTit}>화석 에너지</Text>
+                      <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
                     </View>
-                    <Text style={styles.ecoTit}>화석 에너지</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_4} 대체</Text>
-                  </View>
-                  <View style={styles.ecoItem}>
-                    <View style={styles.ecoImgbox}>
-                      <Image source={require('../assets/images/ico_detail_eco03.png')} style={styles.ecoIcon3} />
+                    <View style={styles.ecoItem}>
+                      <View style={styles.ecoImgbox}>
+                        <Image
+                          source={require('../assets/images/ico_detail_eco03.png')}
+                          style={styles.ecoIcon3}
+                        />
+                      </View>
+                      <Text style={styles.ecoTit}>대기 오염물질</Text>
+                      <Text style={styles.ecoVal}>{contents.etxt_5} 감소</Text>
                     </View>
-                    <Text style={styles.ecoTit}>대기 오염물질</Text>
-                    <Text style={styles.ecoVal}>{contents.etxt_5} 감소</Text>
                   </View>
                 </View>
-              </View>
-            )}
+              )}
           </View>
 
           {/* 상세 정보 박스 */}
@@ -654,125 +724,179 @@ const ProductDetailScreen = ({ navigation, route }) => {
                   <View style={styles.overlapWrapper1}>
                     <View style={styles.overlapGroup1}>
                       <View style={styles.overlapGroup1Bg} />
-                      <Image source={require('../assets/images/ic1.png')} style={styles.ic1} />
+                      <Image
+                        source={require('../assets/images/ic1.png')}
+                        style={styles.ic1}
+                      />
                       <Text style={styles.textWrapper1}>모집기간</Text>
-                      <Text style={styles.div1}>{prod.start_date}{'\n'}~ {prod.end_date}</Text>
+                      <Text style={styles.div1}>
+                        {prod.start_date}
+                        {'\n'}~ {prod.end_date}
+                      </Text>
                     </View>
                   </View>
-                  
+
                   {/* 투자기간 */}
                   <View style={styles.overlapWrapper1}>
                     <View style={styles.overlapGroup1}>
                       <View style={styles.overlapGroup1Bg} />
-                      <Image source={require('../assets/images/ic2.png')} style={styles.ic1} />
+                      <Image
+                        source={require('../assets/images/ic2.png')}
+                        style={styles.ic1}
+                      />
                       <Text style={styles.textWrapper1}>투자기간</Text>
-                      <Text style={styles.div1}>{prod.period_text}개월{'\n'}(365일)</Text>
+                      <Text style={styles.div1}>
+                        {prod.period_text}개월{'\n'}(365일)
+                      </Text>
                     </View>
                   </View>
-                  
+
                   {/* 상환일자 */}
                   <View style={styles.overlapWrapper1}>
                     <View style={styles.overlapGroup1}>
                       <View style={styles.overlapGroup1Bg} />
-                      <Image source={require('../assets/images/ic3.png')} style={styles.ic1} />
+                      <Image
+                        source={require('../assets/images/ic3.png')}
+                        style={styles.ic1}
+                      />
                       <Text style={styles.textWrapper1}>상환일자</Text>
                       <Text style={styles.div1}>{contents?.etxt_9 || '-'}</Text>
                     </View>
                   </View>
                 </View>
-                <Text style={styles.note2}>* 상기일정은 변경될 수 있습니다.</Text>
+                <Text style={styles.note2}>
+                  * 상기일정은 변경될 수 있습니다.
+                </Text>
               </View>
             </View>
           </View>
 
           {/* 투자 정보 토글박스 */}
           <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.invest && styles.inTitleOn]}
+            <TouchableOpacity
+              style={[
+                styles.inTitle,
+                expandedSections.invest && styles.inTitleOn,
+              ]}
               onPress={() => toggleSection('invest')}
             >
               <Text style={styles.inTitleText}>투자 정보</Text>
-              <Image 
-                source={require('../assets/images/arrow_select.png')} 
-                style={[styles.arrowIcon, expandedSections.invest && styles.arrowIconRotated]}
+              <Image
+                source={require('../assets/images/arrow_select.png')}
+                style={[
+                  styles.arrowIcon,
+                  expandedSections.invest && styles.arrowIconRotated,
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
-            
+
             {expandedSections.invest && (
               <View style={styles.inCont}>
                 {/* 탭 메뉴 */}
                 <View style={styles.subTabWrapper}>
                   <View style={styles.subTabN}>
-                    <TouchableOpacity 
-                      style={[styles.subTabItem1, activeTab1 === 0 && styles.subTabItemActive1]}
+                    <TouchableOpacity
+                      style={[
+                        styles.subTabItem1,
+                        activeTab1 === 0 && styles.subTabItemActive1,
+                      ]}
                       onPress={() => setActiveTab1(0)}
                     >
-                      <Text style={[styles.subTabText, activeTab1 === 0 && styles.subTabTextActive1]}>상품개요</Text>
+                      <Text
+                        style={[
+                          styles.subTabText,
+                          activeTab1 === 0 && styles.subTabTextActive1,
+                        ]}
+                      >
+                        상품개요
+                      </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.subTabItem2, activeTab1 === 1 && styles.subTabItemActive2]}
+                    <TouchableOpacity
+                      style={[
+                        styles.subTabItem2,
+                        activeTab1 === 1 && styles.subTabItemActive2,
+                      ]}
                       onPress={() => setActiveTab1(1)}
                     >
-                      <Text style={[styles.subTabText, activeTab1 === 1 && styles.subTabTextActive2]}>사업개요</Text>
+                      <Text
+                        style={[
+                          styles.subTabText,
+                          activeTab1 === 1 && styles.subTabTextActive2,
+                        ]}
+                      >
+                        사업개요
+                      </Text>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.subTabLine} />
                 </View>
-                
+
                 {/* 상품개요 */}
                 {activeTab1 === 0 && (
                   <View style={styles.contentWrapN}>
-                    {summary && summary.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
+                    {summary &&
+                      summary.map((item, index) => (
+                        <View key={index}>
+                          {item.text_type === 'TOP_TEXT' && item.top_text && (
                             <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                              <Text style={styles.txtsLi}>{item.top_text}</Text>
                             </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
+                          )}
+                          {item.text_type === 'TITLE_CONTENTS' && (
+                            <>
+                              <Text style={styles.tit}>{item.title}</Text>
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.contents}
+                                </Text>
+                              </View>
+                            </>
+                          )}
+                          {item.text_type === 'BOTTOM_TEXT' &&
+                            item.bottom_text && (
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.bottom_text}
+                                </Text>
+                              </View>
+                            )}
+                        </View>
+                      ))}
                   </View>
                 )}
-                
+
                 {/* 사업개요 */}
                 {activeTab1 === 1 && (
                   <View style={styles.contentWrapN}>
-                    {intro && intro.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
+                    {intro &&
+                      intro.map((item, index) => (
+                        <View key={index}>
+                          {item.text_type === 'TOP_TEXT' && item.top_text && (
                             <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                              <Text style={styles.txtsLi}>{item.top_text}</Text>
                             </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
+                          )}
+                          {item.text_type === 'TITLE_CONTENTS' && (
+                            <>
+                              <Text style={styles.tit}>{item.title}</Text>
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.contents}
+                                </Text>
+                              </View>
+                            </>
+                          )}
+                          {item.text_type === 'BOTTOM_TEXT' &&
+                            item.bottom_text && (
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.bottom_text}
+                                </Text>
+                              </View>
+                            )}
+                        </View>
+                      ))}
                   </View>
                 )}
               </View>
@@ -781,99 +905,142 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
           {/* 안정성 토글박스 */}
           <View style={styles.detailTogglebox}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.stability && styles.inTitleOn]}
+            <TouchableOpacity
+              style={[
+                styles.inTitle,
+                expandedSections.stability && styles.inTitleOn,
+              ]}
               onPress={() => toggleSection('stability')}
             >
               <Text style={styles.inTitleText}>안정성</Text>
-              <Image 
-                source={require('../assets/images/arrow_select.png')} 
-                style={[styles.arrowIcon, expandedSections.stability && styles.arrowIconRotated]}
+              <Image
+                source={require('../assets/images/arrow_select.png')}
+                style={[
+                  styles.arrowIcon,
+                  expandedSections.stability && styles.arrowIconRotated,
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
-            
+
             {expandedSections.stability && (
               <View style={styles.inCont}>
                 {/* 탭 메뉴 */}
                 <View style={styles.subTabWrapper}>
                   <View style={styles.subTabN}>
-                    <TouchableOpacity 
-                      style={[styles.subTabItem1, activeTab2 === 0 && styles.subTabItemActive1]}
+                    <TouchableOpacity
+                      style={[
+                        styles.subTabItem1,
+                        activeTab2 === 0 && styles.subTabItemActive1,
+                      ]}
                       onPress={() => setActiveTab2(0)}
                     >
-                      <Text style={[styles.subTabText1, activeTab2 === 0 && styles.subTabTextActive1]}>차입자정보</Text>
+                      <Text
+                        style={[
+                          styles.subTabText1,
+                          activeTab2 === 0 && styles.subTabTextActive1,
+                        ]}
+                      >
+                        차입자정보
+                      </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.subTabItem2, activeTab2 === 1 && styles.subTabItemActive2]}
+                    <TouchableOpacity
+                      style={[
+                        styles.subTabItem2,
+                        activeTab2 === 1 && styles.subTabItemActive2,
+                      ]}
                       onPress={() => setActiveTab2(1)}
                     >
-                      <Text style={[styles.subTabText2, activeTab2 === 1 && styles.subTabTextActive2]}>담보사항</Text>
+                      <Text
+                        style={[
+                          styles.subTabText2,
+                          activeTab2 === 1 && styles.subTabTextActive2,
+                        ]}
+                      >
+                        담보사항
+                      </Text>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.subTabLine} />
                 </View>
-                
+
                 {/* 차입자정보 */}
                 {activeTab2 === 0 && (
                   <View style={styles.contentWrapN}>
-                    {borrower && borrower.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
+                    {borrower &&
+                      borrower.map((item, index) => (
+                        <View key={index}>
+                          {item.text_type === 'TOP_TEXT' && item.top_text && (
                             <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                              <Text style={styles.txtsLi}>{item.top_text}</Text>
                             </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
+                          )}
+                          {item.text_type === 'TITLE_CONTENTS' && (
+                            <>
+                              <Text style={styles.tit}>{item.title}</Text>
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.contents}
+                                </Text>
+                              </View>
+                            </>
+                          )}
+                          {item.text_type === 'BOTTOM_TEXT' &&
+                            item.bottom_text && (
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.bottom_text}
+                                </Text>
+                              </View>
+                            )}
+                        </View>
+                      ))}
                   </View>
                 )}
-                
+
                 {/* 담보사항 */}
                 {activeTab2 === 1 && (
                   <View style={styles.contentWrapN}>
                     {invest_file && invest_file.length > 0 && (
                       <View style={styles.imgbox}>
                         {invest_file.map((file, index) => (
-                          <Image key={index} source={{ uri: file.filePath }} style={styles.imgboxImage} resizeMode="contain" />
+                          <Image
+                            key={index}
+                            source={{ uri: file.filePath }}
+                            style={styles.imgboxImage}
+                            resizeMode="contain"
+                          />
                         ))}
                       </View>
                     )}
-                    {invest && invest.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
+                    {invest &&
+                      invest.map((item, index) => (
+                        <View key={index}>
+                          {item.text_type === 'TOP_TEXT' && item.top_text && (
                             <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                              <Text style={styles.txtsLi}>{item.top_text}</Text>
                             </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
+                          )}
+                          {item.text_type === 'TITLE_CONTENTS' && (
+                            <>
+                              <Text style={styles.tit}>{item.title}</Text>
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.contents}
+                                </Text>
+                              </View>
+                            </>
+                          )}
+                          {item.text_type === 'BOTTOM_TEXT' &&
+                            item.bottom_text && (
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.bottom_text}
+                                </Text>
+                              </View>
+                            )}
+                        </View>
+                      ))}
                   </View>
                 )}
               </View>
@@ -882,92 +1049,130 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
           {/* 투자 유의사항 토글박스 */}
           <View style={[styles.detailTogglebox, styles.mb40]}>
-            <TouchableOpacity 
-              style={[styles.inTitle, expandedSections.caution && styles.inTitleOn]}
+            <TouchableOpacity
+              style={[
+                styles.inTitle,
+                expandedSections.caution && styles.inTitleOn,
+              ]}
               onPress={() => toggleSection('caution')}
             >
               <Text style={styles.inTitleText}>투자 유의사항</Text>
-              <Image 
-                source={require('../assets/images/arrow_select.png')} 
-                style={[styles.arrowIcon, expandedSections.caution && styles.arrowIconRotated]}
+              <Image
+                source={require('../assets/images/arrow_select.png')}
+                style={[
+                  styles.arrowIcon,
+                  expandedSections.caution && styles.arrowIconRotated,
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
-            
+
             {expandedSections.caution && (
               <View style={styles.inCont}>
                 {/* 탭 메뉴 */}
                 <View style={styles.subTabWrapper}>
                   <View style={styles.subTabN}>
-                    <TouchableOpacity 
-                      style={[styles.subTabItem1, activeTab3 === 0 && styles.subTabItemActive1]}
+                    <TouchableOpacity
+                      style={[
+                        styles.subTabItem1,
+                        activeTab3 === 0 && styles.subTabItemActive1,
+                      ]}
                       onPress={() => setActiveTab3(0)}
                     >
-                      <Text style={[styles.subTabTex1, activeTab3 === 0 && styles.subTabTextActive1]}>투자 리스크</Text>
+                      <Text
+                        style={[
+                          styles.subTabTex1,
+                          activeTab3 === 0 && styles.subTabTextActive1,
+                        ]}
+                      >
+                        투자 리스크
+                      </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.subTabItem2, activeTab3 === 1 && styles.subTabItemActive2]}
+                    <TouchableOpacity
+                      style={[
+                        styles.subTabItem2,
+                        activeTab3 === 1 && styles.subTabItemActive2,
+                      ]}
                       onPress={() => setActiveTab3(1)}
                     >
-                      <Text style={[styles.subTabText2, activeTab3 === 1 && styles.subTabTextActive2]}>투자 유의사항</Text>
+                      <Text
+                        style={[
+                          styles.subTabText2,
+                          activeTab3 === 1 && styles.subTabTextActive2,
+                        ]}
+                      >
+                        투자 유의사항
+                      </Text>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.subTabLine} />
                 </View>
-                
+
                 {/* 투자 리스크 */}
                 {activeTab3 === 0 && (
                   <View style={styles.contentWrapN}>
-                    {risk && risk.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
+                    {risk &&
+                      risk.map((item, index) => (
+                        <View key={index}>
+                          {item.text_type === 'TOP_TEXT' && item.top_text && (
                             <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                              <Text style={styles.txtsLi}>{item.top_text}</Text>
                             </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
+                          )}
+                          {item.text_type === 'TITLE_CONTENTS' && (
+                            <>
+                              <Text style={styles.tit}>{item.title}</Text>
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.contents}
+                                </Text>
+                              </View>
+                            </>
+                          )}
+                          {item.text_type === 'BOTTOM_TEXT' &&
+                            item.bottom_text && (
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.bottom_text}
+                                </Text>
+                              </View>
+                            )}
+                        </View>
+                      ))}
                   </View>
                 )}
-                
+
                 {/* 투자 유의사항 */}
                 {activeTab3 === 1 && (
                   <View style={styles.contentWrapN}>
-                    {caution && caution.map((item, index) => (
-                      <View key={index}>
-                        {item.text_type === 'TOP_TEXT' && item.top_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.top_text}</Text>
-                          </View>
-                        )}
-                        {item.text_type === 'TITLE_CONTENTS' && (
-                          <>
-                            <Text style={styles.tit}>{item.title}</Text>
+                    {caution &&
+                      caution.map((item, index) => (
+                        <View key={index}>
+                          {item.text_type === 'TOP_TEXT' && item.top_text && (
                             <View style={styles.txts}>
-                              <Text style={styles.txtsLi}>{item.contents}</Text>
+                              <Text style={styles.txtsLi}>{item.top_text}</Text>
                             </View>
-                          </>
-                        )}
-                        {item.text_type === 'BOTTOM_TEXT' && item.bottom_text && (
-                          <View style={styles.txts}>
-                            <Text style={styles.txtsLi}>{item.bottom_text}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
+                          )}
+                          {item.text_type === 'TITLE_CONTENTS' && (
+                            <>
+                              <Text style={styles.tit}>{item.title}</Text>
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.contents}
+                                </Text>
+                              </View>
+                            </>
+                          )}
+                          {item.text_type === 'BOTTOM_TEXT' &&
+                            item.bottom_text && (
+                              <View style={styles.txts}>
+                                <Text style={styles.txtsLi}>
+                                  {item.bottom_text}
+                                </Text>
+                              </View>
+                            )}
+                        </View>
+                      ))}
                   </View>
                 )}
               </View>
@@ -984,16 +1189,21 @@ const ProductDetailScreen = ({ navigation, route }) => {
         onRequestClose={() => setShowCalcModal(false)}
       >
         <View style={styles.popContainer}>
-          <TouchableOpacity 
-            style={styles.popMask} 
+          <TouchableOpacity
+            style={styles.popMask}
             activeOpacity={1}
             onPress={() => setShowCalcModal(false)}
           />
           <View style={styles.popWrapper}>
             <View style={styles.popBox}>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.popTitle}>예상 수익계산</Text>
-                
+              <Text style={styles.popTitle}>예상 수익계산</Text>
+              <View style={styles.popTitleBorder} />
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.popScrollView}
+                contentContainerStyle={styles.popScrollContent}
+              >
                 {/* 투자예정 금액 입력 */}
                 <View style={styles.pr4pl4}>
                   <View style={styles.flexTit}>
@@ -1007,7 +1217,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
                       keyboardType="numeric"
                     />
                     <Text style={styles.txtUnit}>원</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.btnCalc}
                       onPress={calculateInterest}
                     >
@@ -1022,19 +1232,27 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 <View style={styles.boxCalc}>
                   <View style={styles.dlTotal}>
                     <Text style={styles.dtTotal}>예상 투자수익</Text>
-                    <Text style={styles.ddTotal}>{formatNumber(calcResult.totalProfit)} 원</Text>
+                    <Text style={styles.ddTotal}>
+                      {formatNumber(calcResult.totalProfit)} 원
+                    </Text>
                   </View>
                   <View style={styles.dl}>
                     <Text style={styles.dt}>세전 총 수익</Text>
-                    <Text style={styles.dd}>{formatNumber(calcResult.totalInterest)} 원</Text>
+                    <Text style={styles.dd}>
+                      {formatNumber(calcResult.totalInterest)} 원
+                    </Text>
                   </View>
                   <View style={styles.dl}>
                     <Text style={styles.dt}>세금(이자소득세+주민세)</Text>
-                    <Text style={styles.dd}>{formatNumber(calcResult.totalTax)} 원</Text>
+                    <Text style={styles.dd}>
+                      {formatNumber(calcResult.totalTax)} 원
+                    </Text>
                   </View>
                   <View style={styles.dl}>
                     <Text style={styles.dt}>플랫폼 수수료</Text>
-                    <Text style={styles.dd}>{formatNumber(calcResult.totalComm)} 원</Text>
+                    <Text style={styles.dd}>
+                      {formatNumber(calcResult.totalComm)} 원
+                    </Text>
                   </View>
                 </View>
 
@@ -1043,21 +1261,32 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 <View style={styles.repayList}>
                   {calcResult.schedule.map((item, index) => (
                     <View key={index} style={styles.repayItem}>
-                      <TouchableOpacity 
-                        style={[styles.inHead, expandedSchedule[index] && styles.inHeadOn]}
+                      <TouchableOpacity
+                        style={[
+                          styles.inHead,
+                          expandedSchedule[index] && styles.inHeadOn,
+                        ]}
                         onPress={() => toggleSchedule(index)}
                       >
                         <Text style={styles.inHeadDt}>{item.round}회차</Text>
                         <Text style={styles.inHeadDd}>
-                          세후 <Text style={styles.cnt}>{formatNumber(item.afterTax)}</Text> 원
+                          세후{' '}
+                          <Text style={styles.cnt}>
+                            {formatNumber(item.afterTax)}
+                          </Text>{' '}
+                          원
                         </Text>
-                        <Image 
-                          source={require('../assets/images/arrow_select.png')} 
-                          style={[styles.scheduleArrow, expandedSchedule[index] && styles.scheduleArrowRotated]}
+                        <Image
+                          source={require('../assets/images/arrow_select.png')}
+                          style={[
+                            styles.scheduleArrow,
+                            expandedSchedule[index] &&
+                              styles.scheduleArrowRotated,
+                          ]}
                           resizeMode="contain"
                         />
                       </TouchableOpacity>
-                      
+
                       {expandedSchedule[index] && (
                         <View style={styles.inCont}>
                           <View style={styles.dlRow}>
@@ -1066,27 +1295,39 @@ const ProductDetailScreen = ({ navigation, route }) => {
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>원금</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.principal)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.principal)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>이자</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.interest)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.interest)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>이자소득세</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.incomeTax)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.incomeTax)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>주민세</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.residentTax)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.residentTax)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>플랫폼수수료</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.commission)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.commission)} 원
+                            </Text>
                           </View>
                           <View style={styles.dlRow}>
                             <Text style={styles.dtRow}>실지급액</Text>
-                            <Text style={styles.ddRow}>{formatNumber(item.actualPayment)} 원</Text>
+                            <Text style={styles.ddRow}>
+                              {formatNumber(item.actualPayment)} 원
+                            </Text>
                           </View>
                         </View>
                       )}
@@ -1103,17 +1344,17 @@ const ProductDetailScreen = ({ navigation, route }) => {
                     지급일자와 지급액에 차이가 있을 수 있습니다.
                   </Text>
                 </View>
-
-                {/* 확인 버튼 */}
-                <View style={styles.btnBoxModal}>
-                  <TouchableOpacity 
-                    style={styles.btnStyleModal}
-                    onPress={() => setShowCalcModal(false)}
-                  >
-                    <Text style={styles.btnTextModal}>확인</Text>
-                  </TouchableOpacity>
-                </View>
               </ScrollView>
+
+              {/* 확인 버튼 (고정) */}
+              <View style={styles.btnBoxModal}>
+                <TouchableOpacity
+                  style={styles.btnStyleModal}
+                  onPress={() => setShowCalcModal(false)}
+                >
+                  <Text style={styles.btnTextModal}>확인</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -1722,16 +1963,30 @@ const styles = StyleSheet.create({
   popBox: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    paddingVertical: 24,
+    paddingVertical: 20,
     paddingHorizontal: 20,
     maxHeight: '90%',
+    overflow: 'hidden',
   },
   popTitle: {
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '700',
     textAlign: 'center',
+    marginBottom: 10,
+  },
+  popTitleBorder: {
+    height: 1,
+    backgroundColor: '#f6f6f6',
     marginBottom: 20,
+    marginHorizontal: -20,
+  },
+  popScrollView: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  popScrollContent: {
+    paddingBottom: 8,
   },
   pr4pl4: {
     paddingHorizontal: 4,
@@ -1909,7 +2164,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   btnBoxModal: {
-    marginTop: 24,
+    paddingTop: 16,
+    backgroundColor: '#fff',
   },
   btnStyleModal: {
     height: 48,
@@ -1926,4 +2182,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProductDetailScreen;
-

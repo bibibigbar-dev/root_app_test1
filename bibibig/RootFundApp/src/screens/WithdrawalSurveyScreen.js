@@ -8,10 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  Modal,
   Image,
 } from 'react-native';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const WithdrawalSurveyScreen = ({ navigation, route }) => {
   const { user } = route.params || {};
@@ -75,7 +75,7 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
       } else if (response.data === '2' || response.data === '3') {
         Alert.alert(
           '회원탈퇴',
-          '탈퇴가 불가능합니다. 진행중인 대출, 상환, 투자 내역 및 예치금을 확인하여 주십시오.'
+          '탈퇴가 불가능합니다. 진행중인 대출, 상환, 투자 내역 및 예치금을 확인하여 주십시오.',
         );
       } else {
         Alert.alert('회원탈퇴', '처리도중 오류가 발생하였습니다.');
@@ -103,15 +103,18 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Back 버튼 헤더 */}
         <View style={styles.headerContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Image 
-              source={require('../assets/images/ico_back.png')} 
+            <Image
+              source={require('../assets/images/ico_back.png')}
               style={styles.backIcon}
             />
           </TouchableOpacity>
@@ -120,7 +123,7 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
 
         <View style={styles.successContainer}>
           <View style={styles.successWrapper}>
-            <Image 
+            <Image
               source={require('../assets/images/ico_success.png')}
               style={styles.successIco}
               resizeMode="contain"
@@ -143,7 +146,7 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
                   <TextInput
                     style={styles.input}
                     placeholder="비밀번호를 입력해주세요."
-                    placeholderTextColor="#a3a7ab"
+                    placeholderTextColor="#999"
                     secureTextEntry={true}
                     value={password}
                     onChangeText={setPassword}
@@ -192,7 +195,7 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
                       isEtcDisabled && styles.textareaDisabled,
                     ]}
                     placeholder="탈퇴사유를 입력해주세요."
-                    placeholderTextColor="#a3a7ab"
+                    placeholderTextColor="#999"
                     multiline={true}
                     numberOfLines={4}
                     maxLength={200}
@@ -215,59 +218,41 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* 탈퇴사유 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showReasonModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowReasonModal(false)}
+        title="탈퇴사유 선택"
+        onClose={() => setShowReasonModal(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowReasonModal(false),
+        }}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowReasonModal(false)}
-        >
-          <View style={styles.modalContainer}>
-            <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
-              <Text style={styles.modalTitle}>탈퇴사유 선택</Text>
-
-              <View style={styles.modalList}>
-                {reasonOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={styles.modalItem}
-                    onPress={() => {
-                      setSelectedReason(option.value);
-                      if (option.value !== '0') {
-                        setEtcReason('');
-                      }
-                      setShowReasonModal(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.modalItemText,
-                        selectedReason === option.value && styles.modalItemTextSelected,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                    {selectedReason === option.value && (
-                      <Text style={styles.modalItemCheck}>✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowReasonModal(false)}
-              >
-                <Text style={styles.modalCloseButtonText}>닫기</Text>
-              </TouchableOpacity>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        {reasonOptions.map(option => (
+          <TouchableOpacity
+            key={option.value}
+            style={styles.modalItem}
+            onPress={() => {
+              setSelectedReason(option.value);
+              if (option.value !== '0') {
+                setEtcReason('');
+              }
+              setShowReasonModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalItemText,
+                selectedReason === option.value && styles.modalItemTextSelected,
+              ]}
+            >
+              {option.label}
+            </Text>
+            {selectedReason === option.value && (
+              <Text style={styles.modalItemCheck}>✓</Text>
+            )}
+          </TouchableOpacity>
+        ))}
+      </AppModal>
     </View>
   );
 };
@@ -520,4 +505,3 @@ const styles = StyleSheet.create({
 });
 
 export default WithdrawalSurveyScreen;
-

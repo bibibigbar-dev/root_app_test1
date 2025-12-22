@@ -9,10 +9,10 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
-  Modal,
   Image,
 } from 'react-native';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const ConsultationRequestScreen = ({ navigation, route }) => {
   const { user } = route.params || {};
@@ -31,12 +31,12 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
     { label: '전문투자자', value: 'S' },
   ];
 
-  const getCsTypeKr = (type) => {
+  const getCsTypeKr = type => {
     const option = csTypeOptions.find(opt => opt.value === type);
     return option ? option.label : '';
   };
 
-  const validateEmail = (email) => {
+  const validateEmail = email => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     return regex.test(email);
   };
@@ -95,13 +95,14 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
         cs_contents: csContents.trim(),
       };
 
-      const response = await ApiService.api.post('/app/insertCsRequest', 
+      const response = await ApiService.api.post(
+        '/app/insertCsRequest',
         ApiService.convertToFormData(requestData),
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        }
+        },
       );
       const rtnvalue = String(response.data);
 
@@ -114,7 +115,10 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
         Alert.alert('상담 신청하기', '입력정보를 확인해주세요.');
       } else if (rtnvalue === '2') {
         // XSS 검증 실패
-        Alert.alert('상담 신청하기', '문의사항에 허용되지 않는 문자가 포함되어 있습니다.');
+        Alert.alert(
+          '상담 신청하기',
+          '문의사항에 허용되지 않는 문자가 포함되어 있습니다.',
+        );
       } else {
         // 기타 오류
         Alert.alert('상담 신청하기', '처리도중 오류가 발생하였습니다.');
@@ -131,7 +135,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.headCon}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.btnBack}
           onPress={() => navigation.goBack()}
         >
@@ -144,12 +148,11 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
         <Text style={styles.headTitle}></Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-
         {/* 제목 */}
         <View style={styles.titleContainer}>
           <Text style={styles.pageTitle}>1:1 상담 신청하기</Text>
@@ -159,11 +162,13 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
         <View style={styles.flexTr}>
           <View style={styles.flexTd}>
             <View style={styles.flexInput}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.selectButton}
                 onPress={() => setShowTypeModal(true)}
               >
-                <Text style={styles.selectButtonText}>{getCsTypeKr(csType)}</Text>
+                <Text style={styles.selectButtonText}>
+                  {getCsTypeKr(csType)}
+                </Text>
                 <Image
                   source={require('../assets/images/arrow_select.png')}
                   style={styles.selectArrow}
@@ -178,52 +183,38 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
         </View>
 
         {/* 유형 선택 모달 */}
-        <Modal
+        <AppModal
           visible={showTypeModal}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setShowTypeModal(false)}
+          title="회원 유형 선택"
+          onClose={() => setShowTypeModal(false)}
+          primaryAction={{
+            text: '닫기',
+            onPress: () => setShowTypeModal(false),
+          }}
         >
-          <TouchableOpacity 
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowTypeModal(false)}
-          >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>회원 유형 선택</Text>
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={() => setShowTypeModal(false)}
-                >
-                  <Text style={styles.modalCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.modalBody}>
-                {csTypeOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.modalOption,
-                      csType === option.value && styles.modalOptionSelected
-                    ]}
-                    onPress={() => {
-                      setCsType(option.value);
-                      setShowTypeModal(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.modalOptionText,
-                      csType === option.value && styles.modalOptionTextSelected
-                    ]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </TouchableOpacity>
-        </Modal>
+          {csTypeOptions.map(option => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.modalOption,
+                csType === option.value && styles.modalOptionSelected,
+              ]}
+              onPress={() => {
+                setCsType(option.value);
+                setShowTypeModal(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.modalOptionText,
+                  csType === option.value && styles.modalOptionTextSelected,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </AppModal>
 
         {/* 법인명 */}
         {(csType === 'C' || csType === 'B') && (
@@ -238,7 +229,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
                   value={csCompany}
                   onChangeText={setCsCompany}
                   placeholder="법인명 입력"
-                  placeholderTextColor="#a3a7ab"
+                  placeholderTextColor="#999"
                 />
               </View>
             </View>
@@ -259,7 +250,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
                 value={csName}
                 onChangeText={setCsName}
                 placeholder={csType === 'S' ? '이름 입력' : '담당자 입력'}
-                placeholderTextColor="#a3a7ab"
+                placeholderTextColor="#999"
               />
             </View>
           </View>
@@ -277,7 +268,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
                 value={csTel}
                 onChangeText={setCsTel}
                 placeholder="연락처 입력"
-                placeholderTextColor="#a3a7ab"
+                placeholderTextColor="#999"
                 keyboardType="phone-pad"
               />
             </View>
@@ -296,7 +287,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
                 value={csEmail}
                 onChangeText={setCsEmail}
                 placeholder="이메일 입력"
-                placeholderTextColor="#a3a7ab"
+                placeholderTextColor="#999"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -316,7 +307,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
                 value={csContents}
                 onChangeText={setCsContents}
                 placeholder="문의사항을 입력해주세요"
-                placeholderTextColor="#a3a7ab"
+                placeholderTextColor="#999"
                 multiline
                 numberOfLines={6}
                 textAlignVertical="top"
@@ -549,4 +540,3 @@ const styles = StyleSheet.create({
 });
 
 export default ConsultationRequestScreen;
-

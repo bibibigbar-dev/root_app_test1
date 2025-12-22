@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Modal,
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const { width } = Dimensions.get('window');
 
@@ -82,8 +82,8 @@ const SignUpCorpScreen = () => {
     }
   };
 
-  const handleTermCheck = (termName) => {
-    setCheckedTerms((prev) => ({
+  const handleTermCheck = termName => {
+    setCheckedTerms(prev => ({
       ...prev,
       [termName]: !prev[termName],
     }));
@@ -92,7 +92,7 @@ const SignUpCorpScreen = () => {
     }
   };
 
-  const createHtmlContent = (htmlContent) => {
+  const createHtmlContent = htmlContent => {
     return `
       <!DOCTYPE html>
       <html>
@@ -162,18 +162,22 @@ const SignUpCorpScreen = () => {
       return;
     }
     if (!checkedTerms.priv2) {
-      setTermError('* 개인(신용)정보 제3자(P2P자금관리) 제공에 동의하여 주십시오.');
+      setTermError(
+        '* 개인(신용)정보 제3자(P2P자금관리) 제공에 동의하여 주십시오.',
+      );
       return;
     }
     if (!checkedTerms.nhapi) {
-      setTermError('* 개인(신용)정보 제3자(투자금예치은행) 제공에 동의하여 주십시오.');
+      setTermError(
+        '* 개인(신용)정보 제3자(투자금예치은행) 제공에 동의하여 주십시오.',
+      );
       return;
     }
 
     try {
       setLoading(true);
       const marketing = checkedTerms.marketing ? 'Y' : 'N';
-      
+
       // API 호출
       const response = await ApiService.api.post('/app/join/corpAgree', {
         marketing: marketing,
@@ -201,49 +205,33 @@ const SignUpCorpScreen = () => {
   };
 
   const renderModal = (isVisible, onClose, title, content) => (
-    <Modal
-      animationType="fade"
-      transparent={true}
+    <AppModal
       visible={isVisible}
-      onRequestClose={onClose}
+      title={title}
+      onClose={onClose}
+      primaryAction={{ text: '닫기', onPress: onClose }}
     >
-      <View style={styles.modalContainer}>
-        <TouchableOpacity style={styles.popMask} onPress={onClose} activeOpacity={1} />
-        <View style={styles.modalWrapper}>
-          <View style={styles.modalBox}>
-            <Text style={styles.popTitle}>{title}</Text>
-            <ScrollView 
-              style={styles.popContent}
-              showsVerticalScrollIndicator={true}
-            >
-              {content && (
-                <WebView
-                  originWhitelist={['*']}
-                  source={{ html: createHtmlContent(content) }}
-                  style={[styles.webView, { height: webViewHeight }]}
-                  scrollEnabled={true}
-                  showsVerticalScrollIndicator={false}
-                  showsHorizontalScrollIndicator={true}
-                  onMessage={(event) => {
-                    try {
-                      const data = JSON.parse(event.nativeEvent.data);
-                      if (data.type === 'height' && data.height) {
-                        setWebViewHeight(data.height + 20);
-                      }
-                    } catch (e) {
-                      console.error('WebView message parse error:', e);
-                    }
-                  }}
-                />
-              )}
-            </ScrollView>
-            <TouchableOpacity style={styles.confirmBtn} onPress={onClose}>
-              <Text style={styles.confirmBtnText}>닫기</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      {content && (
+        <WebView
+          originWhitelist={['*']}
+          source={{ html: createHtmlContent(content) }}
+          style={[styles.webView, { height: webViewHeight }]}
+          scrollEnabled={false}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={true}
+          onMessage={event => {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data.type === 'height' && data.height) {
+                setWebViewHeight(data.height + 20);
+              }
+            } catch (e) {
+              console.error('WebView message parse error:', e);
+            }
+          }}
+        />
+      )}
+    </AppModal>
   );
 
   return (
@@ -289,7 +277,10 @@ const SignUpCorpScreen = () => {
           <View style={styles.termsList}>
             {/* 서비스 이용약관 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('service')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleTermCheck('service')}
+              >
                 <Image
                   source={
                     checkedTerms.service
@@ -299,17 +290,26 @@ const SignUpCorpScreen = () => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowServiceModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowServiceModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
                   <Text style={styles.colorBlue}>(필수)</Text> 서비스 이용약관
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
             {/* 개인정보처리방침 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('privateAgree')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleTermCheck('privateAgree')}
+              >
                 <Image
                   source={
                     checkedTerms.privateAgree
@@ -319,17 +319,26 @@ const SignUpCorpScreen = () => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowPrivateAgreeModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowPrivateAgreeModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
                   <Text style={styles.colorBlue}>(필수)</Text> 개인정보처리방침
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
             {/* 개인(신용)정보 제3자(P2P자금관리) 제공 동의 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('priv2')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleTermCheck('priv2')}
+              >
                 <Image
                   source={
                     checkedTerms.priv2
@@ -339,17 +348,27 @@ const SignUpCorpScreen = () => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowPriv2Modal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowPriv2Modal(true)}
+              >
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보 제3자(P2P자금관리) 제공 동의
+                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보
+                  제3자(P2P자금관리) 제공 동의
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
             {/* 개인(신용)정보 제3자(투자금예치은행) 제공 동의 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('nhapi')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleTermCheck('nhapi')}
+              >
                 <Image
                   source={
                     checkedTerms.nhapi
@@ -359,17 +378,27 @@ const SignUpCorpScreen = () => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowNhapiModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowNhapiModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
-                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보 제3자(투자금예치은행) 제공 동의
+                  <Text style={styles.colorBlue}>(필수)</Text> 개인(신용)정보
+                  제3자(투자금예치은행) 제공 동의
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
             {/* 마케팅 정보 수집 및 활용 동의 */}
             <View style={styles.termsItem}>
-              <TouchableOpacity style={styles.labelBox} onPress={() => handleTermCheck('marketing')}>
+              <TouchableOpacity
+                style={styles.labelBox}
+                onPress={() => handleTermCheck('marketing')}
+              >
                 <Image
                   source={
                     checkedTerms.marketing
@@ -379,11 +408,17 @@ const SignUpCorpScreen = () => {
                   style={styles.checkboxImageSmall}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.termsLink} onPress={() => setShowMarketingModal(true)}>
+              <TouchableOpacity
+                style={styles.termsLink}
+                onPress={() => setShowMarketingModal(true)}
+              >
                 <Text style={styles.termsLinkText}>
                   (선택) 마케팅 정보 수집 및 활용 동의
                 </Text>
-                <Image source={require('../assets/images/arrow_right.png')} style={styles.arrowIcon} />
+                <Image
+                  source={require('../assets/images/arrow_right.png')}
+                  style={styles.arrowIcon}
+                />
               </TouchableOpacity>
             </View>
 
@@ -403,37 +438,37 @@ const SignUpCorpScreen = () => {
         showServiceModal,
         () => setShowServiceModal(false),
         '서비스 이용약관',
-        termsData?.service?.contents || ''
+        termsData?.service?.contents || '',
       )}
       {renderModal(
         showPrivateAgreeModal,
         () => setShowPrivateAgreeModal(false),
         '개인정보처리방침',
-        termsData?.private_agree?.contents || ''
+        termsData?.private_agree?.contents || '',
       )}
       {renderModal(
         showPriv2Modal,
         () => setShowPriv2Modal(false),
         '개인(신용)정보 제3자(P2P자금관리) 제공 동의',
-        termsData?.priv2?.contents || ''
+        termsData?.priv2?.contents || '',
       )}
       {renderModal(
         showNhapiModal,
         () => setShowNhapiModal(false),
         '개인(신용)정보 제3자(투자금예치은행) 제공 동의',
-        termsData?.nhapi?.contents || ''
+        termsData?.nhapi?.contents || '',
       )}
       {renderModal(
         showMarketingModal,
         () => setShowMarketingModal(false),
         '마케팅 정보 수집 및 활용 동의',
-        termsData?.marketing?.contents || ''
+        termsData?.marketing?.contents || '',
       )}
 
       <View style={styles.fixBtnWrap}>
         <View style={styles.btnBox}>
-          <TouchableOpacity 
-            style={[styles.nextButton, loading && styles.nextButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.nextButton, loading && styles.nextButtonDisabled]}
             onPress={handleNext}
             disabled={loading}
           >

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Modal,
   ActivityIndicator,
   Linking,
   Image,
@@ -15,6 +14,7 @@ import {
 import { WebView } from 'react-native-webview';
 import DocumentPicker from 'react-native-document-picker';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const NeighborRequestScreen = ({ navigation, route }) => {
   const [user, setUser] = useState(null);
@@ -52,31 +52,40 @@ const NeighborRequestScreen = ({ navigation, route }) => {
     setShowAddressModal(true);
   };
 
-  const handleAddressSelect = (data) => {
+  const handleAddressSelect = data => {
     try {
       let parsedData = data;
       if (typeof data === 'string') {
         parsedData = JSON.parse(data);
       }
-      
+
       // Daum Postcode API 응답에서 시/도, 시/군/구, 읍/면, 동/리 추출
       // sido는 address 또는 roadAddress에서 추출
       const roadAddress = parsedData.roadAddress || '';
       const jibunAddress = parsedData.jibunAddress || '';
-      
+
       // 시/도 추출 (예: "서울특별시", "경기도" 등)
-      const sidoMatch = roadAddress.match(/^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주특별자치도)/);
+      const sidoMatch = roadAddress.match(
+        /^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주특별자치도)/,
+      );
       const extractedSido = sidoMatch ? sidoMatch[1] : '';
-      
+
       // 시/군/구 추출
-      const sigunguMatch = roadAddress.replace(extractedSido, '').trim().match(/^([^\s]+)/);
+      const sigunguMatch = roadAddress
+        .replace(extractedSido, '')
+        .trim()
+        .match(/^([^\s]+)/);
       const extractedSigungu = sigunguMatch ? sigunguMatch[1] : '';
-      
+
       // 읍/면/동 추출
-      const addressParts = roadAddress.replace(extractedSido, '').replace(extractedSigungu, '').trim().split(' ');
+      const addressParts = roadAddress
+        .replace(extractedSido, '')
+        .replace(extractedSigungu, '')
+        .trim()
+        .split(' ');
       const extractedBname1 = addressParts[0] || '';
       const extractedBname = addressParts[1] || '';
-      
+
       setSido(extractedSido);
       setSigungu(extractedSigungu);
       setBname1(extractedBname1);
@@ -102,16 +111,26 @@ const NeighborRequestScreen = ({ navigation, route }) => {
 
       const files = Array.isArray(result) ? result : [result];
 
-      files.forEach((file) => {
+      files.forEach(file => {
         const fileName = file.name || file.fileName || '';
         const fileExt = fileName.split('.').pop().toLowerCase();
-        const allowedExts = ['gif', 'jpg', 'jpeg', 'png', 'pdf', 'hwp', 'xls', 'xlsx', 'csv'];
-        
+        const allowedExts = [
+          'gif',
+          'jpg',
+          'jpeg',
+          'png',
+          'pdf',
+          'hwp',
+          'xls',
+          'xlsx',
+          'csv',
+        ];
+
         if (!allowedExts.includes(fileExt)) {
           Alert.alert(
             '서류 제출',
             '업로드 불가 파일형식입니다.\n(gif, jpg, jpeg, png, pdf, hwp, xls, xlsx 파일만 가능합니다.)',
-            [{ text: '확인' }]
+            [{ text: '확인' }],
           );
           return;
         }
@@ -122,18 +141,21 @@ const NeighborRequestScreen = ({ navigation, route }) => {
           Alert.alert(
             '서류 제출',
             '업로드 가능한 최대 용량은 파일당 5MB 입니다.',
-            [{ text: '확인' }]
+            [{ text: '확인' }],
           );
           return;
         }
 
-        setSelectedFiles(prev => [...prev, {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          name: fileName,
-          uri: file.uri || file.fileCopyUri,
-          size: fileSize,
-          type: file.type || 'application/octet-stream',
-        }]);
+        setSelectedFiles(prev => [
+          ...prev,
+          {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            name: fileName,
+            uri: file.uri || file.fileCopyUri,
+            size: fileSize,
+            type: file.type || 'application/octet-stream',
+          },
+        ]);
       });
     } catch (error) {
       if (DocumentPicker.isCancel(error)) {
@@ -144,7 +166,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleRemoveFile = (fileId) => {
+  const handleRemoveFile = fileId => {
     setSelectedFiles(selectedFiles.filter(file => file.id !== fileId));
   };
 
@@ -163,7 +185,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
 
     try {
       const memberId = user?.session?.member_id || user?.id;
-      
+
       if (!memberId) {
         Alert.alert('알림', '로그인이 필요합니다.');
         setLoading(false);
@@ -186,11 +208,15 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         });
       });
 
-      const response = await ApiService.api.post('/app/product/upload/proc/arearequest', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      const response = await ApiService.api.post(
+        '/app/product/upload/proc/arearequest',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         },
-      });
+      );
 
       const result = String(response.data);
 
@@ -253,24 +279,28 @@ const NeighborRequestScreen = ({ navigation, route }) => {
               style={styles.addressInput}
               value={sido}
               placeholder="시/도"
+              placeholderTextColor="#999"
               editable={false}
             />
             <TextInput
               style={styles.addressInput}
               value={sigungu}
               placeholder="시/군/구"
+              placeholderTextColor="#999"
               editable={false}
             />
             <TextInput
               style={styles.addressInput}
               value={bname1}
               placeholder="읍/면"
+              placeholderTextColor="#999"
               editable={false}
             />
             <TextInput
               style={styles.addressInput}
               value={bname}
               placeholder="동/리"
+              placeholderTextColor="#999"
               editable={false}
             />
           </View>
@@ -290,7 +320,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
             style={styles.fileUploadBox}
             onPress={handleFilePicker}
           >
-             <Image 
+            <Image
               source={require('../assets/images/ico_fileupload.png')}
               style={styles.fileuploadIco}
               resizeMode="contain"
@@ -300,7 +330,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
 
           {selectedFiles.length > 0 && (
             <View style={styles.fileList}>
-              {selectedFiles.map((file) => (
+              {selectedFiles.map(file => (
                 <View key={file.id} style={styles.fileItem}>
                   <Text style={styles.fileName} numberOfLines={1}>
                     {file.name}
@@ -328,7 +358,9 @@ const NeighborRequestScreen = ({ navigation, route }) => {
 
         <View style={styles.notifBox}>
           <Text style={styles.notifText}>
-            보안망으로 인하여 정상적으로 첨부가 되지 않을 경우 로그인 아이디를 포함하여 아래 고객센터 메일로 전달주시면 빠른 처리 진행하겠습니다.{'\n\n'}
+            보안망으로 인하여 정상적으로 첨부가 되지 않을 경우 로그인 아이디를
+            포함하여 아래 고객센터 메일로 전달주시면 빠른 처리 진행하겠습니다.
+            {'\n\n'}
             <Text style={styles.mailto} onPress={handleEmailPress}>
               Email : cs@rootenery.co.kr
             </Text>
@@ -349,26 +381,22 @@ const NeighborRequestScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* 주소 검색 모달 - Daum Postcode */}
-      <Modal
+      <AppModal
         visible={showAddressModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddressModal(false)}
+        title="주소검색"
+        onClose={() => setShowAddressModal(false)}
+        backdropClose={false}
+        scroll={false}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowAddressModal(false),
+        }}
       >
-        <View style={styles.addressModalOverlay}>
-          <View style={styles.addressModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>주소검색</Text>
-              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.webViewContainer}>
-              <WebView
-                source={{
-                  baseUrl: 'https://rootenergy.co.kr',
-                  html: `
+        <View style={styles.webViewContainer}>
+          <WebView
+            source={{
+              baseUrl: 'https://rootenergy.co.kr',
+              html: `
                     <!DOCTYPE html>
                     <html>
                       <head>
@@ -468,37 +496,37 @@ const NeighborRequestScreen = ({ navigation, route }) => {
                         </script>
                       </body>
                     </html>
-                  `
-                }}
-                onMessage={(event) => {
-                  const data = event.nativeEvent.data;
-                  try {
-                    const parsed = JSON.parse(data);
-                    if (parsed?.__type === 'address') {
-                      handleAddressSelect(parsed.payload);
-                      return;
-                    }
-                  } catch (_) {}
-                  handleAddressSelect(data);
-                }}
-                onShouldStartLoadWithRequest={(request) => {
-                  if (request.url.startsWith('postcode://')) {
-                    const payload = decodeURIComponent(request.url.replace('postcode://', ''));
-                    handleAddressSelect(payload);
-                    return false;
-                  }
-                  return true;
-                }}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                mixedContentMode="always"
-                originWhitelist={['*']}
-                style={styles.webView}
-              />
-            </View>
-          </View>
+                  `,
+            }}
+            onMessage={event => {
+              const data = event.nativeEvent.data;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed?.__type === 'address') {
+                  handleAddressSelect(parsed.payload);
+                  return;
+                }
+              } catch (_) {}
+              handleAddressSelect(data);
+            }}
+            onShouldStartLoadWithRequest={request => {
+              if (request.url.startsWith('postcode://')) {
+                const payload = decodeURIComponent(
+                  request.url.replace('postcode://', ''),
+                );
+                handleAddressSelect(payload);
+                return false;
+              }
+              return true;
+            }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            mixedContentMode="always"
+            originWhitelist={['*']}
+            style={styles.webView}
+          />
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 };
@@ -792,4 +820,3 @@ const styles = StyleSheet.create({
 });
 
 export default NeighborRequestScreen;
-

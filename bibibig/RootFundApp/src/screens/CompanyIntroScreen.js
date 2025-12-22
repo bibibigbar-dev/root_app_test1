@@ -34,11 +34,14 @@ const CompanyIntroScreen = ({ navigation }) => {
     try {
       const userData = await AsyncStorage.getItem('userData');
       const userToken = await AsyncStorage.getItem('userToken');
-      
+
       if (userData && userToken) {
         // 로그인 상태 - 대출 상담 신청 페이지로 이동
         const user = JSON.parse(userData);
-        navigation.navigate('LoanRequest', { user, returnScreen: 'CompanyIntro' });
+        navigation.navigate('LoanRequest', {
+          user,
+          returnScreen: 'CompanyIntro',
+        });
       } else {
         // 로그인 안 됨 - 로그인 페이지로 이동
         navigation.navigate('Login', { type: 'loreq' });
@@ -51,63 +54,60 @@ const CompanyIntroScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
-        style={styles.content}
-        showsHorizontalScrollIndicator={false}
-      >
+      <ScrollView style={styles.content} showsHorizontalScrollIndicator={false}>
         {/* 비주얼 섹션 */}
         <View style={styles.subBusinessVisual}>
-          <ImageBackground 
-            source={require('../assets/images/bg_corp_intro.png')} 
+          <ImageBackground
+            source={require('../assets/images/bg_corp_intro.png')}
             style={styles.imgbox}
             resizeMode="cover"
           >
-          <View style={styles.txtbox}>
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>회사소개</Text>
-            </View>
-            <Text style={styles.title}>More for the future</Text>
-            <Text style={styles.titleP}>
-              세상의 가장 작은 뿌리인 시민 한 사람, 한 사람으로부터{'\n'}
-              에너지 전환이 이루어진다는 믿음으로{'\n'}
-              누구나 에너지의 주인이 되는 미래를 만듭니다.
-            </Text>
-            
-            <Text style={styles.subTitle}>
-              루트인프라금융㈜은{'\n'}
-              국내 최초 친환경 투자 플랫폼{'\n'}
-              '루트펀드'를 운영하는{'\n'}
-              재생에너지 금융 전문{'\n'}
-              핀테크 기업입니다
-            </Text>
+            <View style={styles.txtbox}>
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>회사소개</Text>
+              </View>
+              <Text style={styles.title}>More for the future</Text>
+              <Text style={styles.titleP}>
+                세상의 가장 작은 뿌리인 시민 한 사람, 한 사람으로부터{'\n'}
+                에너지 전환이 이루어진다는 믿음으로{'\n'}
+                누구나 에너지의 주인이 되는 미래를 만듭니다.
+              </Text>
 
-            <View style={styles.subImgbox}>
-              <Image 
-                source={require('../assets/images/img_regi.png')} 
-                style={styles.regiImage}
-                resizeMode="contain"
-              />
-            </View>
+              <Text style={styles.subTitle}>
+                루트인프라금융㈜은{'\n'}
+                국내 최초 친환경 투자 플랫폼{'\n'}
+                '루트펀드'를 운영하는{'\n'}
+                재생에너지 금융 전문{'\n'}
+                핀테크 기업입니다
+              </Text>
 
-            <Text style={styles.subDetail}>
-              재생에너지 수용성 솔루션 전문 기업{'\n'}
-              ㈜루트에너지의 자회사로,{'\n'}
-              누구나 에너지의 주인이 될 수 있도록{'\n'}
-              손쉽게 재생에너지에 투자할 수 있는{'\n'}
-              편리한 금융 환경을 만듭니다.{'\n'}
-              루트인프라금융㈜는 온라인투자연계금융업(온투업)의{'\n'}
-              엄격한 기준을 통과한 제도권 금융회사로서{'\n'}
-              더욱 안전한 금융 서비스를 제공합니다.
-            </Text>
-          </View>
+              <View style={styles.subImgbox}>
+                <Image
+                  source={require('../assets/images/img_regi.png')}
+                  style={styles.regiImage}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <Text style={styles.subDetail}>
+                재생에너지 수용성 솔루션 전문 기업{'\n'}
+                ㈜루트에너지의 자회사로,{'\n'}
+                누구나 에너지의 주인이 될 수 있도록{'\n'}
+                손쉽게 재생에너지에 투자할 수 있는{'\n'}
+                편리한 금융 환경을 만듭니다.{'\n'}
+                루트인프라금융㈜는 온라인투자연계금융업(온투업)의{'\n'}
+                엄격한 기준을 통과한 제도권 금융회사로서{'\n'}
+                더욱 안전한 금융 서비스를 제공합니다.
+              </Text>
+            </View>
           </ImageBackground>
         </View>
 
         {/* 미션 가이드 섹션 */}
         <View style={styles.subMissionGuide}>
           <View style={styles.missionImg}>
-            <Image 
-              source={require('../assets/images/rootfund_logo.png')} 
+            <Image
+              source={require('../assets/images/rootfund_logo.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
@@ -118,8 +118,8 @@ const CompanyIntroScreen = ({ navigation }) => {
             친환경 투자 플랫폼 루트펀드
           </Text>
           <View style={styles.phoneImg}>
-            <Image 
-              source={require('../assets/images/img_phone.png')} 
+            <Image
+              source={require('../assets/images/img_phone.png')}
               style={styles.phoneImage}
               resizeMode="contain"
             />
@@ -129,24 +129,28 @@ const CompanyIntroScreen = ({ navigation }) => {
           <View style={styles.item}>
             <View style={styles.itemContentBox}>
               <View style={styles.itemImgbox}>
-                <Image 
-                  source={require('../assets/images/img_rootfund_01.png')} 
+                <Image
+                  source={require('../assets/images/img_rootfund_01.png')}
                   style={styles.itemImage}
                   resizeMode="contain"
                 />
               </View>
               <View style={styles.titbox}>
-                <Image 
-                  source={require('../assets/images/icon_check.png')} 
+                <Image
+                  source={require('../assets/images/icon_check.png')}
                   style={styles.checkImg}
                   resizeMode="contain"
                 />
                 <Text style={styles.itemTit}>수익을 쌓고 유익을 더합니다</Text>
               </View>
               <Text style={styles.itemTxt}>
-                재생에너지 특화 P2P 플랫폼 루트펀드의 새로운 BI는 투자할수록 쌓이고 배가되는 혜택을 형상화했습니다.{' '}
+                재생에너지 특화 P2P 플랫폼 루트펀드의 새로운 BI는 투자할수록
+                쌓이고 배가되는 혜택을 형상화했습니다.{' '}
                 <Text style={styles.itemTxt2}>
-                  이 혜택에는 연 10% 이상의 높은 수익률뿐만 아니라 기후위기, 지역위기 해결이라는 사회ㆍ환경적 가치가 포함됩니다. 루트펀드는 철저한 사업 검증과 리스크 관리를 통해 안정적이고 수익성 높은 친환경 투자 상품을 선보이고 있습니다.
+                  이 혜택에는 연 10% 이상의 높은 수익률뿐만 아니라 기후위기,
+                  지역위기 해결이라는 사회ㆍ환경적 가치가 포함됩니다. 루트펀드는
+                  철저한 사업 검증과 리스크 관리를 통해 안정적이고 수익성 높은
+                  친환경 투자 상품을 선보이고 있습니다.
                 </Text>
               </Text>
             </View>
@@ -156,24 +160,28 @@ const CompanyIntroScreen = ({ navigation }) => {
           <View style={styles.item}>
             <View style={styles.itemContentBox}>
               <View style={styles.itemImgbox}>
-                <Image 
-                  source={require('../assets/images/img_rootfund_02.png')} 
+                <Image
+                  source={require('../assets/images/img_rootfund_02.png')}
                   style={styles.itemImage}
                   resizeMode="contain"
                 />
               </View>
               <View style={styles.titbox}>
-                <Image 
-                  source={require('../assets/images/icon_check.png')} 
+                <Image
+                  source={require('../assets/images/icon_check.png')}
                   style={styles.checkImg}
                   resizeMode="contain"
                 />
                 <Text style={styles.itemTit}>가치와 가치를 연결합니다</Text>
               </View>
               <Text style={styles.itemTxt}>
-                루트펀드는 태양광, 풍력 발전소, 전기차 충전시설 등의 사업자와 친환경 투자수익을 원하는 투자자를 연결합니다.{' '}
+                루트펀드는 태양광, 풍력 발전소, 전기차 충전시설 등의 사업자와
+                친환경 투자수익을 원하는 투자자를 연결합니다.{' '}
                 <Text style={styles.itemTxt2}>
-                  자금 조달의 사각지대에 있던 소규모 발전 사업자에게는 기존 금융권보다 유리한 조건의 중금리 금융 서비스를, 환경 감수성을 지닌 시민들에게는 누구나 양질의 재생에너지 발전 사업에 투자하고 높은 수익을 얻을 수 있는 가치투자 기회를 제공합니다.
+                  자금 조달의 사각지대에 있던 소규모 발전 사업자에게는 기존
+                  금융권보다 유리한 조건의 중금리 금융 서비스를, 환경 감수성을
+                  지닌 시민들에게는 누구나 양질의 재생에너지 발전 사업에
+                  투자하고 높은 수익을 얻을 수 있는 가치투자 기회를 제공합니다.
                 </Text>
               </Text>
             </View>
@@ -183,24 +191,28 @@ const CompanyIntroScreen = ({ navigation }) => {
           <View style={styles.item}>
             <View style={styles.itemContentBox}>
               <View style={styles.itemImgbox2}>
-                <Image 
-                  source={require('../assets/images/img_rootfund_03.png')} 
+                <Image
+                  source={require('../assets/images/img_rootfund_03.png')}
                   style={styles.itemImage}
                   resizeMode="contain"
                 />
               </View>
               <View style={styles.titbox}>
-                <Image 
-                  source={require('../assets/images/icon_check.png')} 
+                <Image
+                  source={require('../assets/images/icon_check.png')}
                   style={styles.checkImg}
                   resizeMode="contain"
                 />
                 <Text style={styles.itemTit}>더 쉽고 가까워집니다</Text>
               </View>
               <Text style={styles.itemTxt}>
-                루트펀드는 국내 최초 재생에너지 및 탄소중립 전문 P2P 금융 플랫폼입니다.{' '}
+                루트펀드는 국내 최초 재생에너지 및 탄소중립 전문 P2P 금융
+                플랫폼입니다.{' '}
                 <Text style={styles.itemTxt2}>
-                  사용자 친화적인 설계로 누구나 스마트폰 하나만 있으면 투자할 수 있으며, 더욱 안전하고 편리한 IT 환경을 구축하기 위해 끊임없이 발전시켜 나가고 있습니다. 또한 대출, 투자 관련 제반기능의 자동화로 정확하고 투명한 운영이 가능합니다.
+                  사용자 친화적인 설계로 누구나 스마트폰 하나만 있으면 투자할 수
+                  있으며, 더욱 안전하고 편리한 IT 환경을 구축하기 위해 끊임없이
+                  발전시켜 나가고 있습니다. 또한 대출, 투자 관련 제반기능의
+                  자동화로 정확하고 투명한 운영이 가능합니다.
                 </Text>
               </Text>
             </View>
@@ -210,15 +222,15 @@ const CompanyIntroScreen = ({ navigation }) => {
           <View style={styles.item}>
             <View style={styles.itemContentBox}>
               <View style={styles.itemImgbox}>
-                <Image 
-                  source={require('../assets/images/img_rootfund_04.png')} 
+                <Image
+                  source={require('../assets/images/img_rootfund_04.png')}
                   style={styles.itemImage}
                   resizeMode="contain"
                 />
               </View>
               <View style={styles.titbox}>
-                <Image 
-                  source={require('../assets/images/icon_check.png')} 
+                <Image
+                  source={require('../assets/images/icon_check.png')}
                   style={styles.checkImg}
                   resizeMode="contain"
                 />
@@ -227,7 +239,10 @@ const CompanyIntroScreen = ({ navigation }) => {
               <Text style={styles.itemTxt}>
                 루트펀드는 금융과 기술, 가치를 결합해 탄소중립을 앞당깁니다.{' '}
                 <Text style={styles.itemTxt2}>
-                  손쉬운 투자 기회와 높은 수익으로 재생에너지에 대한 긍정적인 인식을 확대하고, 이를 통해 기후위기를 해결하기 위해 노력합니다. 가치투자자와 탄소중립 사업자, 루트펀드가 함께 더 살기 좋은 미래를 만들어갑니다.
+                  손쉬운 투자 기회와 높은 수익으로 재생에너지에 대한 긍정적인
+                  인식을 확대하고, 이를 통해 기후위기를 해결하기 위해
+                  노력합니다. 가치투자자와 탄소중립 사업자, 루트펀드가 함께 더
+                  살기 좋은 미래를 만들어갑니다.
                 </Text>
               </Text>
             </View>
@@ -235,42 +250,77 @@ const CompanyIntroScreen = ({ navigation }) => {
         </View>
 
         {/* 파트너 섹션 */}
-        <Text style={styles.subTitleGuide}>정책, 기술, 금융의{'\n'}최고 전문가와 함께합니다</Text>
+        <Text style={styles.subTitleGuide}>
+          정책, 기술, 금융의{'\n'}최고 전문가와 함께합니다
+        </Text>
         <View style={styles.subPartnerGuide}>
           <View style={styles.partnerBox}>
             <View style={styles.partnerLogos}>
               <View style={styles.partnerLogosRow}>
                 <View style={styles.partnerLogoItem}>
-                  <Image source={require('../assets/images/img_partner_logo01.png')} style={styles.partnerLogoImg} resizeMode="contain" />
+                  <Image
+                    source={require('../assets/images/img_partner_logo01.png')}
+                    style={styles.partnerLogoImg}
+                    resizeMode="contain"
+                  />
                 </View>
                 <View style={styles.partnerLogoItem}>
-                  <Image source={require('../assets/images/img_partner_logo02.png')} style={styles.partnerLogoImg} resizeMode="contain" />
+                  <Image
+                    source={require('../assets/images/img_partner_logo02.png')}
+                    style={styles.partnerLogoImg}
+                    resizeMode="contain"
+                  />
                 </View>
                 <View style={styles.partnerLogoItem}>
-                  <Image source={require('../assets/images/img_partner_logo03.png')} style={styles.partnerLogoImg} resizeMode="contain" />
+                  <Image
+                    source={require('../assets/images/img_partner_logo03.png')}
+                    style={styles.partnerLogoImg}
+                    resizeMode="contain"
+                  />
                 </View>
                 <View style={styles.partnerLogoItem}>
-                  <Image source={require('../assets/images/img_partner_logo04.png')} style={styles.partnerLogoImg} resizeMode="contain" />
+                  <Image
+                    source={require('../assets/images/img_partner_logo04.png')}
+                    style={styles.partnerLogoImg}
+                    resizeMode="contain"
+                  />
                 </View>
               </View>
-              <View style={[styles.partnerLogosRow, {marginTop: 20}]}>
+              <View style={[styles.partnerLogosRow, { marginTop: 20 }]}>
                 <View style={styles.partnerLogoItem}>
-                  <Image source={require('../assets/images/img_partner_logo05.png')} style={styles.partnerLogoImg2} resizeMode="contain" />
+                  <Image
+                    source={require('../assets/images/img_partner_logo05.png')}
+                    style={styles.partnerLogoImg2}
+                    resizeMode="contain"
+                  />
                 </View>
                 <View style={styles.partnerLogoItem}>
-                  <Image source={require('../assets/images/img_partner_logo06.png')} style={styles.partnerLogoImg2} resizeMode="contain" />
+                  <Image
+                    source={require('../assets/images/img_partner_logo06.png')}
+                    style={styles.partnerLogoImg2}
+                    resizeMode="contain"
+                  />
                 </View>
                 <View style={styles.partnerLogoItem}>
-                  <Image source={require('../assets/images/img_partner_logo07.png')} style={styles.partnerLogoImg2} resizeMode="contain" />
+                  <Image
+                    source={require('../assets/images/img_partner_logo07.png')}
+                    style={styles.partnerLogoImg2}
+                    resizeMode="contain"
+                  />
                 </View>
               </View>
             </View>
             <View style={styles.partnerMain}>
               <View style={styles.partnerMainImgbox}>
-                <Image source={require('../assets/images/img_partner_logo00.png')} style={styles.partnerMainLogo} resizeMode="contain" />
+                <Image
+                  source={require('../assets/images/img_partner_logo00.png')}
+                  style={styles.partnerMainLogo}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.partnerMainTxt}>
-                루트펀드는 NH농협은행과 함께{'\n'}최고의 금융 보안성을 갖춘{'\n'}핀테크 서비스를 제공합니다.
+                루트펀드는 NH농협은행과 함께{'\n'}최고의 금융 보안성을 갖춘
+                {'\n'}핀테크 서비스를 제공합니다.
               </Text>
             </View>
           </View>
@@ -278,19 +328,31 @@ const CompanyIntroScreen = ({ navigation }) => {
           <View style={styles.partnerList}>
             <View style={styles.partnerListItem}>
               <View style={styles.partnerListImgbox}>
-                <Image source={require('../assets/images/img_partner_list01.png')} style={styles.partnerListImg} resizeMode="contain" />
+                <Image
+                  source={require('../assets/images/img_partner_list01.png')}
+                  style={styles.partnerListImg}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.partnerListTxt}>라이선스 등록</Text>
             </View>
             <View style={styles.partnerListItem}>
               <View style={styles.partnerListImgbox}>
-                <Image source={require('../assets/images/img_partner_list02.png')} style={styles.partnerListImg} resizeMode="contain" />
+                <Image
+                  source={require('../assets/images/img_partner_list02.png')}
+                  style={styles.partnerListImg}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.partnerListTxt}>예치기관</Text>
             </View>
             <View style={styles.partnerListItem}>
               <View style={styles.partnerListImgbox}>
-                <Image source={require('../assets/images/img_partner_list03.png')} style={styles.partnerListImg} resizeMode="contain" />
+                <Image
+                  source={require('../assets/images/img_partner_list03.png')}
+                  style={styles.partnerListImg}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.partnerListTxt}>NICE신용평가</Text>
             </View>
@@ -298,26 +360,26 @@ const CompanyIntroScreen = ({ navigation }) => {
         </View>
 
         {/* 하단 이미지 섹션 */}
-        <ImageBackground 
-          source={require('../assets/images/img_corp_guide.png')} 
+        <ImageBackground
+          source={require('../assets/images/img_corp_guide.png')}
           style={styles.subMissionImgbox}
           resizeMode="cover"
         >
           <View style={styles.corpGuideTxtbox}>
-            <Text style={styles.corpGuideTit}>재생에너지{'\n'}사업자이신가요?</Text>
-            <Text style={styles.corpGuideTxt}>신청서를 작성하시면 세부 내용에 대한 설명과{'\n'}더불어 모든 절차를 도와드립니다</Text>
+            <Text style={styles.corpGuideTit}>
+              재생에너지{'\n'}사업자이신가요?
+            </Text>
+            <Text style={styles.corpGuideTxt}>
+              신청서를 작성하시면 세부 내용에 대한 설명과{'\n'}더불어 모든
+              절차를 도와드립니다
+            </Text>
           </View>
         </ImageBackground>
-
-        
       </ScrollView>
 
       {/* 하단 고정 버튼 */}
       <View style={styles.fixBtnWrap}>
-        <TouchableOpacity 
-          style={styles.btnStyle}
-          onPress={handleLoanRequest}
-        >
+        <TouchableOpacity style={styles.btnStyle} onPress={handleLoanRequest}>
           <Text style={styles.btnText}>대출 상담 신청</Text>
         </TouchableOpacity>
       </View>
@@ -357,7 +419,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   imgbox: {
-    minHeight: 1250,
+    minHeight: 1350,
     backgroundColor: '#E7EEF9',
     width: '100%',
   },
@@ -438,8 +500,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoImage: {
-    width: 200,
-    height: 50,
+    width: 250,
+    height: 60,
   },
   missionDetail: {
     fontSize: 24,
@@ -469,13 +531,13 @@ const styles = StyleSheet.create({
   },
   itemImage: {
     width: '100%',
-    height: 190,
+    height: undefined,
+    aspectRatio: 1,
   },
   itemContentBox: {
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 12,
-    
   },
   titbox: {
     flexDirection: 'row',
@@ -495,7 +557,7 @@ const styles = StyleSheet.create({
   },
   itemTxt: {
     fontSize: 15,
-    lineHeight: 24,
+    lineHeight: 22,
     fontWeight: '500',
     color: '#222',
     marginTop: 10,
@@ -515,7 +577,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f6f6f6',
   },
   subPartnerGuide: {
-  
     backgroundColor: '#f6f6f6',
     paddingVertical: 30,
   },
@@ -663,4 +724,3 @@ const styles = StyleSheet.create({
 });
 
 export default CompanyIntroScreen;
-

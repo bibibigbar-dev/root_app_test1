@@ -15,17 +15,21 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
   const { user } = route.params || {};
   const [expandedIndex, setExpandedIndex] = useState(null);
 
-  const toggleItem = (index) => {
+  const toggleItem = index => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 상단 비주얼 */}
         <View style={styles.subVisual}>
-          <Image 
-            source={require('../assets/images/bg_corp_guide.png')} 
+          <Image
+            source={require('../assets/images/bg_corp_guide.png')}
             style={styles.visualImage}
             resizeMode="cover"
           />
@@ -33,15 +37,20 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
             <View style={styles.tagWrapper}>
               <Text style={styles.tag}>법인투자</Text>
             </View>
-            <Text style={styles.visualTitle}>법인/전문투자자 대상{'\n'}1:1 맞춤형 상담 서비스</Text>
-            <Text style={styles.visualSubtitle}>루트펀드에서 편하게{'\n'}상담 받아보세요</Text>
+            <Text style={styles.visualTitle}>
+              법인/전문투자자 대상{'\n'}1:1 맞춤형 상담 서비스
+            </Text>
+            <Text style={styles.visualSubtitle}>
+              루트펀드에서 편하게{'\n'}상담 받아보세요
+            </Text>
           </View>
         </View>
 
         {/* 타이틀 */}
         <Text style={styles.subTitleGuide}>
           보다 높은 투자수익률{'\n'}
-          <Text style={styles.colorBlue}>#안정적</Text>으로 <Text style={styles.colorBlue}>#중수익</Text>을 얻는{'\n'}
+          <Text style={styles.colorBlue}>#안정적</Text>으로{' '}
+          <Text style={styles.colorBlue}>#중수익</Text>을 얻는{'\n'}
           루트펀드 기후금융 투자
         </Text>
 
@@ -74,15 +83,21 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
               <Text style={styles.graphTxt}>회사채{'\n'}3년</Text>
             </View>
             <View style={styles.graphBarItem}>
-              <View style={[styles.graphVal, styles.graphValBlue, { height: 148 }]}>
-                <Image 
-                  source={require('../assets/images/graph_logo.png')} 
+              <View
+                style={[styles.graphVal, styles.graphValBlue, { height: 148 }]}
+              >
+                <Image
+                  source={require('../assets/images/graph_logo.png')}
                   style={styles.graphLogo}
                   resizeMode="contain"
                 />
-                <Text style={[styles.graphPct, styles.graphPctBlue]}>12.5%</Text>
+                <Text style={[styles.graphPct, styles.graphPctBlue]}>
+                  12.5%
+                </Text>
               </View>
-              <Text style={[styles.graphTxt, styles.graphTxtBlue]}>루트펀드{'\n'}7개월</Text>
+              <Text style={[styles.graphTxt, styles.graphTxtBlue]}>
+                루트펀드{'\n'}7개월
+              </Text>
             </View>
           </View>
         </View>
@@ -95,8 +110,8 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
             성과를 이룰 수 있었습니다
           </Text>
           <View style={styles.graphBox}>
-            <Image 
-              source={require('../assets/images/img_graph.png')} 
+            <Image
+              source={require('../assets/images/img_graph.png')}
               style={styles.graphImage}
               resizeMode="contain"
             />
@@ -104,9 +119,14 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
               <View style={styles.accumulate}>
                 <Text style={styles.accumulateTxt}>법인 누적 투자 금액</Text>
                 <Text style={styles.accumulateCnt}>204억 1150만원</Text>
+                {/* 점선 + 검정 동그라미 (CSS ::before/::after 대응) */}
+                <View pointerEvents="none" style={styles.accumulateConnector}>
+                  <View style={styles.accumulateLine} />
+                  <View style={styles.accumulateDot} />
+                </View>
               </View>
             </View>
-            
+
             {/* 하단 정보 박스 - 이미지 내부 */}
             <View style={styles.dlbox}>
               <View style={styles.dlItem}>
@@ -120,25 +140,23 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
             </View>
           </View>
         </View>
-       
 
         {/* 투자자격 타이틀 */}
         <Text style={styles.subTitleGuide}>
-          투자자격 변경하고{'\n'}
-          더 많은 수익을 누려보세요
+          투자자격 변경하고{'\n'}더 많은 수익을 누려보세요
         </Text>
 
         {/* 토글 리스트 */}
         <View style={styles.subGuideToggle}>
           {/* 개인소득적격투자자 */}
           <View style={styles.toggleItem}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.inHead, expandedIndex === 0 && styles.inHeadOn]}
               onPress={() => toggleItem(0)}
             >
               <View style={styles.toggleImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_corp_guide01.png')} 
+                <Image
+                  source={require('../assets/images/ico_corp_guide01.png')}
                   style={styles.toggleIcon}
                   resizeMode="contain"
                 />
@@ -146,12 +164,16 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
               <View style={styles.toggleTxtbox}>
                 <Text style={styles.toggleTit}>개인소득적격투자자</Text>
                 <Text style={styles.toggleTxt}>
-                  온투법권 전체 <Text style={styles.toggleEmphasis}>1억원 한도</Text>
+                  온투법권 전체{' '}
+                  <Text style={styles.toggleEmphasis}>1억원 한도</Text>
                 </Text>
               </View>
-              <Image 
-                source={require('../assets/images/arrow_select.png')} 
-                style={[styles.toggleArrow, expandedIndex === 0 && styles.toggleArrowOn]}
+              <Image
+                source={require('../assets/images/arrow_select.png')}
+                style={[
+                  styles.toggleArrow,
+                  expandedIndex === 0 && styles.toggleArrowOn,
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
@@ -159,7 +181,8 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
               <View style={styles.inCont}>
                 <Text style={styles.contTit}>자격요건</Text>
                 <Text style={styles.contTxt}>
-                  <Text style={styles.contStrong}>[필수조건 택 1]</Text>{'\n'}
+                  <Text style={styles.contStrong}>[필수조건 택 1]</Text>
+                  {'\n'}
                   1. 근로소득 1억원 초과{'\n'}
                   2. 사업소득 1억원 초과{'\n'}
                   3. 사업소득과 근로소득 합산 1억원 초과{'\n'}
@@ -170,11 +193,16 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
                   동일 차입자 기준 : 2천만원{'\n'}
                   온투업권 기준 : 1억원
                 </Text>
-               <Text style={[styles.contTit, {marginTop: 24}]}>증빙서류</Text>
+                <Text style={[styles.contTit, { marginTop: 24 }]}>
+                  증빙서류
+                </Text>
                 <Text style={styles.contTxt}>
                   필수조건 중 해당하는 기준에 맞춰 제출{'\n'}
-                  전년도 &lt;근로소득원천징수영수증&gt; 혹은 &lt;소득금액증명원&gt; 중 택 1 (회사 직인 혹은 본인 서명 필수){'\n'}
-                  전년도 '종합소득 과세표준 확정신고 및 납부계산서' 전체 페이지 (본인 서명 혹은 날인 필수)
+                  전년도 &lt;근로소득원천징수영수증&gt; 혹은
+                  &lt;소득금액증명원&gt; 중 택 1 (회사 직인 혹은 본인 서명 필수)
+                  {'\n'}
+                  전년도 '종합소득 과세표준 확정신고 및 납부계산서' 전체 페이지
+                  (본인 서명 혹은 날인 필수)
                 </Text>
               </View>
             )}
@@ -182,13 +210,13 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
 
           {/* 개인전문투자자 */}
           <View style={styles.toggleItem}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.inHead, expandedIndex === 1 && styles.inHeadOn]}
               onPress={() => toggleItem(1)}
             >
               <View style={styles.toggleImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_corp_guide02.png')} 
+                <Image
+                  source={require('../assets/images/ico_corp_guide02.png')}
                   style={styles.toggleIcon}
                   resizeMode="contain"
                 />
@@ -196,12 +224,16 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
               <View style={styles.toggleTxtbox}>
                 <Text style={styles.toggleTit}>개인전문투자자</Text>
                 <Text style={styles.toggleTxt}>
-                  총 투자 가능한도 <Text style={styles.toggleEmphasis}>무제한</Text>
+                  총 투자 가능한도{' '}
+                  <Text style={styles.toggleEmphasis}>무제한</Text>
                 </Text>
               </View>
-              <Image 
-                source={require('../assets/images/arrow_select.png')} 
-                style={[styles.toggleArrow, expandedIndex === 1 && styles.toggleArrowOn]}
+              <Image
+                source={require('../assets/images/arrow_select.png')}
+                style={[
+                  styles.toggleArrow,
+                  expandedIndex === 1 && styles.toggleArrowOn,
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
@@ -209,15 +241,16 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
               <View style={styles.inCont}>
                 <Text style={styles.contTit}>자격요건</Text>
                 <Text style={styles.contTxt}>
-                  <Text style={styles.contStrong}>[필수조건]</Text>{'\n'}
+                  <Text style={styles.contStrong}>[필수조건]</Text>
+                  {'\n'}
                   최근 5년 중 1년 이상의 기간동안{'\n'}
                   금융위원회가 정하여 고시하는 금융투자상품을{'\n'}
                   월말 평균잔고 기준으로{'\n'}
                   5,000만원 이상 보유
                 </Text>
                 <Text style={styles.contTxt}>
-                  <Text style={styles.contStrong}>[선택조건]</Text>{'\n'}
-                  세 가지 중 한 가지 충족 시{'\n'}
+                  <Text style={styles.contStrong}>[선택조건]</Text>
+                  {'\n'}세 가지 중 한 가지 충족 시{'\n'}
                   1. 본인의 연 소득 1억원 또는 배우자와의 연 소득{'\n'}
                   합계가 1억 5,000만원 이상{'\n'}
                   2. 거주 부동산, 임차보증금 및 총부채 금액을{'\n'}
@@ -230,20 +263,22 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
                   (*단, 연계대출 모집금액의 40% 이내)
                 </Text>
                 <Text style={styles.contTit}>증빙서류</Text>
-                <Text style={styles.contTxt}>금융투자업자의 전문투자자 확인증</Text>
+                <Text style={styles.contTxt}>
+                  금융투자업자의 전문투자자 확인증
+                </Text>
               </View>
             )}
           </View>
 
           {/* 법인투자자 */}
           <View style={styles.toggleItem}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.inHead, expandedIndex === 2 && styles.inHeadOn]}
               onPress={() => toggleItem(2)}
             >
               <View style={styles.toggleImgbox}>
-                <Image 
-                  source={require('../assets/images/ico_corp_guide03.png')} 
+                <Image
+                  source={require('../assets/images/ico_corp_guide03.png')}
                   style={styles.toggleIcon}
                   resizeMode="contain"
                 />
@@ -251,12 +286,16 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
               <View style={styles.toggleTxtbox}>
                 <Text style={styles.toggleTit}>법인투자자</Text>
                 <Text style={styles.toggleTxt}>
-                  총 투자 가능한도 <Text style={styles.toggleEmphasis}>무제한</Text>
+                  총 투자 가능한도{' '}
+                  <Text style={styles.toggleEmphasis}>무제한</Text>
                 </Text>
               </View>
-              <Image 
-                source={require('../assets/images/arrow_select.png')} 
-                style={[styles.toggleArrow, expandedIndex === 2 && styles.toggleArrowOn]}
+              <Image
+                source={require('../assets/images/arrow_select.png')}
+                style={[
+                  styles.toggleArrow,
+                  expandedIndex === 2 && styles.toggleArrowOn,
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
@@ -264,7 +303,8 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
               <View style={styles.inCont}>
                 <Text style={styles.contTit}>자격요건</Text>
                 <Text style={styles.contTxt}>
-                  <Text style={styles.contStrong}>[필수조건]</Text>{'\n'}
+                  <Text style={styles.contStrong}>[필수조건]</Text>
+                  {'\n'}
                   법인 등기 등록이 완료되어 법인등록번호를 발급 받은 법인{'\n'}
                   (법인으로 보는 단체 등은 투자 불가)
                 </Text>
@@ -275,8 +315,8 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
 
         {/* 하단 이미지 박스 */}
         <View style={styles.subCorpImgbox}>
-          <Image 
-            source={require('../assets/images/img_corp_guide.png')} 
+          <Image
+            source={require('../assets/images/img_corp_guide.png')}
             style={styles.corpImage}
             resizeMode="cover"
           />
@@ -289,11 +329,11 @@ const CorporateInvestmentScreen = ({ navigation, route }) => {
           </View>
         </View>
       </ScrollView>
-      
+
       {/* 고정 하단 버튼 */}
       <View style={styles.fixBtnWrap}>
         <View style={styles.btnBox}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.btnStyle}
             onPress={() => {
               // 1:1 상담 신청 페이지로 이동
@@ -448,7 +488,6 @@ const styles = StyleSheet.create({
   graphTxtBlue: {
     color: '#2c3db8',
     fontWeight: '600',
-    
   },
   subGuideGraph: {
     backgroundColor: '#fff',
@@ -470,8 +509,9 @@ const styles = StyleSheet.create({
   accumulateBox: {
     position: 'absolute',
     top: -40,
-    left: '50%',
-    transform: [{ translateX: -65 }],
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
   accumulate: {
     position: 'relative',
@@ -496,6 +536,28 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  accumulateConnector: {
+    position: 'absolute',
+    top: '150%',
+    left: '20%',
+    width: 15,
+    alignItems: 'center',
+  },
+  accumulateLine: {
+    width: 1,
+    height: 38,
+    borderWidth: 0.7,
+    borderColor: '#1351f5',
+    borderStyle: 'dashed',
+    backgroundColor: 'transparent',
+  },
+  accumulateDot: {
+    marginTop: 5,
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: '#222',
   },
   dlbox: {
     position: 'absolute',
@@ -544,8 +606,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(224, 225, 226, 0.50)',
   },
-  inHeadOn: {
-  },
+  inHeadOn: {},
   toggleImgbox: {
     marginRight: 16,
   },
@@ -608,8 +669,7 @@ const styles = StyleSheet.create({
   },
   corpImage: {
     width: '100%',
-    height: 400,
-
+    height: 500,
   },
   corpTxtbox: {
     position: 'absolute',
@@ -662,4 +722,3 @@ const styles = StyleSheet.create({
 });
 
 export default CorporateInvestmentScreen;
-

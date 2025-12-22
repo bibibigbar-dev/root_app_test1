@@ -9,11 +9,11 @@ import {
   ActivityIndicator,
   ScrollView,
   SafeAreaView,
-  Modal,
   Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -34,10 +34,14 @@ const AccountChangeScreen = ({ navigation, route }) => {
     try {
       const userData = await AsyncStorage.getItem('userData');
       const bankList = await AsyncStorage.getItem('bankList');
-      
+
       if (userData) {
         const parsed = JSON.parse(userData);
-        const holder = parsed.session?.account_holder_name || parsed.session?.r_name || parsed.name || '';
+        const holder =
+          parsed.session?.account_holder_name ||
+          parsed.session?.r_name ||
+          parsed.name ||
+          '';
         setAccountHolder(holder);
       }
 
@@ -87,7 +91,10 @@ const AccountChangeScreen = ({ navigation, route }) => {
         account: newAccountNumber,
       });
 
-      if (response.success && (response.data.rtnvalue === '0' || response.data.rtnvalue === 0)) {
+      if (
+        response.success &&
+        (response.data.rtnvalue === '0' || response.data.rtnvalue === 0)
+      ) {
         // 사용자 데이터 업데이트
         if (user.session) {
           user.session.bank_nm = selectedBankName;
@@ -98,33 +105,43 @@ const AccountChangeScreen = ({ navigation, route }) => {
           user.member.account = newAccountNumber;
         }
         await AsyncStorage.setItem('userData', JSON.stringify(user));
-        
+
         Alert.alert('계좌 변경', '계좌가 정상적으로 변경되었습니다.', [
           {
             text: '확인',
             onPress: () => {
               // 출금 신청 화면으로 돌아가면서 새로고침 플래그 전달
               navigation.navigate('Withdrawal', { refresh: true });
-            }
-          }
+            },
+          },
         ]);
       } else {
         const rtnvalue = response.data?.rtnvalue;
         let errorMessage = '처리도중 오류가 발생하였습니다.';
         let errorTitle = '계좌인증';
 
-        if (rtnvalue === '1' || rtnvalue === 1 || rtnvalue === '2' || rtnvalue === 2 || rtnvalue === '3' || rtnvalue === 3) {
+        if (
+          rtnvalue === '1' ||
+          rtnvalue === 1 ||
+          rtnvalue === '2' ||
+          rtnvalue === 2 ||
+          rtnvalue === '3' ||
+          rtnvalue === 3
+        ) {
           errorTitle = '계좌 등록';
           errorMessage = '잘못된 데이터 입니다.';
         } else if (rtnvalue === '5' || rtnvalue === 5) {
           errorTitle = '계좌인증';
-          errorMessage = '확인할 수 없는 계좌입니다.\n계좌를 확인하여 주십시오.';
+          errorMessage =
+            '확인할 수 없는 계좌입니다.\n계좌를 확인하여 주십시오.';
         } else if (rtnvalue === '6' || rtnvalue === 6) {
           errorTitle = '계좌인증';
-          errorMessage = '인증받은 정보와 계좌주가 일치하지 않습니다.\n타인의 명의를 도용시 법적 책임을 받을 수 있습니다.';
+          errorMessage =
+            '인증받은 정보와 계좌주가 일치하지 않습니다.\n타인의 명의를 도용시 법적 책임을 받을 수 있습니다.';
         } else if (rtnvalue === '8' || rtnvalue === 8) {
           errorTitle = 'NHOPENAPI 오류';
-          errorMessage = '현재 농협과의 통신이 원활하지 않습니다.\n잠시후에 다시 시도하여 주십시오.';
+          errorMessage =
+            '현재 농협과의 통신이 원활하지 않습니다.\n잠시후에 다시 시도하여 주십시오.';
         }
 
         Alert.alert(errorTitle, errorMessage);
@@ -145,7 +162,10 @@ const AccountChangeScreen = ({ navigation, route }) => {
           <Text style={styles.headerTitle}>출금계좌 변경</Text>
         </View>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.formContainer}>
             {/* 예금주 */}
             <View style={styles.field}>
@@ -207,68 +227,49 @@ const AccountChangeScreen = ({ navigation, route }) => {
       </View>
 
       {/* 은행 선택 모달 - 일반 스크롤 목록 */}
-      <Modal
+      <AppModal
         visible={showBankPicker}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowBankPicker(false)}
+        title="은행 선택"
+        onClose={() => setShowBankPicker(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowBankPicker(false),
+        }}
       >
-        <TouchableOpacity 
-          style={styles.modalMask} 
-          activeOpacity={1} 
-          onPress={() => setShowBankPicker(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalContent}
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>은행 선택</Text>
-              <TouchableOpacity onPress={() => setShowBankPicker(false)}>
-                <Text style={styles.modalCloseButton}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* 일반 스크롤 은행 목록 */}
-            <ScrollView 
-              style={styles.bankListScroll}
-              showsVerticalScrollIndicator={true}
+        {banks.length > 0 ? (
+          banks.map(bank => (
+            <TouchableOpacity
+              key={bank.bank_cd}
+              style={[
+                styles.bankItem,
+                selectedBankCode === bank.bank_cd && styles.bankItemSelected,
+              ]}
+              onPress={() => {
+                setSelectedBankCode(bank.bank_cd);
+                setSelectedBankName(bank.bank_nm);
+                setShowBankPicker(false);
+              }}
             >
-              {banks.length > 0 ? (
-                banks.map((bank) => (
-                  <TouchableOpacity
-                    key={bank.bank_cd}
-                    style={[
-                      styles.bankItem,
-                      selectedBankCode === bank.bank_cd && styles.bankItemSelected
-                    ]}
-                    onPress={() => {
-                      setSelectedBankCode(bank.bank_cd);
-                      setSelectedBankName(bank.bank_nm);
-                      setShowBankPicker(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.bankItemText,
-                      selectedBankCode === bank.bank_cd && styles.bankItemTextSelected
-                    ]}>
-                      {bank.bank_nm}
-                    </Text>
-                    {selectedBankCode === bank.bank_cd && (
-                      <Text style={styles.bankItemCheck}>✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>은행 목록이 없습니다</Text>
-                </View>
+              <Text
+                style={[
+                  styles.bankItemText,
+                  selectedBankCode === bank.bank_cd &&
+                    styles.bankItemTextSelected,
+                ]}
+              >
+                {bank.bank_nm}
+              </Text>
+              {selectedBankCode === bank.bank_cd && (
+                <Text style={styles.bankItemCheck}>✓</Text>
               )}
-            </ScrollView>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>은행 목록이 없습니다</Text>
+          </View>
+        )}
+      </AppModal>
     </SafeAreaView>
   );
 };
@@ -461,4 +462,3 @@ const styles = StyleSheet.create({
 });
 
 export default AccountChangeScreen;
-

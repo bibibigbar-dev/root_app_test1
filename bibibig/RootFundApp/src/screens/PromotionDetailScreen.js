@@ -93,17 +93,19 @@ const PromotionDetailScreen = ({ navigation, route }) => {
         <View style={styles.tabSwiper}>
           <View style={styles.tabSwiperWrapper}>
             <TouchableOpacity 
-              style={[styles.tabSlide, isOngoing && styles.tabSlideActive]}
+              style={[styles.tabItem, isOngoing && styles.tabItemActive]}
               onPress={() => navigation.goBack()}
             >
-              <Text style={[styles.tabLink, isOngoing && styles.tabLinkActive]}>진행중 프로모션</Text>
+              <Text style={[styles.tabText, isOngoing && styles.tabTextActive]}>진행중 프로모션</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.tabSlide, !isOngoing && styles.tabSlideActive]}
+              style={[styles.tabItem, !isOngoing && styles.tabItemActive]}
               onPress={() => navigation.goBack()}
             >
-              <Text style={[styles.tabLink, !isOngoing && styles.tabLinkActive]}>종료된 프로모션</Text>
+              <Text style={[styles.tabText, !isOngoing && styles.tabTextActive]}>종료된 프로모션</Text>
             </TouchableOpacity>
+            {isOngoing && <View style={styles.tabActiveBar} />}
+            {!isOngoing && <View style={[styles.tabActiveBar, { left: '50%' }]} />}
           </View>
         </View>
 
@@ -176,33 +178,39 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tabSwiper: {
-    height: 30,
+    position: 'relative',
     marginTop: 8,
-    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e1e2',
   },
   tabSwiperWrapper: {
+    position: 'relative',
     flexDirection: 'row',
   },
-  tabSlide: {
-    marginRight: 24,
-    position: 'relative',
+  tabItem: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
-  tabSlideActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#2c3db8',
+  tabItemActive: {
+    borderBottomWidth: 0,
   },
-  tabLink: {
-    paddingTop: 3,
-    paddingBottom: 7,
-    fontSize: 17,
-    lineHeight: 20,
+  tabText: {
+    fontSize: 16,
+    lineHeight: 22,
     fontWeight: '600',
-    color: '#bfc3c7',
+    color: '#999',
   },
-  tabLinkActive: {
+  tabTextActive: {
     color: '#2c3db8',
+  },
+  tabActiveBar: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    width: '50%',
+    height: 2,
+    backgroundColor: '#2c3db8',
   },
   loadingContainer: {
     flex: 1,
@@ -270,6 +278,8 @@ const styles = StyleSheet.create({
   },
   imgbox: {
     marginBottom: 24, // 2.4rem
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   htmlContent: {
     color: '#666',

@@ -8,22 +8,28 @@ import {
   TextInput,
   Switch,
   Alert,
-  Modal,
   ActivityIndicator,
   Linking,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
-const MyPageContent = ({ navigation, route, user, member_id, memberData: initialMemberData }) => {
+const MyPageContent = ({
+  navigation,
+  route,
+  user,
+  member_id,
+  memberData: initialMemberData,
+}) => {
   const [loading, setLoading] = useState(true);
   const [memberData, setMemberData] = useState(initialMemberData || null);
-  
+
   // 비밀번호 변경
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   // 개인정보
   const [birthdate, setBirthdate] = useState('');
   const [phone, setPhone] = useState('');
@@ -31,7 +37,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
   const [address1, setAddress1] = useState('');
   const [address2, setAddress2] = useState('');
   const [jobCode, setJobCode] = useState('00');
-  
+
   // 법인정보
   const [coCpno, setCoCpno] = useState('');
   const [coName, setCoName] = useState('');
@@ -39,11 +45,11 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
   const [ceoName, setCeoName] = useState('');
   const [industryCode, setIndustryCode] = useState('');
   const [coporationCode, setCoporationCode] = useState('');
-  
+
   // 수신동의
   const [emailApproval, setEmailApproval] = useState(false);
   const [smsApproval, setSmsApproval] = useState(false);
-  
+
   // 모달
   const [showJobModal, setShowJobModal] = useState(false);
   const [showMarketingModal, setShowMarketingModal] = useState(false);
@@ -93,16 +99,15 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
     };
   }, []);
 
-
   const loadMemberData = async () => {
     setLoading(true);
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      
+
       const response = await ApiService.api.get('/app/my/info', {
-        params: { member_id: memberId }
+        params: { member_id: memberId },
       });
-      
+
       if (response.data && response.data.member) {
         const member = response.data.member;
         // 전체 응답 데이터를 저장 (okname 포함)
@@ -114,17 +119,23 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
           industry: response.data.industry,
           coporation: response.data.coporation,
         });
-        
+
         // 데이터 설정
-        if (member.birthdate_yyyy && member.birthdate_mm && member.birthdate_dd) {
-          setBirthdate(`${member.birthdate_yyyy}.${member.birthdate_mm}.${member.birthdate_dd}`);
+        if (
+          member.birthdate_yyyy &&
+          member.birthdate_mm &&
+          member.birthdate_dd
+        ) {
+          setBirthdate(
+            `${member.birthdate_yyyy}.${member.birthdate_mm}.${member.birthdate_dd}`,
+          );
         }
         setPhone(member.phone || '');
         setZipcode(member.zipcode || '');
         setAddress1(member.address1 || '');
         setAddress2(member.address2 || '');
         setJobCode(member.job_code || '00');
-        
+
         // 법인정보
         if (member.sort === 'C' || member.corp_yn === 'PC') {
           setCoCpno(member.co_cpno || '');
@@ -134,7 +145,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
           setIndustryCode(member.industry_code || '');
           setCoporationCode(member.coporation_code || '');
         }
-        
+
         // 수신동의
         setEmailApproval(member.email_approval === 'Y');
         setSmsApproval(member.sms_approval === 'Y');
@@ -146,40 +157,43 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
     }
   };
 
-  const validatePassword = (password) => {
+  const validatePassword = password => {
     const validationPwd = /^((?=.*[0-9])(?=.*[a-z])(?=.*[!@#$%^&*]).{10,20})/;
     return validationPwd.test(password);
   };
 
   const lastAddressPayloadRef = useRef(null);
 
-  const handleAddressSelect = (payload) => {
+  const handleAddressSelect = payload => {
     if (!payload) return;
-    
+
     try {
-      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
-      
+      const payloadString =
+        typeof payload === 'string' ? payload : JSON.stringify(payload);
+
       // 중복 방지: 같은 payload가 0.5초 이내에 다시 오면 무시
       const now = Date.now();
-      if (lastAddressPayloadRef.current === payloadString && 
-          lastAddressPayloadRef.timestamp && 
-          now - lastAddressPayloadRef.timestamp < 500) {
+      if (
+        lastAddressPayloadRef.current === payloadString &&
+        lastAddressPayloadRef.timestamp &&
+        now - lastAddressPayloadRef.timestamp < 500
+      ) {
         return;
       }
-      
+
       lastAddressPayloadRef.current = payloadString;
       lastAddressPayloadRef.timestamp = now;
 
       const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
-      
+
       if (data?.zonecode || data?.roadAddress || data?.jibunAddress) {
         const newZipcode = data.zonecode || '';
         const newAddress = data.roadAddress || data.jibunAddress || '';
-        
+
         setZipcode(newZipcode);
         setAddress1(newAddress);
         setShowAddressModal(false);
-        
+
         setTimeout(() => {
           lastAddressPayloadRef.current = null;
           lastAddressPayloadRef.timestamp = null;
@@ -193,10 +207,10 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
 
   const handleSave = async () => {
     const memberId = member_id || user?.session?.member_id || user?.id;
-    
+
     // 비밀번호 변경 여부 확인
     const isPasswordChange = currentPassword || newPassword || confirmPassword;
-    
+
     if (isPasswordChange) {
       // 비밀번호 유효성 검사
       if (!currentPassword) {
@@ -212,15 +226,24 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
         return;
       }
       if (newPassword.length < 10) {
-        Alert.alert('개인정보 변경', '비밀번호 형식에 맞지 않습니다.(10자리 이상 영문,숫자,특수문자 조합)');
+        Alert.alert(
+          '개인정보 변경',
+          '비밀번호 형식에 맞지 않습니다.(10자리 이상 영문,숫자,특수문자 조합)',
+        );
         return;
       }
       if (!validatePassword(newPassword)) {
-        Alert.alert('개인정보 변경', '비밀번호 형식에 맞지 않습니다.(영문,숫자,특수문자를 포함한 최소 10자, 최대 20자)');
+        Alert.alert(
+          '개인정보 변경',
+          '비밀번호 형식에 맞지 않습니다.(영문,숫자,특수문자를 포함한 최소 10자, 최대 20자)',
+        );
         return;
       }
       if (/(\w)\1\1\1/.test(newPassword)) {
-        Alert.alert('개인정보 변경', '비밀번호에 동일한 문자를 연속적으로 4회 이상 사용할 수 없습니다.');
+        Alert.alert(
+          '개인정보 변경',
+          '비밀번호에 동일한 문자를 연속적으로 4회 이상 사용할 수 없습니다.',
+        );
         return;
       }
       if (newPassword !== confirmPassword) {
@@ -235,12 +258,16 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
         Alert.alert('개인정보 변경', '직업을 선택해주세요.');
         return;
       }
-      
+
       try {
         // 비밀번호 RSA 암호화
-        const encryptedPassword = await ApiService.encryptPassword(currentPassword);
-        const encryptedNewPassword = await ApiService.encryptPassword(newPassword);
-        
+        const encryptedPassword = await ApiService.encryptPassword(
+          currentPassword,
+        );
+        const encryptedNewPassword = await ApiService.encryptPassword(
+          newPassword,
+        );
+
         const requestData = {
           member_id: memberId,
           password: encryptedPassword,
@@ -250,9 +277,10 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
           address2: address2.toString(),
           jobCode: jobCode.toString(),
         };
-        
+
         // 법인정보 추가
-        const isCorpOrBiz = memberData?.sort === 'C' || memberData?.corp_yn === 'PC';
+        const isCorpOrBiz =
+          memberData?.sort === 'C' || memberData?.corp_yn === 'PC';
         if (isCorpOrBiz) {
           requestData.co_name = (coName || '').toString();
           requestData.co_name_eng = (coNameEng || '').toString();
@@ -263,26 +291,52 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
         if (memberData?.sort === 'C') {
           requestData.coporation_code = (coporationCode || '').toString();
         }
-        
-        const response = await ApiService.api.post('/app/member/proc/updateMemberAllInfo', requestData);
-        
+
+        const response = await ApiService.api.post(
+          '/app/member/proc/updateMemberAllInfo',
+          requestData,
+        );
+
         if (response.data === '0') {
           Alert.alert('개인정보 변경', '정상적으로 변경되었습니다.', [
-            { text: '확인', onPress: () => loadMemberData() }
+            { text: '확인', onPress: () => loadMemberData() },
           ]);
           setCurrentPassword('');
           setNewPassword('');
           setConfirmPassword('');
-        } else if (response.data === '1' || response.data === '3' || response.data === '5') {
-          Alert.alert('개인정보 변경', '기존 비밀번호가 일치하지 않습니다.\n비밀번호 5회 오류시 자동 로그아웃됩니다.\n5회 입력오류시 일시적으로 계정을 사용할 수 없습니다.');
+        } else if (
+          response.data === '1' ||
+          response.data === '3' ||
+          response.data === '5'
+        ) {
+          Alert.alert(
+            '개인정보 변경',
+            '기존 비밀번호가 일치하지 않습니다.\n비밀번호 5회 오류시 자동 로그아웃됩니다.\n5회 입력오류시 일시적으로 계정을 사용할 수 없습니다.',
+          );
         } else if (response.data === '11') {
-          Alert.alert('개인정보 변경', '비밀번호 형식에 맞지 않습니다.(10자리 이상 영문/숫자/특수문자 조합)');
+          Alert.alert(
+            '개인정보 변경',
+            '비밀번호 형식에 맞지 않습니다.(10자리 이상 영문/숫자/특수문자 조합)',
+          );
         } else if (response.data === '13') {
-          Alert.alert('개인정보 변경', '사용할 수 없는 신규 비밀번호입니다.(개인정보 포함)');
+          Alert.alert(
+            '개인정보 변경',
+            '사용할 수 없는 신규 비밀번호입니다.(개인정보 포함)',
+          );
         } else if (response.data === '100') {
-          Alert.alert('개인정보 변경', '비밀번호 형식에 맞지 않습니다.(동일/연속된 4자리 글자 사용 불가)');
-        } else if (response.data === '111' || response.data === '112' || response.data === '113') {
-          Alert.alert('개인정보 변경', '비밀번호에 개인정보가 포함되어 있습니다');
+          Alert.alert(
+            '개인정보 변경',
+            '비밀번호 형식에 맞지 않습니다.(동일/연속된 4자리 글자 사용 불가)',
+          );
+        } else if (
+          response.data === '111' ||
+          response.data === '112' ||
+          response.data === '113'
+        ) {
+          Alert.alert(
+            '개인정보 변경',
+            '비밀번호에 개인정보가 포함되어 있습니다',
+          );
         } else {
           Alert.alert('개인정보 변경', '처리도중 오류가 발생하였습니다.');
         }
@@ -299,7 +353,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
         Alert.alert('개인정보 변경', '직업을 선택해주세요.');
         return;
       }
-      
+
       try {
         const requestData = {
           member_id: memberId,
@@ -308,9 +362,10 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
           address2: address2.toString(),
           job_code: jobCode.toString(),
         };
-        
+
         // 법인정보 추가
-        const isCorpOrBiz = memberData?.sort === 'C' || memberData?.corp_yn === 'PC';
+        const isCorpOrBiz =
+          memberData?.sort === 'C' || memberData?.corp_yn === 'PC';
         if (isCorpOrBiz) {
           requestData.co_name = (coName || '').toString();
           requestData.co_name_eng = (coNameEng || '').toString();
@@ -321,12 +376,15 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
         if (memberData?.sort === 'C') {
           requestData.coporation_code = (coporationCode || '').toString();
         }
-        
-        const response = await ApiService.api.post('/app/member/proc/updateMemberAddressInfo', requestData);
-        
+
+        const response = await ApiService.api.post(
+          '/app/member/proc/updateMemberAddressInfo',
+          requestData,
+        );
+
         if (response.data.rtnvalue === '0') {
           Alert.alert('개인정보 변경', '정상적으로 변경되었습니다.', [
-            { text: '확인', onPress: () => loadMemberData() }
+            { text: '확인', onPress: () => loadMemberData() },
           ]);
         } else {
           Alert.alert('개인정보 변경', '처리도중 오류가 발생하였습니다.');
@@ -340,11 +398,14 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
   const handleApprovalChange = async (type, value) => {
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-      const response = await ApiService.api.post('/app/member/process/updateSendApproval', {
-        member_id: memberId,
-        type: type.toString(),
-        status: value ? 'Y' : 'N',
-      });
+      const response = await ApiService.api.post(
+        '/app/member/process/updateSendApproval',
+        {
+          member_id: memberId,
+          type: type.toString(),
+          status: value ? 'Y' : 'N',
+        },
+      );
       // 응답이 '0'이 아닌 경우에만 에러 처리
       if (response.data != '0') {
         Alert.alert('개인정보 변경', '처리도중 오류가 발생하였습니다.');
@@ -364,26 +425,29 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
     try {
       // 회원정보 조회 시 받아온 okname 데이터 사용
       const oknameData = memberData?.okname;
-      
+
       if (!oknameData) {
-        Alert.alert('오류', '본인인증 정보를 가져올 수 없습니다.\n관리자에게 문의해주세요.');
+        Alert.alert(
+          '오류',
+          '본인인증 정보를 가져올 수 없습니다.\n관리자에게 문의해주세요.',
+        );
         return;
       }
-      
+
       if (oknameData.okname === 'Y') {
         const okname_url = oknameData.okname_url;
         const cp_cd = oknameData.cp_cd;
         const token = oknameData.token;
-        
+
         // Form 데이터를 URL 파라미터로 변환
         const formParams = new URLSearchParams({
           tc: 'kcb.oknm.online.safehscert.popup.cmd.P931_CertChoiceCmd',
           cp_cd: cp_cd || '',
           mdl_tkn: token || '',
         });
-        
+
         const fullUrl = `${okname_url}?${formParams.toString()}`;
-        
+
         // 외부 브라우저로 본인인증 페이지 열기
         Alert.alert(
           '휴대전화 본인인증',
@@ -391,7 +455,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
           [
             {
               text: '취소',
-              style: 'cancel'
+              style: 'cancel',
             },
             {
               text: '확인',
@@ -406,13 +470,14 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                 } catch (error) {
                   Alert.alert('오류', '브라우저를 열 수 없습니다.');
                 }
-              }
-            }
-          ]
+              },
+            },
+          ],
         );
       } else {
         const rslt_cd = oknameData.rslt_cd || '';
-        const rslt_msg = oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
+        const rslt_msg =
+          oknameData.rslt_msg || '본인인증 정보를 가져올 수 없습니다.';
         Alert.alert('휴대전화 본인인증', `[${rslt_cd}] ${rslt_msg}`);
       }
     } catch (error) {
@@ -422,26 +487,43 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
 
   // 본인인증 완료 후 콜백 처리
   // 웹 페이지에서 fnKCBOkNameProcess(rtnvalue, rtnmessage, authtype, name, birthdate, gender, mobile, nationalInfo, di, ci) 형태로 호출
-  const handleCertifyCallback = async (rtnvalue, rtnmessage, authtype, name, birthdate, gender, mobile, nationalInfo, di, ci) => {
+  const handleCertifyCallback = async (
+    rtnvalue,
+    rtnmessage,
+    authtype,
+    name,
+    birthdate,
+    gender,
+    mobile,
+    nationalInfo,
+    di,
+    ci,
+  ) => {
     if (rtnvalue === '0') {
       try {
-        const response = await ApiService.api.post('/app/member/update/certify', {
-          authType: authtype,
-          name: name,
-          birthDate: birthdate,
-          gender: gender,
-          mobile: mobile,
-          nationalInfo: nationalInfo,
-          di: di,
-          ci: ci,
-        });
-        
+        const response = await ApiService.api.post(
+          '/app/member/update/certify',
+          {
+            authType: authtype,
+            name: name,
+            birthDate: birthdate,
+            gender: gender,
+            mobile: mobile,
+            nationalInfo: nationalInfo,
+            di: di,
+            ci: ci,
+          },
+        );
+
         if (response.data === '0') {
           Alert.alert('본인인증', '인증이 완료되었습니다.', [
-            { text: '확인', onPress: () => loadMemberData() }
+            { text: '확인', onPress: () => loadMemberData() },
           ]);
         } else if (response.data === '2') {
-          Alert.alert('본인인증', '인증정보가 올바르지 않습니다.\n(법인휴대전화의 경우 실 사용자 등록이 되어야 합니다.)');
+          Alert.alert(
+            '본인인증',
+            '인증정보가 올바르지 않습니다.\n(법인휴대전화의 경우 실 사용자 등록이 되어야 합니다.)',
+          );
         } else if (response.data === '3') {
           Alert.alert('본인인증', '이미 가입된 회원의 정보입니다');
         } else if (response.data === '4') {
@@ -460,11 +542,16 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
   const getMemberClassText = () => {
     if (!memberData) return '개인투자자';
     switch (memberData.member_class) {
-      case '10': return '소득적격투자자';
-      case '20': return '전문투자자';
-      case '30': return '법인투자자';
-      case '40': return '여신금융기관';
-      default: return '개인투자자';
+      case '10':
+        return '소득적격투자자';
+      case '20':
+        return '전문투자자';
+      case '30':
+        return '법인투자자';
+      case '40':
+        return '여신금융기관';
+      default:
+        return '개인투자자';
     }
   };
 
@@ -504,7 +591,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                 <TextInput
                   style={styles.flexInputText}
                   placeholder="현재 비밀번호 입력"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor="#999"
                   secureTextEntry={true}
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
@@ -516,7 +603,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                 <TextInput
                   style={styles.flexInputText}
                   placeholder="변경 비밀번호 입력"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor="#999"
                   secureTextEntry={true}
                   value={newPassword}
                   onChangeText={setNewPassword}
@@ -528,7 +615,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                 <TextInput
                   style={styles.flexInputText}
                   placeholder="변경 비밀번호 재입력"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor="#999"
                   secureTextEntry={true}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -538,7 +625,9 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
               </View>
             </View>
           </View>
-          <View style={[styles.hrLine, styles.mt20, styles.mr16, styles.ml16]} />
+          <View
+            style={[styles.hrLine, styles.mt20, styles.mr16, styles.ml16]}
+          />
           <View style={styles.flexTr}>
             <Text style={styles.flexTh}>이름</Text>
             <View style={styles.flexTd}>
@@ -568,7 +657,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                   value={phone}
                   editable={false}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.btnStyle}
                   onPress={handlePhoneChange}
                 >
@@ -586,7 +675,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                   value={zipcode}
                   editable={false}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.btnStyle}
                   onPress={handleAddressSearch}
                 >
@@ -604,6 +693,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                 <TextInput
                   style={styles.flexInputText}
                   placeholder="상세주소"
+                  placeholderTextColor="#999"
                   value={address2}
                   onChangeText={setAddress2}
                 />
@@ -614,12 +704,13 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
             <Text style={styles.flexTh}>직업</Text>
             <View style={styles.flexTd}>
               <View style={styles.flexInput}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.selectButton}
                   onPress={() => setShowJobModal(true)}
                 >
                   <Text style={styles.selectButtonText}>
-                    {jobOptions.find(opt => opt.value === jobCode)?.label || '선택해주세요'}
+                    {jobOptions.find(opt => opt.value === jobCode)?.label ||
+                      '선택해주세요'}
                   </Text>
                   <Text style={styles.selectArrow}>▼</Text>
                 </TouchableOpacity>
@@ -643,160 +734,175 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
           </View>
         </View>
 
-        {/* 회색 공백 */}
-        <View style={styles.graySpace} />
-
         {/* 법인정보 (법인회원인 경우) */}
         {memberData?.sort === 'C' && (
-          <View style={[styles.subWhitebox, styles.whiteboxMargin, styles.pb10]}>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>법인번호</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.input}
-                    value={coCpno}
-                    onChangeText={setCoCpno}
-                  />
+          <>
+            {/* 회색 공백 */}
+            <View style={styles.graySpace} />
+            <View
+              style={[styles.subWhitebox, styles.whiteboxMargin, styles.pb10]}
+            >
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>법인번호</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.input}
+                      value={coCpno}
+                      onChangeText={setCoCpno}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>법인명</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.input}
+                      value={coName}
+                      onChangeText={setCoName}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>법인 영문명</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.input}
+                      value={coNameEng}
+                      onChangeText={setCoNameEng}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>대표명</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.input}
+                      value={ceoName}
+                      onChangeText={setCeoName}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>업종구분</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TouchableOpacity
+                      style={styles.selectButton}
+                      onPress={() => setShowIndustryModal(true)}
+                    >
+                      <Text style={styles.selectButtonText}>
+                        {memberData?.industry?.find(
+                          item => item.code === industryCode,
+                        )?.code_name || '선택해주세요'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>기업구분</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TouchableOpacity
+                      style={styles.selectButton}
+                      onPress={() => setShowCoporationModal(true)}
+                    >
+                      <Text style={styles.selectButtonText}>
+                        {memberData?.coporation?.find(
+                          item => item.code === coporationCode,
+                        )?.code_name || '선택해주세요'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>법인명</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.input}
-                    value={coName}
-                    onChangeText={setCoName}
-                  />
-                </View>
-              </View>
-            </View>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>법인 영문명</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.input}
-                    value={coNameEng}
-                    onChangeText={setCoNameEng}
-                  />
-                </View>
-              </View>
-            </View>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>대표명</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.input}
-                    value={ceoName}
-                    onChangeText={setCeoName}
-                  />
-                </View>
-              </View>
-            </View>
-            <View style={styles.flexTr}>
-            <Text style={styles.flexTh}>업종구분</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TouchableOpacity
-                    style={styles.selectButton}
-                    onPress={() => setShowIndustryModal(true)}
-                  >
-                    <Text style={styles.selectButtonText}>
-                      {memberData?.industry?.find(item => item.code === industryCode)?.code_name || '선택해주세요'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>기업구분</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TouchableOpacity
-                    style={styles.selectButton}
-                    onPress={() => setShowCoporationModal(true)}
-                  >
-                    <Text style={styles.selectButtonText}>
-                      {memberData?.coporation?.find(item => item.code === coporationCode)?.code_name || '선택해주세요'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </View>
+          </>
         )}
 
         {/* 개인사업자 정보 */}
         {memberData?.corp_yn === 'PC' && (
-          <View style={[styles.subWhitebox, styles.whiteboxMargin, styles.pb10]}>
-            <View style={styles.flexTr}>
-            <Text style={styles.flexTh}>사업자번호</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.input}
-                    value={coCpno}
-                    onChangeText={setCoCpno}
-                  />
+          <>
+            {/* 회색 공백 */}
+            <View style={styles.graySpace} />
+            <View
+              style={[styles.subWhitebox, styles.whiteboxMargin, styles.pb10]}
+            >
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>사업자번호</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.input}
+                      value={coCpno}
+                      onChangeText={setCoCpno}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>사업장명</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.input}
+                      value={coName}
+                      onChangeText={setCoName}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>사업장 영문명</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.input}
+                      value={coNameEng}
+                      onChangeText={setCoNameEng}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>사업장 대표명</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TextInput
+                      style={styles.input}
+                      value={ceoName}
+                      onChangeText={setCeoName}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.flexTr}>
+                <Text style={styles.flexTh}>업종구분</Text>
+                <View style={styles.flexTd}>
+                  <View style={styles.flexInput}>
+                    <TouchableOpacity
+                      style={styles.selectButton}
+                      onPress={() => setShowIndustryModal(true)}
+                    >
+                      <Text style={styles.selectButtonText}>
+                        {memberData?.industry?.find(
+                          item => item.code === industryCode,
+                        )?.code_name || '선택해주세요'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>사업장명</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.input}
-                    value={coName}
-                    onChangeText={setCoName}
-                  />
-                </View>
-              </View>
-            </View>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>사업장 영문명</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.input}
-                    value={coNameEng}
-                    onChangeText={setCoNameEng}
-                  />
-                </View>
-              </View>
-            </View>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>사업장 대표명</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TextInput
-                    style={styles.input}
-                    value={ceoName}
-                    onChangeText={setCeoName}
-                  />
-                </View>
-              </View>
-            </View>
-            <View style={styles.flexTr}>
-              <Text style={styles.flexTh}>업종구분</Text>
-              <View style={styles.flexTd}>
-                <View style={styles.flexInput}>
-                  <TouchableOpacity
-                    style={styles.selectButton}
-                    onPress={() => setShowIndustryModal(true)}
-                  >
-                    <Text style={styles.selectButtonText}>
-                      {memberData?.industry?.find(item => item.code === industryCode)?.code_name || '선택해주세요'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </View>
+          </>
         )}
 
         {/* 회색 공백 */}
@@ -813,14 +919,16 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                     발전소 정보와 신규 상품 안내를 제공받습니다.
                   </Text>
                   <TouchableOpacity onPress={() => setShowMarketingModal(true)}>
-                    <Text style={styles.linkText}>마케팅 정보 수집 및 활용</Text>
+                    <Text style={styles.linkText}>
+                      마케팅 정보 수집 및 활용
+                    </Text>
                   </TouchableOpacity>
                   <View style={styles.switchContainer}>
                     <View style={styles.switchRow}>
                       <Text style={styles.switchLabel}>이메일</Text>
                       <Switch
                         value={emailApproval}
-                        onValueChange={(value) => {
+                        onValueChange={value => {
                           setEmailApproval(value);
                           handleApprovalChange('EMAIL', value);
                         }}
@@ -832,7 +940,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                       <Text style={styles.switchLabel}>문자</Text>
                       <Switch
                         value={smsApproval}
-                        onValueChange={(value) => {
+                        onValueChange={value => {
                           setSmsApproval(value);
                           handleApprovalChange('SMS', value);
                         }}
@@ -854,7 +962,7 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
           </TouchableOpacity>
 
           {/* 회원탈퇴 링크 */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.withdrawLink}
             onPress={() => navigation.navigate('MemberWithdrawal', { user })}
           >
@@ -867,186 +975,145 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
       </View>
 
       {/* 직업 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showJobModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowJobModal(false)}
+        title="직업 선택"
+        onClose={() => setShowJobModal(false)}
+        primaryAction={{ text: '닫기', onPress: () => setShowJobModal(false) }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>직업 선택</Text>
-            <ScrollView style={styles.modalScroll}>
-              {jobOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.modalOption,
-                    jobCode === option.value && styles.modalOptionActive
-                  ]}
-                  onPress={() => {
-                    setJobCode(option.value);
-                    setShowJobModal(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.modalOptionText,
-                    jobCode === option.value && styles.modalOptionTextActive
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowJobModal(false)}
+        {jobOptions.map(option => (
+          <TouchableOpacity
+            key={option.value}
+            style={[
+              styles.modalOption,
+              jobCode === option.value && styles.modalOptionActive,
+            ]}
+            onPress={() => {
+              setJobCode(option.value);
+              setShowJobModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalOptionText,
+                jobCode === option.value && styles.modalOptionTextActive,
+              ]}
             >
-              <Text style={styles.modalCloseButtonText}>닫기</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+              {option.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </AppModal>
 
       {/* 마케팅 정보 모달 */}
-      <Modal
+      <AppModal
         visible={showMarketingModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowMarketingModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>마케팅 정보 수집 및 활용</Text>
-            <ScrollView style={styles.modalScroll}>
-              <Text style={styles.modalText}>
-                서비스 제공 및 이용과 관련하여 루트인프라금융㈜가 취득한 개인정보는 "개인정보처리방침"에 의하여 엄격하게 관리되며, 발송되는 마케팅 정보는 회원님에게 유익한 상품 정보, 신규 서비스 안내, 각종 이벤트 등 광고성 정보로 관련법의 규정을 준수하여 발송됩니다. 단, 광고성 정보 이외 의무적으로 안내되어야 하는 정보성 내용은 수신동의 여부와 무관하게 제공됩니다.
-                {'\n\n'}
-                수신 동의 이후에도 의사에 따라 동의를 철회할 수 있으며, 수신을 동의하지 않아도 루트인프라금융㈜가 제공하는 서비스를 이용할 수 있으나, 당사의 마케팅 정보를 수신하지 못할 수 있습니다.
-              </Text>
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowMarketingModal(false)}
-            >
-              <Text style={styles.modalCloseButtonText}>확인</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* 업종구분 선택 모달 */}
-      <Modal
-        visible={showIndustryModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowIndustryModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>업종구분 선택</Text>
-            <ScrollView style={styles.modalScroll}>
-              {memberData?.industry?.map((option) => (
-                <TouchableOpacity
-                  key={option.code}
-                  style={[
-                    styles.modalOption,
-                    industryCode === option.code && styles.modalOptionActive
-                  ]}
-                  onPress={() => {
-                    setIndustryCode(option.code);
-                    setShowIndustryModal(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.modalOptionText,
-                    industryCode === option.code && styles.modalOptionTextActive
-                  ]}>
-                    {option.code_name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowIndustryModal(false)}
-            >
-              <Text style={styles.modalCloseButtonText}>닫기</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* 기업구분 선택 모달 */}
-      <Modal
-        visible={showCoporationModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCoporationModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>기업구분 선택</Text>
-            <ScrollView style={styles.modalScroll}>
-              {memberData?.coporation?.map((option) => (
-                <TouchableOpacity
-                  key={option.code}
-                  style={[
-                    styles.modalOption,
-                    coporationCode === option.code && styles.modalOptionActive
-                  ]}
-                  onPress={() => {
-                    setCoporationCode(option.code);
-                    setShowCoporationModal(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.modalOptionText,
-                    coporationCode === option.code && styles.modalOptionTextActive
-                  ]}>
-                    {option.code_name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowCoporationModal(false)}
-            >
-              <Text style={styles.modalCloseButtonText}>닫기</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* 주소 검색 모달 - Daum Postcode */}
-      <Modal
-        visible={showAddressModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => {
-          setShowAddressModal(false);
+        title="마케팅 정보 수집 및 활용"
+        onClose={() => setShowMarketingModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowMarketingModal(false),
         }}
       >
-        {/* NOTE: 배경 터치로 닫기는 iOS에서 WebView 터치를 종종 막습니다.
-            우선 기능 안정화를 위해 X 버튼으로만 닫습니다. */}
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, styles.addressModalLarge]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>주소검색</Text>
-              <TouchableOpacity
-                style={styles.modalCloseIcon}
-                onPress={() => setShowAddressModal(false)}
-              >
-                <Text style={styles.modalCloseIconText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+        <Text style={styles.modalText}>
+          서비스 제공 및 이용과 관련하여 루트인프라금융㈜가 취득한 개인정보는
+          "개인정보처리방침"에 의하여 엄격하게 관리되며, 발송되는 마케팅 정보는
+          회원님에게 유익한 상품 정보, 신규 서비스 안내, 각종 이벤트 등 광고성
+          정보로 관련법의 규정을 준수하여 발송됩니다. 단, 광고성 정보 이외
+          의무적으로 안내되어야 하는 정보성 내용은 수신동의 여부와 무관하게
+          제공됩니다.
+          {'\n\n'}
+          수신 동의 이후에도 의사에 따라 동의를 철회할 수 있으며, 수신을
+          동의하지 않아도 루트인프라금융㈜가 제공하는 서비스를 이용할 수 있으나,
+          당사의 마케팅 정보를 수신하지 못할 수 있습니다.
+        </Text>
+      </AppModal>
 
-            <View style={styles.webViewContainer}>
-              <WebView
-                source={{
-                  baseUrl: 'https://rootenergy.co.kr',
-                  html: `
+      {/* 업종구분 선택 모달 */}
+      <AppModal
+        visible={showIndustryModal}
+        title="업종구분 선택"
+        onClose={() => setShowIndustryModal(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowIndustryModal(false),
+        }}
+      >
+        {memberData?.industry?.map(option => (
+          <TouchableOpacity
+            key={option.code}
+            style={[
+              styles.modalOption,
+              industryCode === option.code && styles.modalOptionActive,
+            ]}
+            onPress={() => {
+              setIndustryCode(option.code);
+              setShowIndustryModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalOptionText,
+                industryCode === option.code && styles.modalOptionTextActive,
+              ]}
+            >
+              {option.code_name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </AppModal>
+
+      {/* 기업구분 선택 모달 */}
+      <AppModal
+        visible={showCoporationModal}
+        title="기업구분 선택"
+        onClose={() => setShowCoporationModal(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowCoporationModal(false),
+        }}
+      >
+        {memberData?.coporation?.map(option => (
+          <TouchableOpacity
+            key={option.code}
+            style={[
+              styles.modalOption,
+              coporationCode === option.code && styles.modalOptionActive,
+            ]}
+            onPress={() => {
+              setCoporationCode(option.code);
+              setShowCoporationModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalOptionText,
+                coporationCode === option.code && styles.modalOptionTextActive,
+              ]}
+            >
+              {option.code_name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </AppModal>
+
+      {/* 주소 검색 모달 - Daum Postcode */}
+      <AppModal
+        visible={showAddressModal}
+        title="주소검색"
+        onClose={() => setShowAddressModal(false)}
+        backdropClose={false}
+        scroll={false}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowAddressModal(false),
+        }}
+      >
+        <View style={styles.webViewContainer}>
+          <WebView
+            source={{
+              baseUrl: 'https://rootenergy.co.kr',
+              html: `
                     <!DOCTYPE html>
                     <html>
                       <head>
@@ -1156,39 +1223,39 @@ const MyPageContent = ({ navigation, route, user, member_id, memberData: initial
                         </script>
                       </body>
                     </html>
-                  `
-                }}
-                onMessage={(event) => {
-                  const data = event.nativeEvent.data;
-                  try {
-                    const parsed = JSON.parse(data);
-                    if (parsed?.__type === 'address') {
-                      handleAddressSelect(parsed.payload);
-                      return;
-                    }
-                  } catch (_) {}
-                  handleAddressSelect(data);
-                }}
-                onShouldStartLoadWithRequest={(request) => {
-                  if (request.url.startsWith('postcode://')) {
-                    const payload = decodeURIComponent(request.url.replace('postcode://', ''));
-                    handleAddressSelect(payload);
-                    return false;
-                  }
-                  return true;
-                }}
-                onError={(syntheticEvent) => {}}
-                onConsoleMessage={(event) => {}}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                mixedContentMode="always"
-                originWhitelist={['*']}
-                style={styles.webView}
-              />
-            </View>
-          </View>
+                  `,
+            }}
+            onMessage={event => {
+              const data = event.nativeEvent.data;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed?.__type === 'address') {
+                  handleAddressSelect(parsed.payload);
+                  return;
+                }
+              } catch (_) {}
+              handleAddressSelect(data);
+            }}
+            onShouldStartLoadWithRequest={request => {
+              if (request.url.startsWith('postcode://')) {
+                const payload = decodeURIComponent(
+                  request.url.replace('postcode://', ''),
+                );
+                handleAddressSelect(payload);
+                return false;
+              }
+              return true;
+            }}
+            onError={syntheticEvent => {}}
+            onConsoleMessage={event => {}}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            mixedContentMode="always"
+            originWhitelist={['*']}
+            style={styles.webView}
+          />
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 };
@@ -1457,8 +1524,8 @@ const styles = StyleSheet.create({
   },
   saveButtonArea: {
     backgroundColor: '#f8f9fa',
-    paddingTop: 30,
-    paddingBottom: 30,
+    paddingTop: 40,
+    paddingBottom: 40,
     paddingHorizontal: 20,
   },
   saveButton: {
