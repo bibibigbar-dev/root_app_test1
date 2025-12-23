@@ -60,14 +60,14 @@ const SignUpCorpFormScreen = () => {
 
     try {
       setCheckingCorpNo(true);
-
+      
       const data = {
         b_no: [corpNoTemp],
       };
-
+      
       const serviceKey =
         'R8wLA%2BjGmUyPNyjHuPQsIzCQlZg1Qkvq6pIITuiz6TtCEGMJ1ALzuvvd8%2BoL6TXo3YoTmC3ZR0RN04yB%2BSxzVA%3D%3D';
-
+      
       const response = await fetch(
         `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${serviceKey}`,
         {
@@ -89,9 +89,9 @@ const SignUpCorpFormScreen = () => {
         result.data.length > 0
       ) {
         const bizData = result.data[0];
-
+        
         let checkNextStep = false;
-
+        
         if (bizData.b_stt_cd === '01') {
           // 계속사업자
           Alert.alert('사업자번호 조회', '조회가 완료되었습니다.');
@@ -103,8 +103,8 @@ const SignUpCorpFormScreen = () => {
             '휴업자 등록번호 입니다. 계속 진행하시겠습니까?',
             [
               { text: '취소', style: 'cancel' },
-              {
-                text: '확인',
+              { 
+                text: '확인', 
                 onPress: () => {
                   setCorpNo(corpNoTemp);
                   setCorpNoVerified(true);
@@ -120,8 +120,8 @@ const SignUpCorpFormScreen = () => {
             '폐업자 등록번호 입니다. 계속 진행하시겠습니까?',
             [
               { text: '취소', style: 'cancel' },
-              {
-                text: '확인',
+              { 
+                text: '확인', 
                 onPress: () => {
                   setCorpNo(corpNoTemp);
                   setCorpNoVerified(true);
@@ -144,8 +144,8 @@ const SignUpCorpFormScreen = () => {
             }\n계속 진행하시겠습니까?`,
             [
               { text: '취소', style: 'cancel' },
-              {
-                text: '확인',
+              { 
+                text: '확인', 
                 onPress: () => {
                   setCorpNo(corpNoTemp);
                   setCorpNoVerified(true);
@@ -155,7 +155,7 @@ const SignUpCorpFormScreen = () => {
           );
           return;
         }
-
+        
         if (checkNextStep) {
           setCorpNo(corpNoTemp);
           setCorpNoVerified(true);
@@ -274,7 +274,7 @@ const SignUpCorpFormScreen = () => {
 
       if (rtnvalue === '0') {
         // 회원가입 성공
-
+        
         // 자동 로그인 처리
         if (member_id) {
           try {
@@ -282,12 +282,12 @@ const SignUpCorpFormScreen = () => {
               web_id: email,
               member_pwd: password, // 사용자가 입력한 평문 비밀번호
             };
-
+            
             const loginResponse = await ApiService.api.post(
               '/app/loginProcess',
               loginData,
             );
-
+            
             if (
               loginResponse.data.rtnvalue === '0' &&
               loginResponse.data.member
@@ -303,7 +303,7 @@ const SignUpCorpFormScreen = () => {
                 session: loginResponse.data.member,
                 member: loginResponse.data.member,
               };
-
+              
               await AsyncStorage.setItem('userData', JSON.stringify(userData));
             } else {
               console.warn('⚠️ 자동 로그인 실패, 수동 로그인 필요');
@@ -312,7 +312,7 @@ const SignUpCorpFormScreen = () => {
             console.error('❌ 자동 로그인 오류:', loginError);
           }
         }
-
+        
         // 서비스 이용신청 화면으로 이동
         navigation.replace('MyCert', {
           use_tf_join: 'Y',
@@ -522,24 +522,24 @@ const SignUpCorpFormScreen = () => {
         }}
       >
         {joinRootOptions.map(option => (
-          <TouchableOpacity
-            key={option.value}
-            style={styles.modalItem}
-            onPress={() => {
-              setJoinRoot(option.value);
-              setShowJoinRootModal(false);
-            }}
-          >
+                <TouchableOpacity
+                  key={option.value}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setJoinRoot(option.value);
+                    setShowJoinRootModal(false);
+                  }}
+                >
             <Text
               style={[
-                styles.modalItemText,
+                    styles.modalItemText,
                 joinRoot === option.value && styles.modalItemTextSelected,
               ]}
             >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
       </AppModal>
 
       {/* 다음 버튼 */}

@@ -109,12 +109,12 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
       >
         {/* Back 버튼 헤더 */}
         <View style={styles.headerContainer}>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Image
-              source={require('../assets/images/ico_back.png')}
+            <Image 
+              source={require('../assets/images/ico_back.png')} 
               style={styles.backIcon}
             />
           </TouchableOpacity>
@@ -123,7 +123,7 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
 
         <View style={styles.successContainer}>
           <View style={styles.successWrapper}>
-            <Image
+            <Image 
               source={require('../assets/images/ico_success.png')}
               style={styles.successIco}
               resizeMode="contain"
@@ -228,30 +228,30 @@ const WithdrawalSurveyScreen = ({ navigation, route }) => {
         }}
       >
         {reasonOptions.map(option => (
-          <TouchableOpacity
-            key={option.value}
-            style={styles.modalItem}
-            onPress={() => {
-              setSelectedReason(option.value);
-              if (option.value !== '0') {
-                setEtcReason('');
-              }
-              setShowReasonModal(false);
-            }}
-          >
-            <Text
-              style={[
-                styles.modalItemText,
-                selectedReason === option.value && styles.modalItemTextSelected,
-              ]}
-            >
-              {option.label}
-            </Text>
-            {selectedReason === option.value && (
-              <Text style={styles.modalItemCheck}>✓</Text>
-            )}
-          </TouchableOpacity>
-        ))}
+                  <TouchableOpacity
+                    key={option.value}
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setSelectedReason(option.value);
+                      if (option.value !== '0') {
+                        setEtcReason('');
+                      }
+                      setShowReasonModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalItemText,
+                        selectedReason === option.value && styles.modalItemTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    {selectedReason === option.value && (
+                      <Text style={styles.modalItemCheck}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
       </AppModal>
     </View>
   );

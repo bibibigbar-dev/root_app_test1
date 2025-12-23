@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,21 +20,56 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
   const [assetData, setAssetData] = useState(null);
   const [activeTab, setActiveTab] = useState('deposit'); // 'deposit' or 'withdraw'
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [showAccountModal, setShowAccountModal] = useState(false);
   const [showLimitTooltip, setShowLimitTooltip] = useState(false);
   const [showInvestTooltip, setShowInvestTooltip] = useState(false);
-  const [selectedBank, setSelectedBank] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
   const [banks, setBanks] = useState([]);
+  const scrollViewRef = useRef(null);
+  const withdrawSectionRef = useRef(null);
 
   useEffect(() => {
     loadAssetData();
+    // 계좌 변경 후 출금 탭으로 전환
+    if (route.params?.activeWithdrawTab) {
+      setActiveTab('withdraw');
+    }
   }, []);
+
+  // route params 처리 (계좌 변경 후 리프레시)
+  useEffect(() => {
+    if (route.params?.refresh) {
+      loadAssetData();
+      // 출금 탭으로 전환
+      if (route.params?.activeWithdrawTab) {
+        setActiveTab('withdraw');
+      }
+      // params 초기화
+      navigation.setParams({ refresh: undefined, scrollToWithdraw: undefined, activeWithdrawTab: undefined });
+    }
+  }, [route.params?.refresh]);
+
+  // 스크롤 위치 조정 (투자금출금 탭으로)
+  useEffect(() => {
+    if (
+      route.params?.scrollToWithdraw &&
+      withdrawSectionRef.current &&
+      scrollViewRef.current
+    ) {
+      setTimeout(() => {
+        withdrawSectionRef.current.measureLayout(
+          scrollViewRef.current,
+          (x, y) => {
+            scrollViewRef.current.scrollTo({ y: y - 20, animated: true });
+          },
+          () => {},
+        );
+      }, 500);
+    }
+  }, [route.params?.scrollToWithdraw, loading]);
 
   const loadAssetData = async () => {
     setLoading(true);
     try {
-      const memberId = member_id || user?.session?.member_id || user?.id;
+      const memberId = member_id || user?.session?.member_id || user?.member_id || user?.id;
 
       if (!memberId) {
         console.warn('⚠️ member_id가 없습니다. 로그인이 필요합니다.');
@@ -43,17 +78,10 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         return;
       }
 
-      console.log('🔍 자산 정보 조회 시작:', {
-        member_id: memberId,
-        url: `${ApiService.baseURL}/app/my/home?member_id=${memberId}`,
-      });
-
       // 자산 정보 조회 API 호출
       const response = await ApiService.api.get('/app/my/home', {
         params: { member_id: memberId },
       });
-
-      console.log('✅ 자산 정보 조회 성공:', response.data);
 
       // 투자자 여부 확인 (useBalancePage)
       if (response.data && response.data.useBalancePage === false) {
@@ -67,7 +95,13 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
 
       if (response.data) {
         setAssetData(response.data);
-        setBalance(response.data.balance || user?.session?.balance || '0');
+        // balance 값 우선순위: refund_bal > balance > session.balance
+        const balanceValue =
+          response.data.refund_bal ||
+          response.data.balance ||
+          user?.session?.balance ||
+          '0';
+        setBalance(balanceValue);
       } else {
         setBalance(user?.session?.balance || '0');
       }
@@ -77,14 +111,9 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         const banksResponse = await ApiService.api.get('/member/get/banks');
         if (banksResponse.data) {
           setBanks(banksResponse.data);
-          console.log('✅ 은행 목록 조회 성공:', banksResponse.data);
         }
       } catch (bankError) {
-        console.warn(
-          '⚠️ 은행 목록 조회 실패 (무시하고 계속):',
-          bankError.response?.status,
-        );
-        // 은행 목록이 없어도 앱은 계속 작동
+        // 은행 목록이 없어도 앱은 계속 작동 (조용히 무시)
       }
     } catch (error) {
       // 에러 상세 로깅
@@ -128,7 +157,6 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         '/app/product/balance/refresh',
         { member_id: memberId },
       );
-      console.log('Balance refresh response:', response.data);
 
       if (response.data) {
         // balance 값을 직접 받는 경우
@@ -192,136 +220,108 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
       return;
     }
 
-    try {
-      const reqModes = await ApiService.setReqModes({ reqdata: amount });
-
-      Alert.alert(
-        '출금신청',
-        `(${formatCurrency(amount)}원)을 출금 신청하시겠습니까?`,
-        [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '실행',
-            onPress: async () => {
-              try {
-                const memberId =
-                  member_id || user?.session?.member_id || user?.id;
-                if (!memberId) {
-                  Alert.alert('오류', '사용자 ID를 확인할 수 없습니다.');
-                  return;
-                }
-
-                const refundRequestData = {
-                  member_id: String(memberId),
-                  refund_price: String(amount),
-                  _bcsrmd1: reqModes.data1,
-                  _bcsrmd2: reqModes.data2,
-                };
-
-                const formData =
-                  ApiService.convertToFormData(refundRequestData);
-
-                const response = await ApiService.api.post(
-                  '/app/member/process/refund',
-                  formData,
-                  {
-                    headers: {
-                      'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                  },
-                );
-
-                const responseData = String(response.data);
-
-                if (responseData === '0') {
-                  Alert.alert('출금신청하기', '출금신청이 완료되었습니다.', [
-                    { text: '확인', onPress: () => loadAssetData() },
-                  ]);
-                } else if (responseData === '1') {
-                  navigation.navigate('Login');
-                } else if (responseData === '2' || responseData === '3') {
-                  Alert.alert('예치금 출금', '출금금액을 확인하여 주세요.');
-                } else if (responseData === '4' || responseData === '5') {
-                  Alert.alert('예치금 출금', '출금금액이 예치금보다 많습니다.');
-                } else if (responseData === '10') {
-                  Alert.alert(
-                    '예치금 출금',
-                    '직전 출금신청에 대한 내용을 처리중입니다. 잠시후에 다시 요청하세요.',
-                  );
-                } else if (responseData === '99') {
-                  Alert.alert(
-                    '예치금 출금',
-                    '은행사와 통신이 원활하지 않습니다.\n잠시 후 다시 요청하세요.',
-                  );
-                } else {
-                  Alert.alert(
-                    '예치금 출금',
-                    `[${responseData}] 처리도중 오류가 발생하였습니다.`,
-                  );
-                }
-              } catch (error) {
-                console.error('❌ 출금 신청 오류:', error);
-                Alert.alert('예치금 출금', '처리도중 오류가 발생하였습니다.');
-              }
-            },
-          },
-        ],
-      );
-    } catch (error) {
-      Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
-    }
+    Alert.alert(
+      '출금신청',
+      `(${formatCurrency(amount)}원)을 출금 신청하시겠습니까?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '실행',
+          onPress: () => proceedWithdraw(amount),
+        },
+      ],
+    );
   };
 
-  const handleChangeAccount = async () => {
-    if (!selectedBank) {
-      Alert.alert('계좌 변경', '은행을 선택하여 주십시오');
-      return;
-    }
-    if (!accountNumber || isNaN(accountNumber)) {
-      Alert.alert('계좌 변경', '계좌번호를 확인하여 주십시오.');
-      return;
-    }
-
+  const proceedWithdraw = async (amount) => {
     try {
-      const selectedBankData = banks.find(b => b.bank_cd === selectedBank);
+      const memberId = member_id || user?.session?.member_id || user?.id;
+      if (!memberId) {
+        Alert.alert('오류', '사용자 ID를 확인할 수 없습니다.');
+        return;
+      }
+
+      // Alert 확인 후 setReqModes 호출 (토큰 만료 방지)
+      const reqModes = await ApiService.setReqModes({ reqdata: amount });
+
+      const refundRequestData = {
+        member_id: String(memberId),
+        refund_price: String(amount),
+        _bcsrmd1: reqModes.data1,
+        _bcsrmd2: reqModes.data2,
+      };
+
+      console.log('💰 출금 신청 요청:', {
+        member_id: String(memberId),
+        refund_price: String(amount),
+        _bcsrmd1: reqModes.data1,
+        _bcsrmd2_length: reqModes.data2?.length,
+      });
+
+      const formData = ApiService.convertToFormData(refundRequestData);
+
       const response = await ApiService.api.post(
-        '/app/member/process/changeAccount',
+        '/app/member/process/refund',
+        formData,
         {
-          bank_cd: selectedBank,
-          bank_nm: selectedBankData?.bank_nm || '',
-          account: accountNumber,
-          bbachk: 'Y',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         },
       );
 
-      if (response.data === '0') {
-        Alert.alert('알림', '계좌가 변경되었습니다.', [
-          {
-            text: '확인',
-            onPress: () => {
-              setShowAccountModal(false);
-              loadAssetData();
-            },
-          },
+      console.log('✅ 출금 신청 응답:', response.data);
+      const responseData = String(response.data);
+
+      if (responseData === '0') {
+        Alert.alert('출금신청하기', '출금신청이 완료되었습니다.', [
+          { text: '확인', onPress: () => loadAssetData() },
         ]);
-      } else if (
-        response.data === '1' ||
-        response.data === '2' ||
-        response.data === '3'
-      ) {
-        Alert.alert('계좌 등록', '잘못된 데이터 입니다.');
-      } else if (response.data === '5') {
+      } else if (responseData === '1') {
+        navigation.navigate('Login');
+      } else if (responseData === '2' || responseData === '3') {
+        Alert.alert('예치금 출금', '출금금액을 확인하여 주세요.');
+      } else if (responseData === '4' || responseData === '5') {
+        Alert.alert('예치금 출금', '출금금액이 예치금보다 많습니다.');
+      } else if (responseData === '10') {
         Alert.alert(
-          '계좌인증',
-          '확인할 수 없는 계좌입니다.\n계좌를 확인하여 주십시오.',
+          '예치금 출금',
+          '직전 출금신청에 대한 내용을 처리중입니다. 잠시후에 다시 요청하세요.',
         );
-      } else if (response.data === '6') {
-        Alert.alert('계좌인증', '인증받은 정보와 계좌주가 일치하지 않습니다.');
+      } else if (responseData === '99') {
+        Alert.alert(
+          '예치금 출금',
+          '은행사와 통신이 원활하지 않습니다.\n잠시 후 다시 요청하세요.',
+        );
+      } else if (responseData === '10001') {
+        Alert.alert(
+          '예치금 출금',
+          '보안 검증에 실패했습니다. 다시 시도해주세요.',
+        );
+      } else if (responseData === '10002') {
+        Alert.alert(
+          '예치금 출금',
+          '금액 검증에 실패했습니다. 다시 시도해주세요.',
+        );
       } else {
-        Alert.alert('계좌인증', '처리도중 오류가 발생하였습니다.');
+        Alert.alert(
+          '예치금 출금',
+          `[${responseData}] 처리도중 오류가 발생하였습니다.`,
+        );
       }
     } catch (error) {
-      Alert.alert('계좌 등록', '처리도중 오류가 발생하였습니다.');
+      console.error('❌ 출금 신청 오류:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+
+      let errorMessage = '처리도중 오류가 발생하였습니다.';
+      if (error.response?.data) {
+        errorMessage += `\n(오류코드: ${error.response.data})`;
+      }
+
+      Alert.alert('예치금 출금', errorMessage);
     }
   };
 
@@ -351,7 +351,19 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
   const refundBal = assetData?.refund_bal || balance;
   const vAccount =
     user?.session?.v_account || assetData?.member?.v_account || '';
-  const bankNm = user?.session?.bank_nm || assetData?.member?.bank_nm || '';
+
+  // 은행명 가져오기: 우선 bank_nm 직접 사용, 없으면 BANK_CD로 banks 목록에서 찾기
+  let bankNm = assetData?.member?.bank_nm || user?.session?.bank_nm || '';
+  
+  // bank_nm이 없으면 bank_cd로 찾기
+  if (!bankNm) {
+    const bankCd = assetData?.member?.bank_cd || user?.session?.bank_cd || '';
+    if (bankCd && banks.length > 0) {
+      const foundBank = banks.find(b => b.bank_cd === bankCd);
+      bankNm = foundBank?.bank_nm || '';
+    }
+  }
+
   const accountDec = assetData?.member?.account_dec || '';
   const seyfertNm =
     assetData?.member?.seyfert_nm || user?.session?.r_name || '';
@@ -359,7 +371,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView ref={scrollViewRef} style={styles.scrollView}>
         {/* 나의자산 */}
         <View style={styles.subWhitebox}>
           <View style={styles.subTitleBox}>
@@ -437,7 +449,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                         </TouchableOpacity>
                         {showInvestTooltip && (
                           <View style={styles.tooltip}>
-                            <Text style={styles.tooltipText}>
+                            <Text style={styles.tooltipText} numberOfLines={1}>
                               루트펀드에 투자한 총 투자 원금
                             </Text>
                             <View style={styles.tooltipArrow} />
@@ -579,7 +591,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         </View>
 
         {/* 탭 메뉴 */}
-        <View style={styles.subTab}>
+        <View ref={withdrawSectionRef} style={styles.subTab}>
           <TouchableOpacity
             style={[
               styles.tabItem,
@@ -735,7 +747,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                       <TouchableOpacity
                         style={styles.changeButton}
                         onPress={() =>
-                          navigation.navigate('AccountChangeWithHeader')
+                          navigation.navigate('AccountChangeWithHeader', {
+                            banks: banks,
+                            user: user,
+                            member_id: member_id,
+                          })
                         }
                       >
                         <Text style={styles.changeButtonText}>계좌변경</Text>
@@ -840,76 +856,6 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
           </View>
         )}
       </ScrollView>
-
-      {/* 출금계좌 변경 모달 */}
-      <AppModal
-        visible={showAccountModal}
-        title="출금계좌 변경"
-        onClose={() => setShowAccountModal(false)}
-        secondaryAction={{
-          text: '취소',
-          onPress: () => setShowAccountModal(false),
-        }}
-        primaryAction={{
-          text: '변경',
-          onPress: handleChangeAccount,
-        }}
-      >
-        <View style={styles.modalBody}>
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>예금주</Text>
-            <Text style={styles.modalValue}>
-              {user?.session?.r_name || '-'}
-            </Text>
-          </View>
-
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>은행선택</Text>
-            <View style={styles.selectContainer}>
-              {banks.length > 0 ? (
-                <ScrollView style={styles.selectScroll}>
-                  {banks.map(bank => (
-                    <TouchableOpacity
-                      key={bank.bank_cd}
-                      style={[
-                        styles.selectOption,
-                        selectedBank === bank.bank_cd &&
-                          styles.selectOptionActive,
-                      ]}
-                      onPress={() => setSelectedBank(bank.bank_cd)}
-                    >
-                      <Text
-                        style={[
-                          styles.selectOptionText,
-                          selectedBank === bank.bank_cd &&
-                            styles.selectOptionTextActive,
-                        ]}
-                      >
-                        {bank.bank_nm}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              ) : (
-                <Text style={styles.selectPlaceholder}>
-                  은행 목록을 불러오는 중...
-                </Text>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>계좌번호</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={accountNumber}
-              onChangeText={setAccountNumber}
-              placeholder="기호('-')없이 숫자만 입력"
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
-      </AppModal>
 
       {(showInvestTooltip || showLimitTooltip) && (
         <TouchableOpacity
@@ -1075,12 +1021,14 @@ const styles = StyleSheet.create({
   tooltip: {
     position: 'absolute',
     bottom: 22,
-    left: -120,
+    left: -110,
     backgroundColor: '#393f44',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    zIndex: 1000,
+    minWidth: 250,
+    maxWidth: 280,
+    zIndex: 200,
     elevation: 10,
   },
   tooltipText: {
@@ -1093,7 +1041,7 @@ const styles = StyleSheet.create({
   tooltipArrow: {
     position: 'absolute',
     bottom: -6,
-    left: 90,
+    left: 110,
     width: 0,
     height: 0,
     borderLeftWidth: 6,
@@ -1152,17 +1100,17 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   methodItem: {
-    marginTop: 8,
+    marginTop: 10,
   },
   methodInbox: {
     position: 'relative',
     borderRadius: 10,
     backgroundColor: '#fff',
-    shadowColor: 'rgba(104, 111, 115, 0.15)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
     overflow: 'hidden',
     minHeight: 175,
   },

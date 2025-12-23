@@ -48,6 +48,10 @@ const LoginScreen = ({ navigation, route }) => {
     
     // 저장된 로그인 정보가 있으면 자동으로 Face ID 실행
     checkAndAutoTriggerBiometric();
+    
+    // Deep Link 리스너 설정
+    const subscription = setupDeepLinkListener();
+    return () => subscription?.remove();
   }, []);
 
   const checkAndAutoTriggerBiometric = async () => {
@@ -72,6 +76,103 @@ const LoginScreen = ({ navigation, route }) => {
     } catch (error) {
       console.log('자동 Face ID 실행 실패:', error);
       // 에러 발생 시 조용히 무시 (수동 로그인 가능)
+    }
+  };
+
+  const setupDeepLinkListener = () => {
+    // Deep Link 리스너 설정
+    const handleDeepLink = (event) => {
+      const url = event.url;
+      console.log('🔗 Deep Link 수신:', url);
+      
+      // rootfundapp://kakao/callback?code=xxx
+      if (url.includes('rootfundapp://kakao/callback')) {
+        const code = url.split('code=')[1]?.split('&')[0];
+        if (code) {
+          console.log('✅ 카카오 인증 코드 수신:', code);
+          handleKakaoCallback(code);
+        }
+      }
+    };
+    
+    // 앱이 실행 중일 때 Deep Link 수신
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+    
+    // 앱이 종료된 상태에서 Deep Link로 실행된 경우
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('🔗 Initial Deep Link:', url);
+        handleDeepLink({ url });
+      }
+    });
+    
+    return subscription;
+  };
+
+  const handleKakaoCallback = async (code) => {
+    try {
+      setMainLoginLoading(true);
+      console.log('🔄 카카오 로그인 처리 중...');
+      
+      // 1. 백엔드 콜백 엔드포인트 호출 (kakaoCi와 access_token 받기)
+      const response = await ApiService.api.get('/app/auth/kakaoCallbackForApp', {
+        params: { code }
+      });
+      
+      console.log('✅ 카카오 콜백 응답:', response.data);
+      
+      if (response.data && response.data.success) {
+        const { kakaoCi, access_token } = response.data;
+        
+        if (kakaoCi && access_token) {
+          console.log('🔑 카카오 CI 및 토큰 수신 완료');
+          
+          // 2. 기존 로그인 API 호출 (kakaoCi로 로그인)
+          const loginResult = await ApiService.kakaoLogin({
+            kakaoCi: kakaoCi,
+            access_token: access_token
+          });
+          
+          console.log('✅ 카카오 로그인 결과:', loginResult);
+          
+          if (loginResult.success) {
+            // 로그인 성공 - 메인 화면으로 이동
+            navigation.replace('Main');
+          } else {
+            // 로그인 실패 (회원가입 필요 등)
+            Alert.alert(
+              '회원가입 필요',
+              '카카오 계정으로 회원가입을 진행하시겠습니까?',
+              [
+                {
+                  text: '취소',
+                  style: 'cancel'
+                },
+                {
+                  text: '회원가입',
+                  onPress: () => {
+                    navigation.navigate('SignUpType', {
+                      kakaoData: {
+                        kakaoCi: kakaoCi,
+                        access_token: access_token
+                      }
+                    });
+                  }
+                }
+              ]
+            );
+          }
+        } else {
+          Alert.alert('오류', '카카오 인증 정보를 받지 못했습니다.');
+        }
+      } else {
+        Alert.alert('로그인 실패', response.data?.message || '카카오 로그인에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('❌ 카카오 로그인 처리 오류:', error);
+      Alert.alert('오류', '카카오 로그인 처리 중 오류가 발생했습니다.');
+    } finally {
+      setMainLoginLoading(false);
     }
   };
 
@@ -278,28 +379,32 @@ const LoginScreen = ({ navigation, route }) => {
     try {
       setMainLoginLoading(true);
       
-      // 카카오 로그인 URL 가져오기
-      const response = await ApiService.api.get('/app/auth/kakaoLogin');
+      // 앱 전용 카카오 로그인 URL 가져오기
+      const response = await ApiService.api.get('/app/auth/kakaoLoginForApp');
       
       if (response.data) {
         const kakaoLoginUrl = response.data;
+        console.log('🔗 카카오 로그인 URL:', kakaoLoginUrl);
         
-        // 카카오 로그인 URL로 이동
+        // 카카오 로그인 URL로 이동 (외부 브라우저)
         const canOpen = await Linking.canOpenURL(kakaoLoginUrl);
         if (canOpen) {
           await Linking.openURL(kakaoLoginUrl);
+          // Deep Link로 돌아올 때까지 대기
         } else {
           Alert.alert('오류', '카카오 로그인 URL을 열 수 없습니다.');
+          setMainLoginLoading(false);
         }
       } else {
         Alert.alert('오류', '카카오 로그인 URL을 가져오는데 실패했습니다.');
+        setMainLoginLoading(false);
       }
     } catch (error) {
       console.error('❌ 카카오 로그인 오류:', error);
       Alert.alert('오류', '카카오 로그인 처리 중 오류가 발생했습니다.');
-    } finally {
       setMainLoginLoading(false);
     }
+    // 로딩은 handleKakaoCallback에서 해제
   };
 
   const handleFindEmail = () => {

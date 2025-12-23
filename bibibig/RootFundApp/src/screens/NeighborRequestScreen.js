@@ -58,25 +58,25 @@ const NeighborRequestScreen = ({ navigation, route }) => {
       if (typeof data === 'string') {
         parsedData = JSON.parse(data);
       }
-
+      
       // Daum Postcode API 응답에서 시/도, 시/군/구, 읍/면, 동/리 추출
       // sido는 address 또는 roadAddress에서 추출
       const roadAddress = parsedData.roadAddress || '';
       const jibunAddress = parsedData.jibunAddress || '';
-
+      
       // 시/도 추출 (예: "서울특별시", "경기도" 등)
       const sidoMatch = roadAddress.match(
         /^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주특별자치도)/,
       );
       const extractedSido = sidoMatch ? sidoMatch[1] : '';
-
+      
       // 시/군/구 추출
       const sigunguMatch = roadAddress
         .replace(extractedSido, '')
         .trim()
         .match(/^([^\s]+)/);
       const extractedSigungu = sigunguMatch ? sigunguMatch[1] : '';
-
+      
       // 읍/면/동 추출
       const addressParts = roadAddress
         .replace(extractedSido, '')
@@ -85,7 +85,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         .split(' ');
       const extractedBname1 = addressParts[0] || '';
       const extractedBname = addressParts[1] || '';
-
+      
       setSido(extractedSido);
       setSigungu(extractedSigungu);
       setBname1(extractedBname1);
@@ -125,7 +125,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
           'xlsx',
           'csv',
         ];
-
+        
         if (!allowedExts.includes(fileExt)) {
           Alert.alert(
             '서류 제출',
@@ -149,11 +149,11 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         setSelectedFiles(prev => [
           ...prev,
           {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            name: fileName,
-            uri: file.uri || file.fileCopyUri,
-            size: fileSize,
-            type: file.type || 'application/octet-stream',
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: fileName,
+          uri: file.uri || file.fileCopyUri,
+          size: fileSize,
+          type: file.type || 'application/octet-stream',
           },
         ]);
       });
@@ -185,7 +185,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
 
     try {
       const memberId = user?.session?.member_id || user?.id;
-
+      
       if (!memberId) {
         Alert.alert('알림', '로그인이 필요합니다.');
         setLoading(false);
@@ -212,8 +212,8 @@ const NeighborRequestScreen = ({ navigation, route }) => {
         '/app/product/upload/proc/arearequest',
         formData,
         {
-          headers: {
-            'Content-Type': 'multipart/form-data',
+        headers: {
+          'Content-Type': 'multipart/form-data',
           },
         },
       );
@@ -320,7 +320,7 @@ const NeighborRequestScreen = ({ navigation, route }) => {
             style={styles.fileUploadBox}
             onPress={handleFilePicker}
           >
-            <Image
+             <Image 
               source={require('../assets/images/ico_fileupload.png')}
               style={styles.fileuploadIco}
               resizeMode="contain"
@@ -392,11 +392,11 @@ const NeighborRequestScreen = ({ navigation, route }) => {
           onPress: () => setShowAddressModal(false),
         }}
       >
-        <View style={styles.webViewContainer}>
-          <WebView
-            source={{
-              baseUrl: 'https://rootenergy.co.kr',
-              html: `
+            <View style={styles.webViewContainer}>
+              <WebView
+                source={{
+                  baseUrl: 'https://rootenergy.co.kr',
+                  html: `
                     <!DOCTYPE html>
                     <html>
                       <head>
@@ -497,35 +497,35 @@ const NeighborRequestScreen = ({ navigation, route }) => {
                       </body>
                     </html>
                   `,
-            }}
+                }}
             onMessage={event => {
-              const data = event.nativeEvent.data;
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed?.__type === 'address') {
-                  handleAddressSelect(parsed.payload);
-                  return;
-                }
-              } catch (_) {}
-              handleAddressSelect(data);
-            }}
+                  const data = event.nativeEvent.data;
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed?.__type === 'address') {
+                      handleAddressSelect(parsed.payload);
+                      return;
+                    }
+                  } catch (_) {}
+                  handleAddressSelect(data);
+                }}
             onShouldStartLoadWithRequest={request => {
-              if (request.url.startsWith('postcode://')) {
+                  if (request.url.startsWith('postcode://')) {
                 const payload = decodeURIComponent(
                   request.url.replace('postcode://', ''),
                 );
-                handleAddressSelect(payload);
-                return false;
-              }
-              return true;
-            }}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            mixedContentMode="always"
-            originWhitelist={['*']}
-            style={styles.webView}
-          />
-        </View>
+                    handleAddressSelect(payload);
+                    return false;
+                  }
+                  return true;
+                }}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                mixedContentMode="always"
+                originWhitelist={['*']}
+                style={styles.webView}
+              />
+            </View>
       </AppModal>
     </View>
   );

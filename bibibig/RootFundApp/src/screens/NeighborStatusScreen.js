@@ -16,6 +16,8 @@ const NeighborStatusScreen = ({ navigation, route }) => {
   const [neighborList, setNeighborList] = useState([]);
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [selectedMemo, setSelectedMemo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     loadNeighborStatus();
@@ -40,10 +42,20 @@ const NeighborStatusScreen = ({ navigation, route }) => {
       });
 
       if (response.data) {
-        setNeighborList(response.data.nb || []);
+        const list = response.data.nb || [];
+        setNeighborList(list);
+        
+        // 페이지 계산 (3개씩 표시)
+        const pages = Math.ceil(list.length / 3);
+        setTotalPages(pages > 0 ? pages : 1);
+      } else {
+        setNeighborList([]);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('이웃신청 현황 조회 오류:', error);
+      setNeighborList([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -70,6 +82,15 @@ const NeighborStatusScreen = ({ navigation, route }) => {
     if (status === 'X') return styles.colorRed;
     return styles.colorMint;
   };
+
+  const handleLoadMore = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // 현재 페이지까지 표시할 항목들
+  const visibleItems = neighborList.slice(0, currentPage * 3);
 
   return (
     <View style={styles.container}>
@@ -105,43 +126,58 @@ const NeighborStatusScreen = ({ navigation, route }) => {
               </View>
             </View>
           ) : (
-            <View style={styles.neighborList}>
-              {neighborList.map((item, index) => (
-                <View key={index} style={styles.neighborItem}>
-                  <View style={styles.inbox}>
-                    <Text style={styles.itemTit}>{item.orderName}</Text>
-                    <View style={styles.prdDatabox}>
-                      <View style={styles.dl}>
-                        <Text style={styles.dt}>승인여부</Text>
-                        <Text style={[styles.dd, getStatusColor(item.status)]}>
-                          {getStatusText(item.status)}
-                        </Text>
-                      </View>
-                      <View style={styles.dl}>
-                        <Text style={styles.dt}>승인일자</Text>
-                        <Text style={styles.dd}>
-                          {item.status === 'Y'
-                            ? formatDate(item.certdate)
-                            : '-'}
-                        </Text>
-                      </View>
-                      <View style={styles.dl}>
-                        <Text style={styles.dt}>비고</Text>
-                        {item.status === 'X' ? (
-                          <TouchableOpacity
-                            onPress={() => handleMemoPopup(item.memo)}
-                          >
-                            <Text style={styles.memoLink}>사유보기</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <Text style={styles.dd}>-</Text>
-                        )}
+            <>
+              <View style={styles.neighborList}>
+                {visibleItems.map((item, index) => (
+                  <View key={index} style={styles.neighborItem}>
+                    <View style={styles.inbox}>
+                      <Text style={styles.itemTit}>{item.orderName}</Text>
+                      <View style={styles.prdDatabox}>
+                        <View style={styles.dl}>
+                          <Text style={styles.dt}>승인여부</Text>
+                          <Text style={[styles.dd, getStatusColor(item.status)]}>
+                            {getStatusText(item.status)}
+                          </Text>
+                        </View>
+                        <View style={styles.dl}>
+                          <Text style={styles.dt}>승인일자</Text>
+                          <Text style={styles.dd}>
+                            {item.status === 'Y'
+                              ? formatDate(item.certdate)
+                              : '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.dl}>
+                          <Text style={styles.dt}>비고</Text>
+                          {item.status === 'X' ? (
+                            <TouchableOpacity
+                              onPress={() => handleMemoPopup(item.memo)}
+                            >
+                              <Text style={styles.memoLink}>사유보기</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <Text style={styles.dd}>-</Text>
+                          )}
+                        </View>
                       </View>
                     </View>
                   </View>
+                ))}
+              </View>
+
+              {currentPage < totalPages && (
+                <View style={styles.loadMoreContainer}>
+                  <TouchableOpacity
+                    style={styles.loadMoreButton}
+                    onPress={handleLoadMore}
+                  >
+                    <Text style={styles.loadMoreText}>
+                      더보기 ({currentPage}/{totalPages})
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-              ))}
-            </View>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -284,6 +320,28 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#666',
     textDecorationLine: 'underline',
+  },
+  loadMoreContainer: {
+    marginTop: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: '#e0e1e2',
+    backgroundColor: '#fff',
+  },
+  loadMoreText: {
+    marginRight: 8,
+    fontSize: 13,
+    lineHeight: 19.5,
+    fontWeight: '400',
+    color: '#666',
   },
   modalOverlay: {
     flex: 1,

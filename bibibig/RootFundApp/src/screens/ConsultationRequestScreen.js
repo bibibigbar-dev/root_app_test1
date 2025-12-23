@@ -135,7 +135,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.headCon}>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.btnBack}
           onPress={() => navigation.goBack()}
         >
@@ -148,7 +148,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
         <Text style={styles.headTitle}></Text>
       </View>
 
-      <ScrollView
+      <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -162,7 +162,7 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
         <View style={styles.flexTr}>
           <View style={styles.flexTd}>
             <View style={styles.flexInput}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.selectButton}
                 onPress={() => setShowTypeModal(true)}
               >
@@ -193,27 +193,27 @@ const ConsultationRequestScreen = ({ navigation, route }) => {
           }}
         >
           {csTypeOptions.map(option => (
-            <TouchableOpacity
-              key={option.value}
-              style={[
-                styles.modalOption,
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.modalOption,
                 csType === option.value && styles.modalOptionSelected,
-              ]}
-              onPress={() => {
-                setCsType(option.value);
-                setShowTypeModal(false);
-              }}
-            >
+                    ]}
+                    onPress={() => {
+                      setCsType(option.value);
+                      setShowTypeModal(false);
+                    }}
+                  >
               <Text
                 style={[
-                  styles.modalOptionText,
+                      styles.modalOptionText,
                   csType === option.value && styles.modalOptionTextSelected,
                 ]}
               >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
         </AppModal>
 
         {/* 법인명 */}

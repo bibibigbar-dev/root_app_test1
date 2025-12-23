@@ -131,7 +131,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
     try {
       // 유효성 검사
       const numericPrice = loPrice.replace(/[^0-9]/g, '');
-
+      
       if (!numericPrice || parseInt(numericPrice, 10) <= 0) {
         Alert.alert('대출신청', '대출 신청금액을 확인해주세요.');
         return;
@@ -187,7 +187,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
       if (rtnvalue === '0') {
         // 성공 - 완료 화면으로 이동
         setLoading(false);
-        navigation.navigate('LoanRequestDone', {
+        navigation.navigate('LoanRequestDone', { 
           orderNumber: response.data.orderNumber,
           returnScreen: returnScreen || 'Loan',
         });
@@ -208,7 +208,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.headCon}>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.btnBack}
           onPress={() => navigation.goBack()}
         >
@@ -220,7 +220,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -234,7 +234,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
         <View style={styles.flexTr}>
           <View style={styles.flexTd}>
             <View style={styles.flexInput}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.selectButton}
                 onPress={() => setShowTypeModal(true)}
               >
@@ -256,7 +256,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
         <View style={styles.flexTr}>
           <View style={styles.flexTd}>
             <View style={styles.flexInput}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.selectButton}
                 onPress={() => setShowPeriodModal(true)}
               >
@@ -318,13 +318,13 @@ const LoanRequestScreen = ({ navigation, route }) => {
         <View style={styles.termsArea}>
           {/* 전체 동의 */}
           <View style={styles.termsBox}>
-            <TouchableOpacity
+            <TouchableOpacity 
               style={styles.termsBoxLabel}
               onPress={handleAgreeAll}
             >
               <Image
                 source={
-                  agreeAll
+                  agreeAll 
                     ? require('../assets/images/checkbox_on.png')
                     : require('../assets/images/checkbox_off.png')
                 }
@@ -338,13 +338,13 @@ const LoanRequestScreen = ({ navigation, route }) => {
           {/* 개별 약관 */}
           <View style={styles.termsList}>
             <View style={styles.termsListItem}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.termsItemRow}
                 onPress={() => setAgreeMust1(!agreeMust1)}
               >
                 <Image
                   source={
-                    agreeMust1
+                    agreeMust1 
                       ? require('../assets/images/checkbox_on.png')
                       : require('../assets/images/checkbox_off.png')
                   }
@@ -352,7 +352,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
                   resizeMode="contain"
                 />
               </TouchableOpacity>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.termsLink}
                 onPress={() => showTerms('loan')}
               >
@@ -363,13 +363,13 @@ const LoanRequestScreen = ({ navigation, route }) => {
             </View>
 
             <View style={styles.termsListItem}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.termsItemRow}
                 onPress={() => setAgreeMust2(!agreeMust2)}
               >
                 <Image
                   source={
-                    agreeMust2
+                    agreeMust2 
                       ? require('../assets/images/checkbox_on.png')
                       : require('../assets/images/checkbox_off.png')
                   }
@@ -377,7 +377,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
                   resizeMode="contain"
                 />
               </TouchableOpacity>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.termsLink}
                 onPress={() => showTerms('priv1')}
               >
@@ -389,13 +389,13 @@ const LoanRequestScreen = ({ navigation, route }) => {
             </View>
 
             <View style={styles.termsListItem}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.termsItemRow}
                 onPress={() => setAgreeMust3(!agreeMust3)}
               >
                 <Image
                   source={
-                    agreeMust3
+                    agreeMust3 
                       ? require('../assets/images/checkbox_on.png')
                       : require('../assets/images/checkbox_off.png')
                   }
@@ -403,7 +403,7 @@ const LoanRequestScreen = ({ navigation, route }) => {
                   resizeMode="contain"
                 />
               </TouchableOpacity>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={styles.termsLink}
                 onPress={() => showTerms('priv2')}
               >
@@ -440,27 +440,27 @@ const LoanRequestScreen = ({ navigation, route }) => {
         primaryAction={{ text: '닫기', onPress: () => setShowTypeModal(false) }}
       >
         {loTypeOptions.map(option => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.modalOption,
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.modalOption,
               loType === option.value && styles.modalOptionSelected,
-            ]}
-            onPress={() => {
-              setLoType(option.value);
-              setShowTypeModal(false);
-            }}
-          >
+                  ]}
+                  onPress={() => {
+                    setLoType(option.value);
+                    setShowTypeModal(false);
+                  }}
+                >
             <Text
               style={[
-                styles.modalOptionText,
+                    styles.modalOptionText,
                 loType === option.value && styles.modalOptionTextSelected,
               ]}
             >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
       </AppModal>
 
       {/* 대출 기간 선택 모달 */}
@@ -474,27 +474,27 @@ const LoanRequestScreen = ({ navigation, route }) => {
         }}
       >
         {loPeriodOptions.map(option => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.modalOption,
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.modalOption,
               loPeriod === option.value && styles.modalOptionSelected,
-            ]}
-            onPress={() => {
-              setLoPeriod(option.value);
-              setShowPeriodModal(false);
-            }}
-          >
+                  ]}
+                  onPress={() => {
+                    setLoPeriod(option.value);
+                    setShowPeriodModal(false);
+                  }}
+                >
             <Text
               style={[
-                styles.modalOptionText,
+                    styles.modalOptionText,
                 loPeriod === option.value && styles.modalOptionTextSelected,
               ]}
             >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
       </AppModal>
 
       {/* 약관 상세 모달 */}
@@ -507,32 +507,32 @@ const LoanRequestScreen = ({ navigation, route }) => {
           onPress: () => setShowTermsModal(false),
         }}
       >
-        {termsContent ? (
-          <RenderHTML
-            contentWidth={width - 80}
-            source={{ html: termsContent }}
-            tagsStyles={{
-              body: {
-                color: '#666',
-                fontSize: 13,
-                lineHeight: 19.5,
-                fontWeight: '400',
-              },
-              p: {
-                marginTop: 8,
-                marginBottom: 8,
-              },
-              div: {
-                marginTop: 8,
-                marginBottom: 8,
-              },
-            }}
-          />
-        ) : (
+                {termsContent ? (
+                  <RenderHTML
+                    contentWidth={width - 80}
+                    source={{ html: termsContent }}
+                    tagsStyles={{
+                      body: {
+                        color: '#666',
+                        fontSize: 13,
+                        lineHeight: 19.5,
+                        fontWeight: '400',
+                      },
+                      p: {
+                        marginTop: 8,
+                        marginBottom: 8,
+                      },
+                      div: {
+                        marginTop: 8,
+                        marginBottom: 8,
+                      },
+                    }}
+                  />
+                ) : (
           <Text style={styles.popTermsText}>
             약관 내용을 불러오는 중입니다...
           </Text>
-        )}
+                )}
       </AppModal>
     </View>
   );

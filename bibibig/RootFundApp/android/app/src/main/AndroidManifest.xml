@@ -32,6 +32,7 @@
             <category android:name="android.intent.category.DEFAULT" />
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="rootfund" />
+            <data android:scheme="rootfundapp" />
         </intent-filter>
         
         <!-- Universal Link 설정 (https) -->

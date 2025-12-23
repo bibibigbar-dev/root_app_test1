@@ -88,6 +88,7 @@ const AccountChangeScreen = ({ navigation, route }) => {
       const response = await ApiService.changeAccount({
         member_id: user.session.member_id,
         bank_cd: selectedBankCode,
+        bank_nm: selectedBankName,
         account: newAccountNumber,
       });
 

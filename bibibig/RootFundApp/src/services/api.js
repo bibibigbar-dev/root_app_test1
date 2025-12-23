@@ -657,6 +657,121 @@ DwIDAQAB
     }
   }
 
+  // 카카오 로그인
+  async kakaoLogin(kakaoData) {
+    try {
+      console.log('🔑 카카오 로그인 API 호출:', {
+        kakaoCi: kakaoData.kakaoCi,
+        hasToken: !!kakaoData.access_token
+      });
+
+      // 카카오 로그인 데이터 구성
+      const loginData = {
+        kakaoCi: kakaoData.kakaoCi,
+        access_token: kakaoData.access_token,
+        loginType: 'kakao'
+      };
+
+      // Form-data 형태로 변환
+      const formData = this.convertToFormData(loginData);
+
+      const response = await this.api.post('/app/kakaoLoginProcess', formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+
+      console.log('✅ 카카오 로그인 API 응답:', response.data);
+
+      // 백엔드 응답 처리
+      if (response.data) {
+        // rtnvalue가 "0" 또는 0이면 성공
+        if (response.data.rtnvalue === "0" || response.data.rtnvalue === 0) {
+          // 백엔드에서 전달받은 세션 데이터 추출
+          const sessionData = response.data.rsdata?.session || response.data.rsdata?.result || {};
+          const memberData = response.data.rsdata?.member || {};
+
+          // 로그인 만료 시간 설정 (24시간 후)
+          const expirationTime = Date.now() + (24 * 60 * 60 * 1000);
+
+          // 사용자 데이터 구성
+          const userData = {
+            id: sessionData.member_id,
+            email: sessionData.email,
+            name: sessionData.member_name || sessionData.r_name || '사용자',
+            token: response.data.token || 'kakao-token-' + Date.now(),
+            loginTime: Date.now(),
+            expirationTime: expirationTime,
+            loginType: 'kakao',
+            kakaoCi: kakaoData.kakaoCi,
+
+            // 백엔드 세션 데이터
+            session: {
+              member_id: sessionData.member_id,
+              memGuid: sessionData.memGuid,
+              email: sessionData.email,
+              web_id: sessionData.web_id,
+              member_name: sessionData.member_name,
+              r_name: sessionData.r_name,
+              balance: sessionData.balance,
+              member_class: sessionData.member_class,
+              f_member_class_kr: sessionData.f_member_class_kr,
+              member_type: sessionData.member_type,
+              member_grade: sessionData.member_grade,
+              sort: sessionData.sort,
+              v_account: sessionData.v_account,
+              bank_nm: memberData.bank_nm,
+              bank_cd: memberData.bank_cd,
+              account: memberData.account,
+              account_dec: memberData.account_dec,
+              account_holder_name: memberData.name
+            },
+
+            // 회원 은행 정보
+            member: memberData,
+
+            // 원본 응답 데이터
+            ...response.data
+          };
+
+          // 사용자 데이터 저장
+          await AsyncStorage.setItem('userData', JSON.stringify(userData));
+          await AsyncStorage.setItem('userToken', userData.token);
+          await AsyncStorage.setItem('loginTime', userData.loginTime.toString());
+
+          return {
+            success: true,
+            user: userData
+          };
+        } else {
+          // 로그인 실패
+          const rtnvalue = String(response.data.rtnvalue || '');
+          let errorMessage = response.data.memo || '카카오 로그인에 실패했습니다.';
+
+          console.log('❌ 카카오 로그인 실패:', rtnvalue, errorMessage);
+
+          return {
+            success: false,
+            message: errorMessage,
+            rtnvalue: rtnvalue
+          };
+        }
+      }
+
+      return {
+        success: false,
+        message: '서버 응답이 없습니다.'
+      };
+    } catch (error) {
+      console.error('❌ 카카오 로그인 오류:', error);
+      return {
+        success: false,
+        message: '카카오 로그인 처리 중 오류가 발생했습니다.',
+        error: error.message
+      };
+    }
+  }
+
   // 출금 신청 로그인
   async withdrawalLogin(credentials) {
     try {
@@ -953,6 +1068,7 @@ DwIDAQAB
       const changeAccountData = {
         member_id: accountData.member_id,
         bank_cd: accountData.bank_cd,
+        bank_nm: accountData.bank_nm,
         account: encodedAccount,
         bbachk: 'Y',
         gubun: accountData.gubun || ''

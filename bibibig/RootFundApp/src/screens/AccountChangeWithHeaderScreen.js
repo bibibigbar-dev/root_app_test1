@@ -36,7 +36,7 @@ const AccountChangeWithHeaderScreen = ({ navigation, route }) => {
   const loadData = async () => {
     try {
       const userData = await AsyncStorage.getItem('userData');
-
+      
       if (userData) {
         const parsed = JSON.parse(userData);
         setUser(parsed);
@@ -55,8 +55,7 @@ const AccountChangeWithHeaderScreen = ({ navigation, route }) => {
           setBanks(banksResponse.data);
         }
       } catch (bankError) {
-        console.warn('⚠️ 은행 목록 조회 실패:', bankError.response?.status);
-        // AsyncStorage에서 fallback
+        // AsyncStorage에서 fallback (조용히 무시)
         const bankList = await AsyncStorage.getItem('bankList');
         if (bankList) {
           const parsedBanks = JSON.parse(bankList);
@@ -102,6 +101,7 @@ const AccountChangeWithHeaderScreen = ({ navigation, route }) => {
       const response = await ApiService.changeAccount({
         member_id: user.session.member_id,
         bank_cd: selectedBankCode,
+        bank_nm: selectedBankName,
         account: newAccountNumber,
       });
 
@@ -119,12 +119,20 @@ const AccountChangeWithHeaderScreen = ({ navigation, route }) => {
           user.member.account = newAccountNumber;
         }
         await AsyncStorage.setItem('userData', JSON.stringify(user));
-
+        
         Alert.alert('계좌 변경', '계좌가 정상적으로 변경되었습니다.', [
           {
             text: '확인',
             onPress: () => {
-              navigation.goBack();
+              // 자산관리 화면으로 돌아가면서 출금 탭으로 전환하고 리프레시
+              const memberId = user?.session?.member_id || user?.member_id || user?.id;
+              navigation.navigate('MyPage', {
+                user: user,
+                member_id: memberId,
+                initialTab: 'assets',
+                refresh: true,
+                activeWithdrawTab: true, // 출금 탭 활성화
+              });
             },
           },
         ]);
@@ -255,40 +263,40 @@ const AccountChangeWithHeaderScreen = ({ navigation, route }) => {
           text: '닫기',
           onPress: () => setShowBankPicker(false),
         }}
-      >
-        {banks.length > 0 ? (
-          banks.map(bank => (
-            <TouchableOpacity
-              key={bank.bank_cd}
-              style={[
-                styles.bankItem,
-                selectedBankCode === bank.bank_cd && styles.bankItemSelected,
-              ]}
-              onPress={() => {
-                setSelectedBankCode(bank.bank_cd);
-                setSelectedBankName(bank.bank_nm);
-                setShowBankPicker(false);
-              }}
             >
+              {banks.length > 0 ? (
+          banks.map(bank => (
+                  <TouchableOpacity
+                    key={bank.bank_cd}
+                    style={[
+                      styles.bankItem,
+                selectedBankCode === bank.bank_cd && styles.bankItemSelected,
+                    ]}
+                    onPress={() => {
+                      setSelectedBankCode(bank.bank_cd);
+                      setSelectedBankName(bank.bank_nm);
+                      setShowBankPicker(false);
+                    }}
+                  >
               <Text
                 style={[
-                  styles.bankItemText,
+                      styles.bankItemText,
                   selectedBankCode === bank.bank_cd &&
                     styles.bankItemTextSelected,
                 ]}
               >
-                {bank.bank_nm}
-              </Text>
-              {selectedBankCode === bank.bank_cd && (
-                <Text style={styles.bankItemCheck}>✓</Text>
+                      {bank.bank_nm}
+                    </Text>
+                    {selectedBankCode === bank.bank_cd && (
+                      <Text style={styles.bankItemCheck}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>은행 목록이 없습니다</Text>
+                </View>
               )}
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>은행 목록이 없습니다</Text>
-          </View>
-        )}
       </AppModal>
     </SafeAreaView>
   );

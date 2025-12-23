@@ -317,11 +317,8 @@ const WithdrawalScreen = ({ navigation, route }) => {
             {
               text: '확인',
               onPress: async () => {
-                // 사용자 정보 새로고침
-                const updatedUser = await ApiService.getCurrentUser();
-                if (updatedUser) {
-                  setUser(updatedUser);
-                }
+                // 화면 전체 리프레시
+                await loadUserData();
               },
             },
           ]

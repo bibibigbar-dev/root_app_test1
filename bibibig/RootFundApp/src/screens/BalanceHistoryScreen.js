@@ -18,17 +18,17 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'deposit', 'withdraw'
   const [currentUser, setCurrentUser] = useState(user);
-  
+
   // 전체 데이터
   const [allDeals, setAllDeals] = useState([]);
   const [allCurrentPage, setAllCurrentPage] = useState(1);
   const [allTotalPages, setAllTotalPages] = useState(1);
-  
+
   // 입금 데이터
   const [depositDeals, setDepositDeals] = useState([]);
   const [depositCurrentPage, setDepositCurrentPage] = useState(1);
   const [depositTotalPages, setDepositTotalPages] = useState(1);
-  
+
   // 출금 데이터
   const [withdrawDeals, setWithdrawDeals] = useState([]);
   const [withdrawCurrentPage, setWithdrawCurrentPage] = useState(1);
@@ -62,36 +62,36 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
   const loadBalanceData = async () => {
     setLoading(true);
     try {
-      const memberId = member_id || currentUser?.session?.member_id || currentUser?.id;
-      
+      const memberId =
+        member_id || currentUser?.session?.member_id || currentUser?.id;
+
       const response = await ApiService.api.get('/app/my/balance', {
-        params: { member_id: memberId }
+        params: { member_id: memberId },
       });
 
       // 응답 데이터 처리
       const data = response.data || {};
-      
+
       // 전체 거래내역
       const deals = data.deals || [];
       const allPages = Math.ceil(deals.length / ITEMS_PER_PAGE);
       setAllDeals(deals);
       setAllTotalPages(allPages);
       setAllCurrentPage(1);
-      
+
       // 입금 거래내역
       const dealsPlus = data.deals_plus || [];
       const depositPages = Math.ceil(dealsPlus.length / ITEMS_PER_PAGE);
       setDepositDeals(dealsPlus);
       setDepositTotalPages(depositPages);
       setDepositCurrentPage(1);
-      
+
       // 출금 거래내역
       const dealsMinus = data.deals_minus || [];
       const withdrawPages = Math.ceil(dealsMinus.length / ITEMS_PER_PAGE);
       setWithdrawDeals(dealsMinus);
       setWithdrawTotalPages(withdrawPages);
       setWithdrawCurrentPage(1);
-      
     } catch (error) {
       console.error('입출금내역 조회 실패:', error);
       Alert.alert('오류', '입출금내역을 불러오는 중 오류가 발생했습니다.');
@@ -109,14 +109,14 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = value => {
     if (!value && value !== 0) return '0';
     const stringValue = typeof value === 'string' ? value : String(value);
     const numericValue = stringValue.replace(/[^0-9]/g, '');
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
-  const formatDateTime = (dateString) => {
+  const formatDateTime = dateString => {
     if (!dateString) return '-';
     return dateString.substring(0, 16);
   };
@@ -161,23 +161,35 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
 
   const renderDealItem = (item, index) => {
     const isDeposit = item.plus_price > 0;
-    const amount = Math.abs((item.plus_price || 0) + (item.minus_price || 0));
-    
+    const amount = isDeposit
+      ? Math.abs(item.plus_price || 0)
+      : Math.abs(item.minus_price || 0);
+
     return (
       <View key={index} style={styles.dealItem}>
         <View style={styles.dealInbox}>
           <View style={styles.dateTitleRow}>
             <View style={styles.dateTitle}>
-              <Text style={styles.dateText}>{formatDateTime(item.recordtime)}</Text>
+              <Text style={styles.dateText}>
+                {formatDateTime(item.recordtime)}
+              </Text>
               <Text style={styles.typeText}>{item.type_kr || '-'}</Text>
             </View>
           </View>
-          
-          <View style={[styles.txVolume, isDeposit ? null : styles.txVolumeMinus]}>
+
+          <View
+            style={[styles.txVolume, isDeposit ? null : styles.txVolumeMinus]}
+          >
             <Text style={styles.txType}>{isDeposit ? '입금' : '출금'}</Text>
             <View style={styles.txVolumeRight}>
-              <Text style={[styles.txAmount, isDeposit ? styles.txAmountPlus : styles.txAmountMinus]}>
-                {isDeposit ? '+' : '-'}{formatCurrency(amount)}원
+              <Text
+                style={[
+                  styles.txAmount,
+                  isDeposit ? styles.txAmountPlus : styles.txAmountMinus,
+                ]}
+              >
+                {isDeposit ? '+' : '-'}
+                {formatCurrency(amount)}원
               </Text>
               <Text style={styles.balanceText}>
                 잔액 {formatCurrency(item.balance)}원
@@ -208,13 +220,13 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.headCon}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.btnBack}
           onPress={() => navigation.goBack()}
         >
-          <Image 
-            source={require('../assets/images/ico_back.png')} 
-            style={styles.backIcon} 
+          <Image
+            source={require('../assets/images/ico_back.png')}
+            style={styles.backIcon}
             resizeMode="contain"
           />
         </TouchableOpacity>
@@ -222,7 +234,6 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
       </View>
 
       <ScrollView style={styles.scrollView}>
-
         {/* 제목 */}
         <View style={styles.subTitleBox}>
           <Text style={styles.title}>입출금내역</Text>
@@ -232,35 +243,59 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
         <View style={styles.pl16}>
           <View style={styles.choiceChips}>
             <TouchableOpacity
-              style={[styles.choiceChipItem, activeTab === 'all' && styles.choiceChipActive]}
+              style={[
+                styles.choiceChipItem,
+                activeTab === 'all' && styles.choiceChipActive,
+              ]}
               onPress={() => {
                 setActiveTab('all');
                 setAllCurrentPage(1);
               }}
             >
-              <Text style={[styles.choiceChipText, activeTab === 'all' && styles.choiceChipTextActive]}>
+              <Text
+                style={[
+                  styles.choiceChipText,
+                  activeTab === 'all' && styles.choiceChipTextActive,
+                ]}
+              >
                 전체
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.choiceChipItem, activeTab === 'deposit' && styles.choiceChipActive]}
+              style={[
+                styles.choiceChipItem,
+                activeTab === 'deposit' && styles.choiceChipActive,
+              ]}
               onPress={() => {
                 setActiveTab('deposit');
                 setDepositCurrentPage(1);
               }}
             >
-              <Text style={[styles.choiceChipText, activeTab === 'deposit' && styles.choiceChipTextActive]}>
+              <Text
+                style={[
+                  styles.choiceChipText,
+                  activeTab === 'deposit' && styles.choiceChipTextActive,
+                ]}
+              >
                 입금
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.choiceChipItem, activeTab === 'withdraw' && styles.choiceChipActive]}
+              style={[
+                styles.choiceChipItem,
+                activeTab === 'withdraw' && styles.choiceChipActive,
+              ]}
               onPress={() => {
                 setActiveTab('withdraw');
                 setWithdrawCurrentPage(1);
               }}
             >
-              <Text style={[styles.choiceChipText, activeTab === 'withdraw' && styles.choiceChipTextActive]}>
+              <Text
+                style={[
+                  styles.choiceChipText,
+                  activeTab === 'withdraw' && styles.choiceChipTextActive,
+                ]}
+              >
                 출금
               </Text>
             </TouchableOpacity>
@@ -276,7 +311,7 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
           ) : (
             <>
               {currentDeals.map((item, index) => renderDealItem(item, index))}
-              
+
               {/* 더보기 버튼 */}
               {hasMore && (
                 <View style={styles.loadMoreContainer}>
@@ -284,7 +319,9 @@ const BalanceHistoryScreen = ({ navigation, route }) => {
                     style={styles.loadMoreButton}
                     onPress={handleLoadMore}
                   >
-                    <Text style={styles.loadMoreText}>더보기 ({currentPage}/{totalPages})</Text>
+                    <Text style={styles.loadMoreText}>
+                      더보기 ({currentPage}/{totalPages})
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -454,8 +491,8 @@ const styles = StyleSheet.create({
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
+    marginTop: 30,
+    marginBottom: 0,
   },
   loadMoreButton: {
     flexDirection: 'row',
@@ -477,4 +514,3 @@ const styles = StyleSheet.create({
 });
 
 export default BalanceHistoryScreen;
-

@@ -34,17 +34,17 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
     setLoading(true);
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
-
+      
       // GET 요청으로 쿼리 파라미터 전송
       const params = {
         member_id: memberId,
       };
-
+      
       // orderName이 있으면 추가
       if (searchText) {
         params.orderName = searchText;
       }
-
+      
       const response = await ApiService.api.get('/app/my/invest/review', {
         params: params,
       });
@@ -52,7 +52,7 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
       if (response.data && response.data.list) {
         const list = response.data.list;
         setReviewList(list);
-
+        
         // 페이지 계산 (2개씩 표시)
         const pages = Math.ceil(list.length / 2);
         setTotalPages(pages > 0 ? pages : 1);
@@ -88,10 +88,10 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
 
   const formatDate = dateString => {
     if (!dateString) return '';
-
+    
     // 시간 정보 제거 (공백이나 T로 구분된 시간 부분 제거)
     let dateOnly = dateString.split(' ')[0].split('T')[0];
-
+    
     // YYYY-MM-DD 형식인 경우
     if (dateOnly.includes('-')) {
       const parts = dateOnly.split('-');
@@ -102,7 +102,7 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
         return `${year}.${month}.${day}`;
       }
     }
-
+    
     // YYYYMMDD 형식인 경우
     if (dateOnly.length === 8 && /^\d+$/.test(dateOnly)) {
       const year = dateOnly.slice(2, 4);
@@ -110,7 +110,7 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
       const day = dateOnly.slice(6, 8);
       return `${year}.${month}.${day}`;
     }
-
+    
     // 기타 형식은 그대로 반환
     return dateOnly;
   };
@@ -170,13 +170,13 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
 
       const data =
         typeof response.data === 'string'
-          ? JSON.parse(response.data)
-          : response.data;
+        ? JSON.parse(response.data) 
+        : response.data;
 
       setSelectedItem(item);
       setReviewIdx(data.review_cnt === '0' ? '' : data.rdto?.review_idx || '');
       setReviewText(data.review_cnt === '0' ? '' : data.rdto?.review || '');
-
+      
       if (mode === 'view') {
         // 보기 모달에서는 서버에서 받은 값 사용
         setOpenYn(data.review_cnt === '0' ? true : data.rdto?.open_yn === 'Y');
@@ -231,13 +231,13 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
     if (!selectedItem || !reviewIdx) return;
 
     Alert.alert('투자 이용후기', '정말 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const memberId = member_id || user?.session?.member_id || user?.id;
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const memberId = member_id || user?.session?.member_id || user?.id;
             const response = await ApiService.api.post(
               '/app/my/invest/review/delete',
               {
@@ -247,28 +247,28 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
               },
             );
 
-            if (response.data === '0' || response.data === 0) {
-              Alert.alert('투자 이용후기', '정상적으로 삭제되었습니다.', [
-                {
-                  text: '확인',
-                  onPress: () => {
-                    setShowViewModal(false);
-                    loadReviewList();
+              if (response.data === '0' || response.data === 0) {
+                Alert.alert('투자 이용후기', '정상적으로 삭제되었습니다.', [
+                  {
+                    text: '확인',
+                    onPress: () => {
+                      setShowViewModal(false);
+                      loadReviewList();
+                    },
                   },
-                },
-              ]);
-            } else if (response.data === '1' || response.data === 1) {
-              navigation.navigate('Login');
-            } else {
-              console.warn('Unexpected review delete response:', response.data);
+                ]);
+              } else if (response.data === '1' || response.data === 1) {
+                navigation.navigate('Login');
+              } else {
+                console.warn('Unexpected review delete response:', response.data);
+                Alert.alert('투자 이용후기', '처리도중 오류가 발생하였습니다.');
+              }
+            } catch (error) {
+              console.error('후기 삭제 실패:', error);
               Alert.alert('투자 이용후기', '처리도중 오류가 발생하였습니다.');
             }
-          } catch (error) {
-            console.error('후기 삭제 실패:', error);
-            Alert.alert('투자 이용후기', '처리도중 오류가 발생하였습니다.');
-          }
+          },
         },
-      },
     ]);
   };
 
@@ -293,10 +293,10 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
                 style={styles.searchInput}
                 value={searchText}
                 onChangeText={setSearchText}
-              placeholder="예) 고성군 솔라발전소"
+                placeholder="예) 고성군 솔라발전소"
               placeholderTextColor="#999"
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
               />
             </View>
             <TouchableOpacity
@@ -316,8 +316,8 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
         {reviewList.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={styles.loadingWrapperReview}>
-              <Image
-                source={require('../assets/images/loading3.png')}
+              <Image 
+                source={require('../assets/images/loading3.png')} 
                 style={styles.loadingIco}
                 resizeMode="contain"
               />
@@ -470,55 +470,55 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
         }}
         primaryAction={{ text: '등록하기', onPress: handleSaveReview }}
       >
-        <View style={styles.modalBody}>
-          <View style={styles.flexTit}>
-            <Text style={styles.flexTitText}>상품명</Text>
-          </View>
-          <View style={styles.flexInput}>
-            <View style={styles.txtVal}>
+            <View style={styles.modalBody}>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>상품명</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <View style={styles.txtVal}>
               <Text style={styles.txtValText}>
                 {selectedItem?.orderName || ''}
               </Text>
-            </View>
-          </View>
-
-          <View style={styles.flexTit}>
-            <Text style={styles.flexTitText}>이용후기</Text>
-          </View>
-          <View style={styles.flexInput}>
-            <TextInput
-              style={styles.textarea}
-              value={reviewText}
-              onChangeText={setReviewText}
-              placeholder="투자 이용후기를 입력해주세요"
-              placeholderTextColor="#999"
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.flexTit}>
-            <Text style={styles.flexTitText}>공개글 여부</Text>
-          </View>
-          <View style={styles.flexInput}>
-            <TouchableOpacity
-              style={styles.labelBox}
-              onPress={() => setOpenYn(prev => !prev)}
-            >
-              <View style={[styles.checkbox, openYn && styles.checkboxChecked]}>
-                {openYn && <Text style={styles.checkboxCheck}>✓</Text>}
+                </View>
               </View>
-              <Text style={styles.labelBoxText}>
-                (게시판 공개를 원하지 않을 경우 체크 해제)
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
 
-        <Text style={styles.buyTxt}>
-          해당 상품에 대한 투자 이용후기를{'\n'}등록 하시겠습니까?
-        </Text>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>이용후기</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={styles.textarea}
+                  value={reviewText}
+                  onChangeText={setReviewText}
+                  placeholder="투자 이용후기를 입력해주세요"
+              placeholderTextColor="#999"
+                  multiline
+                  numberOfLines={6}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>공개글 여부</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <TouchableOpacity
+                  style={styles.labelBox}
+              onPress={() => setOpenYn(prev => !prev)}
+                >
+                  <View style={[styles.checkbox, openYn && styles.checkboxChecked]}>
+                    {openYn && <Text style={styles.checkboxCheck}>✓</Text>}
+                  </View>
+                  <Text style={styles.labelBoxText}>
+                    (게시판 공개를 원하지 않을 경우 체크 해제)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <Text style={styles.buyTxt}>
+              해당 상품에 대한 투자 이용후기를{'\n'}등록 하시겠습니까?
+            </Text>
       </AppModal>
 
       {/* 후기 보기/삭제 모달 */}
@@ -532,46 +532,46 @@ const InvestReviewContent = ({ navigation, route, user, member_id }) => {
         }}
         primaryAction={{ text: '삭제하기', onPress: handleDeleteReview }}
       >
-        <View style={styles.modalBody}>
-          <View style={styles.flexTit}>
-            <Text style={styles.flexTitText}>상품명</Text>
-          </View>
-          <View style={styles.flexInput}>
-            <View style={styles.txtVal}>
+            <View style={styles.modalBody}>
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>상품명</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <View style={styles.txtVal}>
               <Text style={styles.txtValText}>
                 {selectedItem?.orderName || ''}
               </Text>
-            </View>
-          </View>
-
-          <View style={styles.flexTit}>
-            <Text style={styles.flexTitText}>이용후기</Text>
-          </View>
-          <View style={styles.flexInput}>
-            <TextInput
-              style={[styles.textarea, styles.textareaDisabled]}
-              value={reviewText}
-              editable={false}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.flexTit}>
-            <Text style={styles.flexTitText}>공개글 여부</Text>
-          </View>
-          <View style={styles.flexInput}>
-            <View style={styles.labelBox}>
-              <View style={[styles.checkbox, openYn && styles.checkboxChecked]}>
-                {openYn && <Text style={styles.checkboxCheck}>✓</Text>}
+                </View>
               </View>
-              <Text style={styles.labelBoxText}>
-                (게시판 공개를 원하지 않을 경우 체크 해제)
-              </Text>
+
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>이용후기</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <TextInput
+                  style={[styles.textarea, styles.textareaDisabled]}
+                  value={reviewText}
+                  editable={false}
+                  multiline
+                  numberOfLines={6}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={styles.flexTit}>
+                <Text style={styles.flexTitText}>공개글 여부</Text>
+              </View>
+              <View style={styles.flexInput}>
+                <View style={styles.labelBox}>
+                  <View style={[styles.checkbox, openYn && styles.checkboxChecked]}>
+                    {openYn && <Text style={styles.checkboxCheck}>✓</Text>}
+                  </View>
+                  <Text style={styles.labelBoxText}>
+                    (게시판 공개를 원하지 않을 경우 체크 해제)
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
       </AppModal>
     </View>
   );

@@ -63,7 +63,7 @@ const SignUpPrivateMinorScreen = () => {
   const [loading, setLoading] = useState(false);
   const [verificationCompleted, setVerificationCompleted] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
-
+  
   // 폼 데이터
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -74,10 +74,10 @@ const SignUpPrivateMinorScreen = () => {
   const [joinRoot, setJoinRoot] = useState('선택해주세요');
   const [joinRootEtc, setJoinRootEtc] = useState('');
   const [jobCode, setJobCode] = useState('00');
-
+  
   // 18세 미만 추가 필드 - 첨부 파일
   const [selectedFiles, setSelectedFiles] = useState([]);
-
+  
   // 에러 메시지
   const [errors, setErrors] = useState({});
 
@@ -277,9 +277,9 @@ const SignUpPrivateMinorScreen = () => {
         '/app/certJoinProcess',
         formData,
         {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
         },
       );
 
@@ -320,7 +320,7 @@ const SignUpPrivateMinorScreen = () => {
         type: [DocumentPicker.types.allFiles],
         allowMultiSelection: true,
       });
-
+      
       setSelectedFiles([...selectedFiles, ...results]);
     } catch (error) {
       if (DocumentPicker.isCancel(error)) {
@@ -362,18 +362,18 @@ const SignUpPrivateMinorScreen = () => {
 
       // 파일명 설정
       const fileName = '미성년자의_법정대리인_투자동의서.docx';
-
+      
       // 앱 번들 내 파일 경로
       const sourcePath =
         Platform.OS === 'android'
-          ? `${RNFS.MainBundlePath}/file/미성년자의 법정대리인 투자동의서_(회원명).docx`
-          : `${RNFS.MainBundlePath}/file/미성년자의 법정대리인 투자동의서_(회원명).docx`;
+        ? `${RNFS.MainBundlePath}/file/미성년자의 법정대리인 투자동의서_(회원명).docx`
+        : `${RNFS.MainBundlePath}/file/미성년자의 법정대리인 투자동의서_(회원명).docx`;
 
       // 다운로드 대상 경로
       const downloadDest =
         Platform.OS === 'ios'
-          ? `${RNFS.DocumentDirectoryPath}/${fileName}`
-          : `${RNFS.DownloadDirectoryPath}/${fileName}`;
+        ? `${RNFS.DocumentDirectoryPath}/${fileName}`
+        : `${RNFS.DownloadDirectoryPath}/${fileName}`;
 
       // 파일 존재 확인
       const fileExists = await RNFS.exists(sourcePath);
@@ -459,13 +459,13 @@ const SignUpPrivateMinorScreen = () => {
 
     try {
       setLoading(true);
-
+      
       // 이메일 중복 확인
       const emailCheckResponse = await ApiService.api.post(
         '/app/check/email/use',
         {
-          web_id: email,
-          email: email,
+        web_id: email,
+        email: email,
         },
       );
 
@@ -475,10 +475,10 @@ const SignUpPrivateMinorScreen = () => {
       if (responseValue === '0') {
         // 이메일 사용 가능 - 본인인증 진행
         setLoading(false);
-
+        
         // okname 데이터 확인
         const oknameData = okname;
-
+        
         if (!oknameData) {
           Alert.alert(
             '오류',
@@ -486,21 +486,21 @@ const SignUpPrivateMinorScreen = () => {
           );
           return;
         }
-
+        
         if (oknameData.okname === 'Y') {
           const okname_url = oknameData.okname_url;
           const cp_cd = oknameData.cp_cd;
           const token = oknameData.token;
-
+          
           // Form 데이터를 URL 파라미터로 변환
           const formParams = new URLSearchParams({
             tc: 'kcb.oknm.online.safehscert.popup.cmd.P931_CertChoiceCmd',
             cp_cd: cp_cd || '',
             mdl_tkn: token || '',
           });
-
+          
           const fullUrl = `${okname_url}?${formParams.toString()}`;
-
+          
           // 외부 브라우저로 본인인증 페이지 열기
           Alert.alert(
             '휴대전화 본인인증',
@@ -783,8 +783,8 @@ const SignUpPrivateMinorScreen = () => {
               style={styles.fileUploadBox}
               onPress={handleFileSelect}
             >
-              <Image
-                source={require('../assets/images/ico_fileupload.png')}
+              <Image 
+                source={require('../assets/images/ico_fileupload.png')} 
                 style={styles.fileUploadIcon}
                 resizeMode="contain"
               />
@@ -861,24 +861,24 @@ const SignUpPrivateMinorScreen = () => {
         primaryAction={{ text: '닫기', onPress: () => setShowJobModal(false) }}
       >
         {jobOptions.map(job => (
-          <TouchableOpacity
-            key={job.value}
-            style={styles.modalItem}
-            onPress={() => {
-              setJobCode(job.value);
-              setShowJobModal(false);
-            }}
-          >
+                <TouchableOpacity
+                  key={job.value}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setJobCode(job.value);
+                    setShowJobModal(false);
+                  }}
+                >
             <Text
               style={[
                 styles.modalItemText,
                 jobCode === job.value && styles.modalItemTextSelected,
               ]}
             >
-              {job.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+                    {job.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
       </AppModal>
 
       {/* 가입 경로 선택 모달 */}
@@ -891,25 +891,25 @@ const SignUpPrivateMinorScreen = () => {
           onPress: () => setShowJoinRootModal(false),
         }}
       >
-        {joinRootOptions.map((option, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.modalItem}
-            onPress={() => {
-              setJoinRoot(option);
-              setShowJoinRootModal(false);
-            }}
-          >
+              {joinRootOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setJoinRoot(option);
+                    setShowJoinRootModal(false);
+                  }}
+                >
             <Text
               style={[
                 styles.modalItemText,
                 joinRoot === option && styles.modalItemTextSelected,
               ]}
             >
-              {option}
-            </Text>
-          </TouchableOpacity>
-        ))}
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
       </AppModal>
 
       {/* 주소 검색 모달 */}
@@ -924,11 +924,11 @@ const SignUpPrivateMinorScreen = () => {
           onPress: () => setShowAddressModal(false),
         }}
       >
-        <View style={styles.webViewContainer}>
-          <WebView
-            source={{
-              baseUrl: 'https://rootenergy.co.kr',
-              html: `
+            <View style={styles.webViewContainer}>
+              <WebView
+                source={{
+                  baseUrl: 'https://rootenergy.co.kr',
+                  html: `
                     <!DOCTYPE html>
                     <html>
                       <head>
@@ -1029,35 +1029,35 @@ const SignUpPrivateMinorScreen = () => {
                       </body>
                     </html>
                   `,
-            }}
+                }}
             onMessage={event => {
-              const data = event.nativeEvent.data;
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed?.__type === 'address') {
-                  handleAddressSelect(parsed.payload);
-                  return;
-                }
-              } catch (_) {}
-              handleAddressSelect(data);
-            }}
+                  const data = event.nativeEvent.data;
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed?.__type === 'address') {
+                      handleAddressSelect(parsed.payload);
+                      return;
+                    }
+                  } catch (_) {}
+                  handleAddressSelect(data);
+                }}
             onShouldStartLoadWithRequest={request => {
-              if (request.url.startsWith('postcode://')) {
+                  if (request.url.startsWith('postcode://')) {
                 const payload = decodeURIComponent(
                   request.url.replace('postcode://', ''),
                 );
-                handleAddressSelect(payload);
-                return false;
-              }
-              return true;
-            }}
-            style={styles.webView}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            mixedContentMode="always"
-            originWhitelist={['*']}
-          />
-        </View>
+                    handleAddressSelect(payload);
+                    return false;
+                  }
+                  return true;
+                }}
+                style={styles.webView}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                mixedContentMode="always"
+                originWhitelist={['*']}
+              />
+            </View>
       </AppModal>
     </View>
   );
