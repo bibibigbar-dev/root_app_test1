@@ -49,6 +49,7 @@ import UpwardRequestDoneScreen from '../screens/UpwardRequestDoneScreen';
 import ConsultationRequestScreen from '../screens/ConsultationRequestScreen';
 import ConsultationRequestDoneScreen from '../screens/ConsultationRequestDoneScreen';
 import NotificationListScreen from '../screens/NotificationListScreen';
+import PushTestScreen from '../screens/PushTestScreen';
 import LoanRequestScreen from '../screens/LoanRequestScreen';
 import LoanRequestDoneScreen from '../screens/LoanRequestDoneScreen';
 import BondMarketHowToUseScreen from '../screens/BondMarketHowToUseScreen';
@@ -58,6 +59,7 @@ import WithdrawalDoneScreen from '../screens/WithdrawalDoneScreen';
 import RecruitScreen from '../screens/RecruitScreen';
 import TermsScreen from '../screens/TermsScreen';
 import InvestReceiptScreen from '../screens/InvestReceiptScreen';
+import InvestCertifyScreen from '../screens/InvestCertifyScreen';
 import MyCertScreen from '../screens/MyCertScreen';
 import InvestCancelScreen from '../screens/InvestCancelScreen';
 import InvestCancelDoneScreen from '../screens/InvestCancelDoneScreen';
@@ -164,7 +166,7 @@ const AppNavigator = () => {
   const isPromotionScreen = currentRoute === 'Promotion';
   
   // Back 버튼이 필요한 화면들
-  const screensWithBack = ['FindEmail', 'FindPassword', 'SignUpType', 'SignUpPrivateSelect', 'SignUpPrivate', 'SignUpCorp', 'SignUpCorpForm', 'InvestReceipt', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'ConsultationRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms', 'WebView'];
+  const screensWithBack = ['FindEmail', 'FindPassword', 'SignUpType', 'SignUpPrivateSelect', 'SignUpPrivate', 'SignUpCorp', 'SignUpCorpForm', 'InvestReceipt', 'InvestCertify', 'RepaymentHistory', 'BalanceHistory', 'UpwardRequest', 'ConsultationRequest', 'BondMarketHowToUse', 'MemberWithdrawal', 'WithdrawalSurvey', 'WithdrawalDone', 'Recruit', 'Terms', 'WebView'];
   const shouldShowBack = screensWithBack.includes(currentRoute);
 
   // Slightly increase offset so screens clear the fixed header/GNB
@@ -247,6 +249,7 @@ const AppNavigator = () => {
           <Stack.Screen name="ConsultationRequest" component={ConsultationRequestScreen} />
           <Stack.Screen name="ConsultationRequestDone" component={ConsultationRequestDoneScreen} />
           <Stack.Screen name="NotificationList" component={NotificationListScreen} />
+          <Stack.Screen name="PushTest" component={PushTestScreen} />
           <Stack.Screen name="LoanRequest" component={LoanRequestScreen} />
           <Stack.Screen name="LoanRequestDone" component={LoanRequestDoneScreen} />
           <Stack.Screen name="BondMarketHowToUse" component={BondMarketHowToUseScreen} />
@@ -256,6 +259,7 @@ const AppNavigator = () => {
           <Stack.Screen name="Recruit" component={RecruitScreen} />
           <Stack.Screen name="Terms" component={TermsScreen} />
           <Stack.Screen name="InvestReceipt" component={InvestReceiptScreen} />
+          <Stack.Screen name="InvestCertify" component={InvestCertifyScreen} />
           <Stack.Screen name="MyCert" component={MyCertScreen} />
           <Stack.Screen name="InvestCancel" component={InvestCancelScreen} />
           <Stack.Screen name="InvestCancelDone" component={InvestCancelDoneScreen} />

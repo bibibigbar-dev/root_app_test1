@@ -15,18 +15,108 @@ import ViewShot from 'react-native-view-shot';
 import RNFS from 'react-native-fs';
 import ApiService from '../services/api';
 
-const InvestReceiptScreen = ({ navigation, route }) => {
+const InvestCertifyScreen = ({ navigation, route }) => {
   const { user, member_id, idx } = route.params || {};
   const [loading, setLoading] = useState(true);
-  const [receiptData, setReceiptData] = useState(null);
+  const [certifyData, setCertifyData] = useState(null);
   const [saving, setSaving] = useState(false);
   const viewShotRef = useRef(null);
 
   useEffect(() => {
-    loadReceiptData();
+    loadCertifyData();
   }, []);
 
-  const loadReceiptData = async () => {
+  const calculateInterest = (data) => {
+    try {
+      const sort = data.prod?.sort || data.invest?.sort || '';
+      const rate = Number(data.prod?.rate || 0);
+      const price = Number(data.invest?.price || 0);
+      const period = Number(data.prod?.period || 0);
+      const orderNumber = data.prod?.orderNumber || '';
+      
+      // 수수료 및 세율 (option에서 가져오거나 기본값 사용)
+      const comm = Number(data.option?.i_comm_1 || 0);
+      const i_tax_per = Number(data.option?.i_tax || 15.4);
+      const r_tax_per = Number(data.option?.r_tax || 0);
+      
+      const d_rate = (rate / 100) / 365;
+      const d_comm = (comm / 100) / 365;
+      
+      let t_int = 0;
+      let t_tax = 0;
+      let t_comm = 0;
+      let t_bal = price;
+      
+      const rp_1_rp = Math.floor(t_bal / period);
+      let start_date = new Date();
+      
+      for (let i = 1; i <= period; i++) {
+        let end_date = new Date(start_date);
+        
+        // 상환 주기 계산
+        if (sort.toLowerCase() === 'bridge') {
+          end_date.setMonth(end_date.getMonth() + 1);
+        } else if (sort.toLowerCase() === 'pf') {
+          end_date.setMonth(end_date.getMonth() + 3);
+        } else {
+          // 특정 상품번호는 6개월, 나머지는 3개월
+          const sixMonthProducts = ['R000278', 'R000280', 'R000281', 'R000282', 'R000286', 'R000287', 'R000288'];
+          if (sixMonthProducts.includes(orderNumber)) {
+            end_date.setMonth(end_date.getMonth() + 6);
+          } else {
+            end_date.setMonth(end_date.getMonth() + 3);
+          }
+        }
+        
+        // 날짜 차이 계산
+        const diff_dt = Math.floor((end_date - start_date) / (1000 * 60 * 60 * 24)) - 1;
+        
+        // 원금 상환액
+        let rp = 0;
+        const repay_type = data.prod?.repay_type;
+        if (i === period) {
+          rp = t_bal;
+        } else {
+          if (repay_type === '1') {
+            rp = rp_1_rp;
+          }
+        }
+        
+        // 이자 계산
+        const ri = (t_bal * d_rate) * diff_dt;
+        
+        // 세금 계산
+        const rti = Math.floor((ri * (i_tax_per / 100)) / 10) * 10;
+        const rtr = Math.floor((ri * (r_tax_per / 100)) / 10) * 10;
+        
+        // 수수료 계산
+        const rc = (price * d_comm) * diff_dt;
+        
+        // 누적
+        t_int += Math.floor(ri);
+        t_tax += (rti + rtr);
+        t_comm += Math.floor(rc);
+        t_bal = t_bal - Math.floor(rp);
+        
+        start_date = end_date;
+      }
+      
+      return {
+        totalInterest: Math.floor(t_int),
+        totalTax: Math.floor(t_tax),
+        totalCommission: Math.floor(t_comm),
+      };
+    } catch (error) {
+      console.error('이자 계산 오류:', error);
+      return {
+        totalInterest: 0,
+        totalTax: 0,
+        totalCommission: 0,
+      };
+    }
+  };
+
+  const loadCertifyData = async () => {
     setLoading(true);
     try {
       const memberId = member_id || user?.session?.member_id || user?.id;
@@ -43,7 +133,7 @@ const InvestReceiptScreen = ({ navigation, route }) => {
         return;
       }
 
-      const response = await ApiService.api.post('/app/my/invest/receipt', {
+      const response = await ApiService.api.post('/app/my/invest/investCertify', {
         member_id: memberId,
         idx: idx,
       });
@@ -52,9 +142,18 @@ const InvestReceiptScreen = ({ navigation, route }) => {
         const rtnvalue = response.data.rtnvalue || response.data.rtnvalue;
 
         if (rtnvalue === '0' || rtnvalue === 0) {
-          setReceiptData(response.data);
+          // 이자 계산
+          const calculated = calculateInterest(response.data);
+          
+          // 계산된 값을 데이터에 추가
+          const dataWithCalculation = {
+            ...response.data,
+            calculated: calculated,
+          };
+          
+          setCertifyData(dataWithCalculation);
         } else {
-          let errorMessage = '원리금수취권 증서를 불러올 수 없습니다.';
+          let errorMessage = '투자 확인서를 불러올 수 없습니다.';
           switch (rtnvalue) {
             case '1':
               errorMessage = '회원 정보가 없습니다.';
@@ -75,10 +174,10 @@ const InvestReceiptScreen = ({ navigation, route }) => {
         }
       }
     } catch (error) {
-      console.error('원리금수취권 증서 조회 실패:', error);
+      console.error('투자 확인서 조회 실패:', error);
       Alert.alert(
         '오류',
-        '원리금수취권 증서를 불러오는 중 오류가 발생했습니다.',
+        '투자 확인서를 불러오는 중 오류가 발생했습니다.',
         [{ text: '확인', onPress: () => navigation.goBack() }],
       );
     } finally {
@@ -221,13 +320,8 @@ const InvestReceiptScreen = ({ navigation, route }) => {
         throw new Error('이미지 캡처 실패');
       }
 
-      // 파일명 생성 (증서번호 또는 날짜 기반)
-      const receiptNum =
-        receiptData?.receipt_num || `receipt_${idx || 'unknown'}`;
-      const fileName = `${receiptNum.replace(
-        /[^a-zA-Z0-9]/g,
-        '_',
-      )}_${new Date().getTime()}.png`;
+      // 파일명 생성
+      const fileName = `invest_certify_${idx || 'unknown'}_${new Date().getTime()}.png`;
 
       // 저장 경로 설정
       const downloadPath = Platform.select({
@@ -287,7 +381,7 @@ const InvestReceiptScreen = ({ navigation, route }) => {
     );
   }
 
-  if (!receiptData) {
+  if (!certifyData) {
     return (
       <View style={styles.container}>
         <View style={styles.headCon}>
@@ -304,7 +398,7 @@ const InvestReceiptScreen = ({ navigation, route }) => {
           <Text style={styles.headTitle}></Text>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>증서 정보를 불러올 수 없습니다.</Text>
+          <Text style={styles.emptyText}>투자 확인서 정보를 불러올 수 없습니다.</Text>
         </View>
       </View>
     );
@@ -326,7 +420,7 @@ const InvestReceiptScreen = ({ navigation, route }) => {
         <TouchableOpacity
           style={styles.btnDownload}
           onPress={handleSaveImage}
-          disabled={saving || !receiptData}
+          disabled={saving || !certifyData}
         >
           {saving ? (
             <ActivityIndicator size="small" color="#fff" />
@@ -344,334 +438,271 @@ const InvestReceiptScreen = ({ navigation, route }) => {
           options={{ format: 'png', quality: 1.0 }}
           style={styles.viewShotContainer}
         >
-          <View style={styles.receiptA4Container}>
-            {/* 증서 외곽 테두리 */}
-            <View style={styles.receiptBorder}>
+          <View style={styles.certifyA4Container}>
+            {/* 확인서 외곽 테두리 */}
+            <View style={styles.certifyBorder}>
               {/* 상단 여백 */}
-              <View style={styles.receiptSpacer} />
+              <View style={styles.certifySpacer} />
 
               {/* 제목 */}
-              <View style={styles.receiptTitleContainer}>
-                <Text style={styles.receiptMainTitle}>원리금수취권 증서</Text>
+              <View style={styles.certifyTitleContainer}>
+                <Text style={styles.certifyMainTitle}>투자 확인서</Text>
               </View>
 
-              <View style={styles.receiptSpacerSmall} />
+              <View style={styles.certifySpacerSmall} />
 
               {/* 상품명 */}
-              <View style={styles.receiptProductNameBox}>
-                <Text style={styles.receiptProductNameLabel}>상품명</Text>
-                <Text style={styles.receiptProductNameValue}>
-                  {receiptData.prod?.orderName ||
-                    receiptData.prod?.r_name ||
+              <View style={styles.certifyProductNameBox}>
+                <Text style={styles.certifyProductNameLabel}>상품명</Text>
+                <Text style={styles.certifyProductNameValue}>
+                  {certifyData.prod?.orderName ||
+                    certifyData.prod?.r_name ||
                     '-'}
                 </Text>
               </View>
 
               {/* 구분선 */}
-              <View style={styles.receiptDividerThick} />
+              <View style={styles.certifyDividerThick} />
 
               {/* 상품 정보 테이블 */}
-              <View style={styles.receiptInfoTable}>
-                <View style={styles.receiptTableRow}>
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
+              <View style={styles.certifyInfoTable}>
+                <View style={styles.certifyTableRow}>
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>
                       연수익률{'\n'}(세전)
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {receiptData.prod?.rate || '-'}%
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {certifyData.prod?.rate || '-'}%
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellSpacer} />
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>모집금액</Text>
+                  <View style={styles.certifyTableCellSpacer} />
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>모집금액</Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
                       {formatCurrency(
-                        receiptData.prod?.investment ||
-                          receiptData.prod?.price ||
+                        certifyData.prod?.investment ||
+                          certifyData.prod?.price ||
                           0,
                       )}
                       원
                     </Text>
                   </View>
                 </View>
-                <View style={styles.receiptTableDivider} />
-                <View style={styles.receiptTableRow}>
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>상환기간</Text>
+                <View style={styles.certifyTableDivider} />
+                <View style={styles.certifyTableRow}>
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>상환기간</Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {receiptData.prod?.period_text ||
-                        (receiptData.prod?.period
-                          ? `${receiptData.prod.period}개월`
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {certifyData.prod?.period_text ||
+                        (certifyData.prod?.period
+                          ? `${certifyData.prod.period}개월`
                           : '-')}
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellSpacer} />
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>상환방식</Text>
+                  <View style={styles.certifyTableCellSpacer} />
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>상환방식</Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {getRepayTypeText(receiptData.prod?.repay_type)}
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {getRepayTypeText(certifyData.prod?.repay_type)}
                     </Text>
                   </View>
                 </View>
               </View>
 
               {/* 구분선 */}
-              <View style={styles.receiptDividerThick} />
+              <View style={styles.certifyDividerThick} />
 
               {/* 투자자 정보 테이블 */}
-              <View style={styles.receiptInfoTable}>
-                <View style={styles.receiptTableRow}>
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
-                      원리금{'\n'}수취권자
-                    </Text>
+              <View style={styles.certifyInfoTable}>
+                <View style={styles.certifyTableRow}>
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>투자자</Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {receiptData.member?.r_name ||
-                        receiptData.member?.name ||
-                        receiptData.member?.member_name ||
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {certifyData.member?.r_name ||
+                        certifyData.member?.name ||
+                        certifyData.member?.member_name ||
                         '-'}
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellSpacer} />
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>계정</Text>
+                  <View style={styles.certifyTableCellSpacer} />
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>계정</Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
+                  <View style={styles.certifyTableCellValue}>
                     <Text
                       style={[
-                        styles.receiptTableCellText,
-                        styles.receiptTableCellTextBreak,
+                        styles.certifyTableCellText,
+                        styles.certifyTableCellTextBreak,
                       ]}
                     >
-                      {receiptData.member?.web_id ||
-                        receiptData.member?.email ||
+                      {certifyData.member?.web_id ||
+                        certifyData.member?.email ||
                         '-'}
                     </Text>
                   </View>
                 </View>
-                <View style={styles.receiptTableDivider} />
-                <View style={styles.receiptTableRow}>
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>투자금액</Text>
+                <View style={styles.certifyTableDivider} />
+                <View style={styles.certifyTableRow}>
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>투자금액</Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {formatCurrency(receiptData.invest?.price || 0)}원
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {formatCurrency(certifyData.invest?.price || 0)}원
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellSpacer} />
-                  <View style={styles.receiptTableCell}>
-                    <View style={styles.receiptTableCellLabelWithNote}>
-                      <Text style={styles.receiptTableCellLabel}>총 수익</Text>
-                      <Text style={styles.receiptTableCellLabelNote}>
-                        (예상, 세금 및 수수료 포함)
+                  <View style={styles.certifyTableCellSpacer} />
+                  <View style={styles.certifyTableCell}>
+                    <View style={styles.certifyTableCellLabelWithNote}>
+                      <Text style={styles.certifyTableCellLabel}>예상 총 수익</Text>
+                      <Text style={styles.certifyTableCellLabelNote}>
+                        (세금 및 수수료 포함)
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {formatCurrency(receiptData.repays?.interest || 0)}원
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {formatCurrency(certifyData.calculated?.totalInterest || 0)}원
                     </Text>
                   </View>
                 </View>
-                <View style={styles.receiptTableDivider} />
-                <View style={styles.receiptTableRow}>
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
-                      총 세금{'\n'}(예상)
+                <View style={styles.certifyTableDivider} />
+                <View style={styles.certifyTableRow}>
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>
+                      예상 총 세금
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {formatCurrency(
-                        (receiptData.repays?.i_tax || 0) +
-                          (receiptData.repays?.r_tax || 0),
-                      )}
-                      원
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {formatCurrency(certifyData.calculated?.totalTax || 0)}원
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellSpacer} />
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
-                      총 수수료{'\n'}(예상)
+                  <View style={styles.certifyTableCellSpacer} />
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>
+                      예상 총 수수료
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {formatCurrency(receiptData.repays?.i_commission || 0)}원
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {formatCurrency(certifyData.calculated?.totalCommission || 0)}원
                     </Text>
                   </View>
                 </View>
-                <View style={styles.receiptTableDivider} />
-                <View style={styles.receiptTableRow}>
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
+                <View style={styles.certifyTableDivider} />
+                <View style={styles.certifyTableRow}>
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>
                       투자 신청일
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {receiptData.invest?.recordtime ||
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
+                      {certifyData.invest?.recordtime ||
                         formatDate(
-                          receiptData.invest?.invest_date ||
-                            receiptData.invest?.regdate,
+                          certifyData.invest?.invest_date ||
+                            certifyData.invest?.regdate,
                         ) ||
                         '-'}
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellSpacer} />
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
-                      투자원금 상환일
-                    </Text>
-                  </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {receiptData.repays?.end_date || '-'}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.receiptTableDivider} />
-                <View style={styles.receiptTableRow}>
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
+                  <View style={styles.certifyTableCellSpacer} />
+                  <View style={styles.certifyTableCell}>
+                    <Text style={styles.certifyTableCellLabel}>
                       이자 지급일
                     </Text>
                   </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
+                  <View style={styles.certifyTableCellValue}>
+                    <Text style={styles.certifyTableCellText}>
                       {getInterestPayDate(
-                        receiptData.invest?.sort || receiptData.prod?.sort,
+                        certifyData.invest?.sort || certifyData.prod?.sort,
                       )}
-                    </Text>
-                  </View>
-                  <View style={styles.receiptTableCellSpacer} />
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>투자 기간</Text>
-                  </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      {receiptData.repays?.start_date &&
-                      receiptData.repays?.end_date
-                        ? `${receiptData.repays.start_date}\n~${receiptData.repays.end_date}`
-                        : '-'}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.receiptTableDivider} />
-                <View style={styles.receiptTableRow}>
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
-                      수익권발행자
-                    </Text>
-                  </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      루트인프라금융㈜
-                    </Text>
-                  </View>
-                  <View style={styles.receiptTableCellSpacer} />
-                  <View style={styles.receiptTableCell}>
-                    <Text style={styles.receiptTableCellLabel}>
-                      수익권판매자
-                    </Text>
-                  </View>
-                  <View style={styles.receiptTableCellValue}>
-                    <Text style={styles.receiptTableCellText}>
-                      루트인프라금융㈜
                     </Text>
                   </View>
                 </View>
               </View>
 
               {/* 구분선 */}
-              <View style={styles.receiptDividerThick} />
+              <View style={styles.certifyDividerThick} />
 
-              <View style={styles.receiptSpacerSmall} />
+              <View style={styles.certifySpacerSmall} />
 
               {/* 각주 및 주의사항 */}
-              <View style={styles.receiptNotesContainer}>
-                <View style={styles.receiptNoteItem}>
-                  <Text style={styles.receiptNoteText}>
-                    투자 수익 지급일은 대출자 상환일의 익영업일이 됩니다.
-                  </Text>
-                </View>
-                <View style={styles.receiptNoteItem}>
-                  <Text style={styles.receiptNoteText}>
-                    투자원금상환일에도 상환한다.
-                  </Text>
-                </View>
-                <View style={styles.receiptNoteItem}>
-                  <Text style={styles.receiptNoteText}>
-                    총 수익의 원천징수 세액기준은 온라인투자연계금융업 및 이용자
-                    보호에 관한 법률에 따라 15.4% 적용
+              <View style={styles.certifyNotesContainer}>
+                <View style={styles.certifyNoteItem}>
+                  <Text style={styles.certifyNoteText}>
+                    - 투자자는 투자금 모집이 완료되기 전까지 당사의 온라인 플랫폼에서 투자신청을 철회하고 투자금을 반환받을 수 있습니다. 단, 투자금 모집이 완료된 이후에는 투자신청을 철회할 수 없습니다.
                   </Text>
                 </View>
 
-                <View style={styles.receiptSpacerSmall} />
+                <View style={styles.certifySpacerSmall} />
 
-                <Text style={styles.receiptWarningText}>
-                  - 본 상품의 중도상환 발생 시, 연 이자의 일할 계산이 적용되므로
-                  명시된 예상 수익금액과 실 수령금액의 차이가 발생할 수
-                  있습니다.
-                </Text>
-                <Text style={styles.receiptWarningText}>
-                  - 본 상품의 연체 발생 시, 대출약정서에 따른 연체가산이자율이
-                  적용됩니다.
-                </Text>
-                <Text style={styles.receiptWarningText}>
-                  (연체가산이자율 : 2019.6.25. 부터 금융위원회의 고시에 따라
-                  연체가산이자율은 연 3%가 적용됩니다.)
-                </Text>
-                <Text style={styles.receiptWarningText}>
-                  - 본 수익권 증서는 고객님이 동의하신 투자이용약관에 의거한
-                  원리금수취권 증서로서, 본 투자상품은 원금 보장이 되지 않으며
-                  예금자 보호대상이 아닙니다.
-                </Text>
+                <View style={styles.certifyNoteItem}>
+                  <Text style={styles.certifyNoteText}>
+                    - 투자금 모집이 완료된 후에는 대출채권에 대한 원리금수취권 증서를 온라인 플랫폼에서 발급받을 수 있습니다.
+                  </Text>
+                </View>
+
+                <View style={styles.certifySpacerSmall} />
+
+                <View style={styles.certifyNoteItem}>
+                  <Text style={styles.certifyNoteText}>
+                    - 투자금 모집 중에 투자자가 투자신청을 철회하거나 당사에서 투자신청 철회를 확인하였을 경우, 본 확인서는 효력을 상실합니다.
+                  </Text>
+                </View>
+
+                <View style={styles.certifySpacerSmall} />
+
+                <View style={styles.certifyNoteItem}>
+                  <Text style={styles.certifyNoteText}>
+                    - 본 확인서는 투자자가 상기 투자상품에 투자하였음을 확인하기 위한 서류로 다른 용도로는 사용할 수 없습니다.
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.receiptSpacerSmall} />
+              <View style={styles.certifySpacerSmall} />
+              <View style={styles.certifySpacerSmall} />
 
               {/* 하단 안내문 */}
-              <View style={styles.receiptFooterContainer}>
-                <Text style={styles.receiptFooterText}>
-                  원리금 수취권 계약에 따라 권리증명을 위해 본 증서를
-                  제공합니다.
+              <View style={styles.certifyFooterContainer}>
+                <Text style={styles.certifyFooterText}>
+                  투자신청 확인요청에 따라 본 확인서를 제공합니다.
                 </Text>
               </View>
 
-              <View style={styles.receiptSpacerSmall} />
+              <View style={styles.certifySpacerSmall} />
 
               {/* 발행일 및 회사명 */}
-              <View style={styles.receiptSignatureContainer}>
-                <Text style={styles.receiptSignatureDate}>
-                  {receiptData.prod?.r_loan_date2
-                    ? formatDateFull(receiptData.prod.r_loan_date2)
+              <View style={styles.certifySignatureContainer}>
+                <Text style={styles.certifySignatureDate}>
+                  {certifyData.prod?.r_loan_date2
+                    ? formatDateFull(certifyData.prod.r_loan_date2)
                     : formatDateFull(new Date().toISOString().split('T')[0])}
                 </Text>
-                <View style={styles.receiptSignatureRow}>
-                  <Text style={styles.receiptSignatureCompany}>
+                <View style={styles.certifySignatureRow}>
+                  <Text style={styles.certifySignatureCompany}>
                     루트인프라금융㈜
                   </Text>
                   <Image
                     source={require('../assets/images/rootfund_stamp.png')}
-                    style={styles.receiptStampImage}
+                    style={styles.certifyStampImage}
                     resizeMode="contain"
                   />
                 </View>
               </View>
 
-              <View style={styles.receiptSpacer} />
+              <View style={styles.certifySpacer} />
             </View>
           </View>
         </ViewShot>
@@ -741,36 +772,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  receiptA4Container: {
+  certifyA4Container: {
     width: '100%',
     backgroundColor: '#ffffff',
     paddingHorizontal: 10,
     paddingBottom: 10,
     marginBottom: 40,
   },
-  receiptBorder: {
+  certifyBorder: {
     borderWidth: 3,
     borderColor: '#2c40a0',
     paddingHorizontal: 10,
     paddingVertical: 15,
     backgroundColor: '#ffffff',
   },
-  receiptSpacer: {
+  certifySpacer: {
     height: 10,
   },
-  receiptSpacerSmall: {
+  certifySpacerSmall: {
     height: 5,
   },
-  receiptTitleContainer: {
+  certifyTitleContainer: {
     alignItems: 'center',
     marginBottom: 20,
   },
-  receiptMainTitle: {
+  certifyMainTitle: {
     fontSize: 25,
     fontWeight: '700',
     color: '#2c40a0',
   },
-  receiptProductNameBox: {
+  certifyProductNameBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#e6f5ff',
@@ -779,126 +810,126 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 10,
   },
-  receiptProductNameLabel: {
+  certifyProductNameLabel: {
     fontSize: 13,
     color: '#2c40a0',
     minWidth: 20,
   },
-  receiptProductNameValue: {
+  certifyProductNameValue: {
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
     color: '#2c40a0',
     marginLeft: 20,
   },
-  receiptDividerThick: {
+  certifyDividerThick: {
     height: 2,
     backgroundColor: '#2c40a0',
     marginVertical: 5,
   },
-  receiptInfoTable: {
+  certifyInfoTable: {
     width: '100%',
   },
-  receiptTableRow: {
+  certifyTableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     minHeight: 42,
     paddingVertical: 8,
   },
-  receiptTableCell: {
+  certifyTableCell: {
     width: 70,
     minHeight: 27,
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
-  receiptTableCellLabel: {
+  certifyTableCellLabel: {
     fontSize: 10,
     color: '#2c40a0',
     lineHeight: 14,
   },
-  receiptTableCellLabelWithNote: {
+  certifyTableCellLabelWithNote: {
     justifyContent: 'center',
   },
-  receiptTableCellLabelNote: {
+  certifyTableCellLabelNote: {
     fontSize: 9,
     color: '#2c40a0',
     lineHeight: 12,
   },
-  receiptTableCellValue: {
+  certifyTableCellValue: {
     width: 80,
     minHeight: 27,
     justifyContent: 'center',
     alignItems: 'flex-end',
   },
-  receiptTableCellText: {
+  certifyTableCellText: {
     fontSize: 10,
     color: '#2c40a0',
     lineHeight: 14,
     textAlign: 'right',
   },
-  receiptTableCellTextBreak: {
+  certifyTableCellTextBreak: {
     flexWrap: 'wrap',
   },
-  receiptTableCellSpacer: {
+  certifyTableCellSpacer: {
     width: 30,
   },
-  receiptTableDivider: {
+  certifyTableDivider: {
     height: 1,
     backgroundColor: '#2c40a0',
     marginVertical: 0,
   },
-  receiptNotesContainer: {
+  certifyNotesContainer: {
     paddingLeft: 10,
     marginTop: 12,
   },
-  receiptNoteItem: {
+  certifyNoteItem: {
     flexDirection: 'row',
     marginTop: 3,
     paddingLeft: 10,
   },
-  receiptNoteText: {
+  certifyNoteText: {
     fontSize: 11,
     color: '#2c40a0',
     lineHeight: 16,
     flex: 1,
   },
-  receiptWarningText: {
+  certifyWarningText: {
     fontSize: 11,
     color: '#2c40a0',
     lineHeight: 16,
     marginTop: 5,
   },
-  receiptFooterContainer: {
+  certifyFooterContainer: {
     alignItems: 'center',
     marginTop: 30,
   },
-  receiptFooterText: {
+  certifyFooterText: {
     fontSize: 13,
     fontWeight: '500',
     color: '#2c40a0',
     textAlign: 'center',
   },
-  receiptSignatureContainer: {
+  certifySignatureContainer: {
     alignItems: 'center',
     marginTop: 20,
   },
-  receiptSignatureDate: {
+  certifySignatureDate: {
     fontSize: 14,
     color: '#2c40a0',
     marginBottom: 15,
   },
-  receiptSignatureRow: {
+  certifySignatureRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  receiptSignatureCompany: {
+  certifySignatureCompany: {
     fontSize: 18,
     color: '#2c40a0',
     fontWeight: '600',
   },
-  receiptStampImage: {
+  certifyStampImage: {
     width: 50,
     height: 50,
     marginLeft: 20,
@@ -906,4 +937,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default InvestReceiptScreen;
+export default InvestCertifyScreen;
+

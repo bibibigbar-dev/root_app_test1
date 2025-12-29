@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   dt: {
     flex: 0,
-    width: 130,
+    width: 100,
     paddingVertical: 3,
     color: '#666',
     fontSize: 13,

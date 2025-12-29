@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 import PushNotificationService from '../services/pushNotification';
@@ -69,6 +70,17 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
       const userToken = await AsyncStorage.getItem('userToken');
       
       if (userData && userToken) {
+        // 세션 만료 검사
+        const loginCheck = await ApiService.checkLoginExpiration();
+        
+        if (loginCheck.expired) {
+          // 세션 만료 시 로그아웃 처리
+          await ApiService.clearLoginData();
+          setUser(null);
+          setIsLoggedIn(false);
+          return;
+        }
+        
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
         setIsLoggedIn(true);
@@ -198,12 +210,31 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
             </TouchableOpacity>
 
             <View style={styles.rightButtons}>
+              {/* 푸시 알림 테스트 버튼 (member_id가 4587일 때만 표시) */}
+              {user?.session?.member_id === '4587' && (
+                <TouchableOpacity
+                  style={styles.pushTestButton}
+                  onPress={() => navigation.navigate('PushTest')}
+                >
+                  <Ionicons
+                    name="flask-outline"
+                    color="#000"
+                    size={22}
+                  />
+                </TouchableOpacity>
+              )}
+
               {/* 알림 버튼 */}
               <TouchableOpacity 
                 style={styles.notificationButton}
                 onPress={handleNotificationPress}
               >
-                <Text style={styles.notificationIcon}>🔔</Text>
+                <Ionicons
+                  name="notifications-outline"
+                  color="#000"
+                  size={24}
+                  style={styles.notificationIcon}
+                />
                 {unreadCount > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
@@ -540,7 +571,7 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
                 >
                   <Image 
                     source={require('../assets/images/ico_menu_list05.png')} 
-                    style={styles.menuListIcon} 
+                    style={[styles.menuListIcon, { tintColor: '#333' }]} 
                     resizeMode="contain"
                   />
                   <Text style={styles.menuListText}>채권거래소</Text>
@@ -675,6 +706,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  pushTestButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 0,
   },
   notificationIcon: {
     fontSize: 22,

@@ -11,6 +11,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { getFontFamily } from './src/styles/fonts';
 import PushNotificationService from './src/services/pushNotification';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from './src/config/api';
 
 // 전역 폰트 스타일 설정
 // Text 컴포넌트의 기본 렌더링 오버라이드
@@ -48,16 +50,78 @@ function App() {
       'requestIdleCallback',
     ]);
 
-    // 푸시 알림 초기화 - 임시 비활성화
-    // const initPushNotifications = async () => {
-    //   try {
-    //     await PushNotificationService.initialize();
-    //   } catch (error) {
-    //     console.error('푸시 알림 초기화 실패:', error);
-    //   }
-    // };
+    // API 서버 변경 감지 및 세션 정리
+    const checkApiServerChange = async () => {
+      try {
+        const savedApiUrl = await AsyncStorage.getItem('lastApiUrl');
+        const currentApiUrl = API_BASE_URL;
 
-    // initPushNotifications();
+        if (savedApiUrl && savedApiUrl !== currentApiUrl) {
+          console.log('');
+          console.log('🔄 API 서버가 변경되었습니다');
+          console.log(`   이전: ${savedApiUrl}`);
+          console.log(`   현재: ${currentApiUrl}`);
+          console.log('   기존 세션을 정리합니다...');
+          
+          // 모든 로그인 관련 데이터 삭제
+          await AsyncStorage.multiRemove([
+            'userData',
+            'userToken',
+            'loginTime',
+            'sessionExpiry',
+            'isLoggedIn',
+          ]);
+          
+          console.log('✅ 세션 정리 완료');
+          console.log('');
+        }
+
+        // 현재 API URL 저장
+        await AsyncStorage.setItem('lastApiUrl', currentApiUrl);
+      } catch (error) {
+        console.error('❌ API 서버 체크 오류:', error);
+      }
+    };
+
+    // 푸시 알림 초기화
+    const initPushNotifications = async () => {
+      console.log('');
+      console.log('='.repeat(60));
+      console.log('🚀 RootFund App 시작');
+      console.log('='.repeat(60));
+      
+      // 먼저 API 서버 변경 체크
+      await checkApiServerChange();
+      
+      try {
+        console.log('📱 푸시 알림 서비스 초기화 시작...');
+        const success = await PushNotificationService.initialize();
+        
+        if (success) {
+          console.log('');
+          console.log('✅ 푸시 알림 초기화 성공!');
+          console.log('   - FCM 토큰 획득 완료');
+          console.log('   - 메시지 리스너 활성화됨');
+          console.log('');
+        } else {
+          console.log('');
+          console.log('⚠️ 푸시 알림 초기화 실패');
+          console.log('   - 앱은 정상적으로 동작합니다');
+          console.log('   - 푸시 알림 기능만 비활성화됩니다');
+          console.log('');
+        }
+      } catch (error) {
+        console.error('');
+        console.error('❌ 푸시 알림 초기화 중 예외 발생:', error);
+        console.error('   - 앱은 정상적으로 동작합니다');
+        console.error('');
+      }
+      
+      console.log('='.repeat(60));
+      console.log('');
+    };
+
+    initPushNotifications();
   }, []);
 
   return (

@@ -17,6 +17,8 @@ import { WebView } from 'react-native-webview';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import { getWebViewPretendardCss } from '../utils/webviewPretendard';
+import AppModal from '../components/AppModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -29,13 +31,13 @@ const createHtmlContent = htmlContent => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
       <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
       <style>
+        ${getWebViewPretendardCss()}
         * {
           margin: 0;
           padding: 0;
           box-sizing: border-box;
         }
         body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           font-size: 15px;
           line-height: 1.5;
           color: #666;
@@ -1097,80 +1099,67 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* 수익 계산 모달 (ProductDetailScreen과 동일) */}
-      <Modal
+      <AppModal
         visible={showCalcModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCalcModal(false)}
+        title="예상 수익계산"
+        onClose={() => setShowCalcModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowCalcModal(false),
+        }}
       >
-        <View style={styles.popContainer}>
-          <TouchableOpacity
-            style={styles.popMask}
-            activeOpacity={1}
-            onPress={() => setShowCalcModal(false)}
-          />
-          <View style={styles.popWrapper}>
-            <View style={styles.popBox}>
-              <Text style={styles.popTitle}>예상 수익계산</Text>
-              <View style={styles.popTitleBorder} />
+        <View style={styles.pr4pl4}>
+          <View style={styles.flexTit}>
+            <Text style={styles.titText}>투자예정 금액</Text>
+          </View>
+          <View style={styles.flexInput}>
+            <TextInput
+              style={styles.textInput}
+              value={formatNumber(calcPrice)}
+              onChangeText={handleCalcPriceChange}
+              keyboardType="numeric"
+            />
+            <Text style={styles.txtUnit}>원</Text>
+            <TouchableOpacity
+              style={styles.btnCalc}
+              onPress={calculateInterest}
+            >
+              <Text style={styles.btnCalcText}>계산하기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={styles.popScrollView}
-                contentContainerStyle={styles.popScrollContent}
-              >
-                <View style={styles.pr4pl4}>
-                  <View style={styles.flexTit}>
-                    <Text style={styles.titText}>투자예정 금액</Text>
-                  </View>
-                  <View style={styles.flexInput}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={formatNumber(calcPrice)}
-                      onChangeText={handleCalcPriceChange}
-                      keyboardType="numeric"
-                    />
-                    <Text style={styles.txtUnit}>원</Text>
-                    <TouchableOpacity
-                      style={styles.btnCalc}
-                      onPress={calculateInterest}
-                    >
-                      <Text style={styles.btnCalcText}>계산하기</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+        <View style={styles.hrLine} />
 
-                <View style={styles.hrLine} />
+        <View style={styles.boxCalc}>
+          <View style={styles.dlTotal}>
+            <Text style={styles.dtTotal}>예상 투자수익</Text>
+            <Text style={styles.ddTotal}>
+              {formatNumber(calcResult.totalProfit)} 원
+            </Text>
+          </View>
+          <View style={styles.dlModal}>
+            <Text style={styles.dtModal}>세전 총 수익</Text>
+            <Text style={styles.ddModal}>
+              {formatNumber(calcResult.totalInterest)} 원
+            </Text>
+          </View>
+          <View style={styles.dlModal}>
+            <Text style={styles.dtModal}>세금(이자소득세+주민세)</Text>
+            <Text style={styles.ddModal}>
+              {formatNumber(calcResult.totalTax)} 원
+            </Text>
+          </View>
+          <View style={styles.dlModal}>
+            <Text style={styles.dtModal}>플랫폼 수수료</Text>
+            <Text style={styles.ddModal}>
+              {formatNumber(calcResult.totalComm)} 원
+            </Text>
+          </View>
+        </View>
 
-                <View style={styles.boxCalc}>
-                  <View style={styles.dlTotal}>
-                    <Text style={styles.dtTotal}>예상 투자수익</Text>
-                    <Text style={styles.ddTotal}>
-                      {formatNumber(calcResult.totalProfit)} 원
-                    </Text>
-                  </View>
-                  <View style={styles.dlModal}>
-                    <Text style={styles.dtModal}>세전 총 수익</Text>
-                    <Text style={styles.ddModal}>
-                      {formatNumber(calcResult.totalInterest)} 원
-                    </Text>
-                  </View>
-                  <View style={styles.dlModal}>
-                    <Text style={styles.dtModal}>세금(이자소득세+주민세)</Text>
-                    <Text style={styles.ddModal}>
-                      {formatNumber(calcResult.totalTax)} 원
-                    </Text>
-                  </View>
-                  <View style={styles.dlModal}>
-                    <Text style={styles.dtModal}>플랫폼 수수료</Text>
-                    <Text style={styles.ddModal}>
-                      {formatNumber(calcResult.totalComm)} 원
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={styles.repayTit}>상환 스케줄</Text>
-                <View style={styles.repayList}>
+        <Text style={styles.repayTit}>상환 스케줄</Text>
+        <View style={styles.repayList}>
                   {calcResult.schedule.map((item, index) => (
                     <View key={index} style={styles.repayItem}>
                       <TouchableOpacity
@@ -1245,31 +1234,18 @@ const ProductDetailOld1Screen = ({ navigation, route }) => {
                       )}
                     </View>
                   ))}
-                </View>
-
-                <View style={styles.flexText}>
-                  <Text style={styles.excIcon}>ⓘ</Text>
-                  <Text style={styles.txtNote}>
-                    위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
-                    변경될 수 있습니다. 또한 중도상환, 연체 등으로 지급일자와
-                    {'\n'}
-                    지급액에 차이가 있을 수 있습니다.
-                  </Text>
-                </View>
-              </ScrollView>
-
-              <View style={styles.btnBoxModal}>
-                <TouchableOpacity
-                  style={styles.btnStyleModal}
-                  onPress={() => setShowCalcModal(false)}
-                >
-                  <Text style={styles.btnTextModal}>확인</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
         </View>
-      </Modal>
+
+        <View style={styles.flexText}>
+          <Text style={styles.excIcon}>ⓘ</Text>
+          <Text style={styles.txtNote}>
+            위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
+            변경될 수 있습니다. 또한 중도상환, 연체 등으로 지급일자와
+            {'\n'}
+            지급액에 차이가 있을 수 있습니다.
+          </Text>
+        </View>
+      </AppModal>
     </View>
   );
 };

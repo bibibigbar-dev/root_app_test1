@@ -16,6 +16,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -1182,30 +1183,17 @@ const ProductDetailScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* 수익 계산 모달 */}
-      <Modal
+      <AppModal
         visible={showCalcModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCalcModal(false)}
+        title="예상 수익계산"
+        onClose={() => setShowCalcModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowCalcModal(false),
+        }}
       >
-        <View style={styles.popContainer}>
-          <TouchableOpacity
-            style={styles.popMask}
-            activeOpacity={1}
-            onPress={() => setShowCalcModal(false)}
-          />
-          <View style={styles.popWrapper}>
-            <View style={styles.popBox}>
-              <Text style={styles.popTitle}>예상 수익계산</Text>
-              <View style={styles.popTitleBorder} />
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={styles.popScrollView}
-                contentContainerStyle={styles.popScrollContent}
-              >
-                {/* 투자예정 금액 입력 */}
-                <View style={styles.pr4pl4}>
+        {/* 투자예정 금액 입력 */}
+        <View style={styles.pr4pl4}>
                   <View style={styles.flexTit}>
                     <Text style={styles.titText}>투자예정 금액</Text>
                   </View>
@@ -1333,32 +1321,18 @@ const ProductDetailScreen = ({ navigation, route }) => {
                       )}
                     </View>
                   ))}
-                </View>
-
-                {/* 안내 문구 */}
-                <View style={styles.flexText}>
-                  <Text style={styles.excIcon}>ⓘ</Text>
-                  <Text style={styles.txtNote}>
-                    위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
-                    변경될 수 있습니다. 또한 중도상환, 연체 등으로{'\n'}
-                    지급일자와 지급액에 차이가 있을 수 있습니다.
-                  </Text>
-                </View>
-              </ScrollView>
-
-              {/* 확인 버튼 (고정) */}
-              <View style={styles.btnBoxModal}>
-                <TouchableOpacity
-                  style={styles.btnStyleModal}
-                  onPress={() => setShowCalcModal(false)}
-                >
-                  <Text style={styles.btnTextModal}>확인</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
         </View>
-      </Modal>
+
+        {/* 안내 문구 */}
+        <View style={styles.flexText}>
+          <Text style={styles.excIcon}>ⓘ</Text>
+          <Text style={styles.txtNote}>
+            위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
+            변경될 수 있습니다. 또한 중도상환, 연체 등으로{'\n'}
+            지급일자와 지급액에 차이가 있을 수 있습니다.
+          </Text>
+        </View>
+      </AppModal>
     </View>
   );
 };

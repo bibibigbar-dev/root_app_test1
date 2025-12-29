@@ -7,10 +7,13 @@ import {
   Image,
 } from 'react-native';
 
-const InvestCancelDoneScreen = ({ navigation }) => {
+const InvestCancelDoneScreen = ({ navigation, route }) => {
+  const { member_id } = route.params || {};
+
   const handleConfirm = () => {
-    // 마이페이지 - 투자현황 탭으로 이동
-    navigation.navigate('MyPage', {
+    // 투자현황 화면으로 이동 (member_id 전달)
+    navigation.navigate('MyPage', { 
+      member_id,
       initialTab: 'invest'
     });
   };
@@ -18,10 +21,20 @@ const InvestCancelDoneScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>투자취소</Text>
-        </View>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('MyPage', { 
+            member_id,
+            initialTab: 'invest'
+          })}
+        >
+          <Image
+            source={require('../assets/images/ico_back.png')}
+            style={styles.backIcon}
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}></Text>
       </View>
 
       {/* Content */}
@@ -54,23 +67,29 @@ const InvestCancelDoneScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f6f6f6',
   },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 16,
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e1e2',
+    backgroundColor: '#f6f6f6',
   },
-  headerContent: {
+  backButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
   headerTitle: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: '700',
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
     color: '#222',
   },
   content: {
@@ -79,8 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   successContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 40,
   },
   successWrapper: {
     alignItems: 'center',
@@ -92,7 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2c3db8',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   successIcoText: {
     fontSize: 48,
@@ -100,17 +118,16 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   successMsg: {
-    fontSize: 18,
-    lineHeight: 26,
-    fontWeight: '600',
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
     color: '#222',
     textAlign: 'center',
   },
   btnBox: {
-    paddingTop: 40,
-    paddingRight: 16,
+    marginTop: 40,
+    paddingHorizontal: 16,
     paddingBottom: 56,
-    paddingLeft: 16,
   },
   btnStyle: {
     height: 48,

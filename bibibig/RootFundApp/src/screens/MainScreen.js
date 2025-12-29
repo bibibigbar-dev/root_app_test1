@@ -52,7 +52,7 @@ const MainScreen = ({ navigation }) => {
   useEffect(() => {
     loadUserData();
     loadMainData();
-    // loadFCMToken(); // 푸시 알림 초기화 임시 비활성화
+    loadFCMToken(); // 푸시 알림 초기화 활성화
   }, []);
 
   useEffect(() => {
@@ -86,47 +86,77 @@ const MainScreen = ({ navigation }) => {
 
   const loadFCMToken = async () => {
     try {
-      console.log('🔍 FCM 토큰 로드 시도...');
+      if (__DEV__) {
+        console.log('🔍 FCM 토큰 로드 시도...');
+      }
       
       // 1. AsyncStorage에서 직접 토큰 가져오기
       const token = await AsyncStorage.getItem('fcmToken');
-      console.log('📦 AsyncStorage 토큰:', token ? `${token.substring(0, 30)}...` : '없음');
+      if (__DEV__) {
+        console.log('📦 AsyncStorage 토큰:', token ? `${token.substring(0, 30)}...` : '없음');
+      }
       
       if (token) {
         setFcmToken(token);
-        console.log('✅ FCM 토큰 로드 성공 (AsyncStorage)');
+        if (__DEV__) {
+          console.log('✅ FCM 토큰 로드 성공 (AsyncStorage)');
+        }
         return;
       }
       
-      // 2. PushNotificationService 초기화 상태 확인
-      const isInitialized = PushNotificationService.isInitialized();
-      console.log('🔧 PushNotificationService 초기화 상태:', isInitialized);
-      
-      if (!isInitialized) {
-        console.log('⚠️ PushNotificationService가 아직 초기화되지 않았습니다. 초기화 시도...');
-        const initSuccess = await PushNotificationService.initialize();
-        console.log('🔧 초기화 결과:', initSuccess ? '성공' : '실패');
-        
-        if (!initSuccess) {
-          console.error('❌ PushNotificationService 초기화 실패');
-          setTimeout(loadFCMToken, 3000);
-          return;
+      // 2. PushNotificationService 초기화 진행 상태 확인
+      const initStatus =
+        typeof PushNotificationService.getInitStatus === 'function'
+          ? PushNotificationService.getInitStatus()
+          : (PushNotificationService.isInitialized() ? 'ready' : 'initializing');
+
+      if (__DEV__) {
+        console.log('🔧 PushNotificationService initStatus:', initStatus);
+      }
+
+      // 초기화 시도가 끝나지 않았으면 잠깐 대기 후 재시도
+      if (initStatus === 'idle' || initStatus === 'initializing') {
+        if (__DEV__) {
+          console.log('⏳ App.js의 초기화 완료 대기 중... 잠시만 기다려주세요');
         }
+        setTimeout(loadFCMToken, 2000);
+        return;
+      }
+
+      // 초기화가 실패한 경우: 무한 재시도하지 않음
+      if (initStatus === 'failed') {
+        if (__DEV__) {
+          const err =
+            typeof PushNotificationService.getInitError === 'function'
+              ? PushNotificationService.getInitError()
+              : null;
+          console.log('⚠️ PushNotificationService 초기화 실패 상태입니다. 재시도를 중단합니다.', err?.message || '');
+        }
+        return;
       }
       
       // 3. PushNotificationService에서 토큰 가져오기
       const serviceToken = PushNotificationService.getToken();
-      console.log('🎯 Service 토큰:', serviceToken ? `${serviceToken.substring(0, 30)}...` : '없음');
+      if (__DEV__) {
+        console.log('🎯 Service 토큰:', serviceToken ? `${serviceToken.substring(0, 30)}...` : '없음');
+      }
       
       if (serviceToken) {
         setFcmToken(serviceToken);
-        console.log('✅ FCM 토큰 로드 성공 (Service)');
+        if (__DEV__) {
+          console.log('✅ FCM 토큰 로드 성공 (Service)');
+        }
       } else {
-        console.log('⏳ FCM 토큰이 아직 생성되지 않았습니다. 3초 후 재시도...');
-        setTimeout(loadFCMToken, 3000);
+        // initStatus가 ready인데도 토큰이 없으면(시뮬레이터/권한/설정) 무한 재시도하지 않음
+        if (__DEV__) {
+          console.log('⚠️ PushNotificationService는 ready지만 토큰이 없습니다. 재시도를 중단합니다.');
+        }
       }
     } catch (error) {
-      console.error('❌ FCM 토큰 로드 오류:', error);
+      // 조용히 재시도 (개발 모드에서만 에러 로그)
+      if (__DEV__) {
+        console.error('❌ FCM 토큰 로드 오류:', error);
+      }
       setTimeout(loadFCMToken, 5000);
     }
   };
@@ -587,16 +617,6 @@ const MainScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* FCM 토큰 표시 (개발용 - 나중에 삭제) */}
-      <TouchableOpacity
-        style={[styles.fcmTokenButton, !fcmToken && styles.fcmTokenButtonDisabled]}
-        onPress={copyFCMToken}
-      >
-        <Text style={styles.fcmTokenText}>
-          {fcmToken ? '📱 FCM 토큰 복사' : '⏳ FCM 토큰 로딩중...'}
-        </Text>
-      </TouchableOpacity>
-      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {mainData.topBanner && (
           <View style={styles.bannerWrapper}>
@@ -1361,24 +1381,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
-  fcmTokenButton: {
+  pushTestButton: {
     position: 'absolute',
     top: 60,
     right: 10,
     backgroundColor: '#2c3db8',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 9999,
     elevation: 10,
-  },
-  fcmTokenButtonDisabled: {
-    backgroundColor: '#999',
-  },
-  fcmTokenText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   loadingContainer: {
     flex: 1,

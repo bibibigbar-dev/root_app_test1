@@ -61,6 +61,8 @@
 		<string>Pretendard-Medium.otf</string>
 		<string>Pretendard-Regular.otf</string>
 		<string>Pretendard-SemiBold.otf</string>
+		<string>Ionicons.ttf</string>
+		<string>MaterialCommunityIcons.ttf</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>

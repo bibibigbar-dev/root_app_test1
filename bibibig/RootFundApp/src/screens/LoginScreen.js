@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ReactNativeBiometrics from 'react-native-biometrics';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import ApiService from '../services/api';
 
 const LoginScreen = ({ navigation, route }) => {
@@ -521,9 +522,7 @@ const LoginScreen = ({ navigation, route }) => {
                 onPress={handleBiometricLogin}
                 disabled={mainLoginLoading || withdrawalLoginLoading}
               >
-                <Text style={styles.biometricIcon}>
-                  {biometricType === 'FaceID' ? '👤' : '👆'}
-                </Text>
+                <MaterialCommunityIcons name="face-recognition" color="#000" size={24} />
               </TouchableOpacity>
             )}
           </View>

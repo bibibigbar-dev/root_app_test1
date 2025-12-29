@@ -59,51 +59,36 @@ const InvestCancelScreen = ({ navigation, route }) => {
       return;
     }
 
-    Alert.alert(
-      '투자 취소',
-      '정말 투자를 취소하시겠습니까?',
-      [
-        { text: '아니오', style: 'cancel' },
-        {
-          text: '예',
-          onPress: async () => {
-            try {
-              setProcessing(true);
+    try {
+      setProcessing(true);
 
-              const response = await ApiService.api.post('/app/product/invest/cancel/process', {
-                orderNumber: orderNumber,
-                tid: cancelData.ivinfo.tid,
-                idx: cancelData.ivinfo.idx,
-              });
+      const response = await ApiService.api.post('/app/product/invest/cancel/process', {
+        member_id: member_id,
+        orderNumber: orderNumber,
+        tid: cancelData.ivinfo.tid,
+        idx: cancelData.ivinfo.idx,
+      });
 
-              const result = String(response.data);
+      const result = String(response.data);
 
-              if (result === '0') {
-                // 취소 성공
-                navigation.replace('InvestCancelDone');
-              } else if (result === '1') {
-                Alert.alert('알림', '상품 목록으로 이동합니다.', [
-                  { text: '확인', onPress: () => navigation.navigate('ProductList') }
-                ]);
-              } else if (result === '2' || result === '3') {
-                Alert.alert('투자취소', '잘못된 취소 요청입니다.');
-              } else if (result === '4') {
-                Alert.alert('투자취소', '취소 가능한 투자 내역이 아닙니다.');
-              } else if (result === '10000') {
-                Alert.alert('투자취소', '현재 금결원 전산망 및 은행점검 중입니다.');
-              } else {
-                Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
-              }
-            } catch (error) {
-              console.error('투자 취소 처리 오류:', error);
-              Alert.alert('오류', '투자 취소 처리 중 오류가 발생했습니다.');
-            } finally {
-              setProcessing(false);
-            }
-          }
-        }
-      ]
-    );
+      if (result === '0') {
+        // 취소 성공 - InvestCancelDone 화면으로 이동 (member_id 전달)
+        navigation.replace('InvestCancelDone', { member_id });
+      } else if (result === '2' || result === '3') {
+        Alert.alert('투자취소', '잘못된 취소 요청입니다.');
+      } else if (result === '4') {
+        Alert.alert('투자취소', '취소 가능한 투자 내역이 아닙니다.');
+      } else if (result === '10000') {
+        Alert.alert('투자취소', '현재 금결원 전산망 및 은행점검 중입니다.');
+      } else {
+        Alert.alert('오류', '처리도중 오류가 발생하였습니다.');
+      }
+    } catch (error) {
+      console.error('투자 취소 처리 오류:', error);
+      Alert.alert('오류', '투자 취소 처리 중 오류가 발생했습니다.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -128,7 +113,7 @@ const InvestCancelScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       {/* Back 버튼 */}
-      <View style={styles.backButtonContainer}>
+      <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -138,13 +123,15 @@ const InvestCancelScreen = ({ navigation, route }) => {
             style={styles.backIcon}
           />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}></Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.successContainer}>
           <View style={styles.successWrapper}>
             <View style={styles.successIco}>
-              <Text style={styles.successIcoText}>!</Text>
+              <Text style={styles.successIcoText}>!</
+              Text>
             </View>
             <Text style={styles.successMsg}>
               투자취소{'\n'}
@@ -234,10 +221,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f6f6f6',
   },
-  backButtonContainer: {
-    paddingTop: 10,
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    backgroundColor: '#f6f6f6',
   },
   backButton: {
     width: 24,
@@ -248,6 +237,12 @@ const styles = StyleSheet.create({
   backIcon: {
     width: 24,
     height: 24,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#222',
   },
   content: {
     flex: 1,
@@ -282,36 +277,49 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   dataView: {
+    marginTop: 24,
     marginHorizontal: 16,
+    borderWidth: 0.5,
+    borderColor: '#e0e1e2',
+    borderRadius: 10,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
+    shadowColor: 'rgba(81, 108, 137, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 2,
     marginBottom: 24,
   },
   inHead: {
-    padding: 20,
-    backgroundColor: '#f6f6f6',
+    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    borderBottomColor: '#f6f6f6',
   },
   inCont: {
-    padding: 20,
+    paddingTop: 4,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
   },
   dl: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
+    alignItems: 'flex-start',
+    marginTop: 16,
   },
   dt: {
-    fontSize: 15,
-    lineHeight: 20,
+    flex: 0,
+    width: 100,
+    paddingVertical: 3,
+    fontSize: 13,
+    lineHeight: 15,
     fontWeight: '400',
     color: '#666',
   },
   dd: {
-    fontSize: 16,
-    lineHeight: 20,
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 21,
     fontWeight: '600',
     color: '#222',
   },
@@ -350,7 +358,7 @@ const styles = StyleSheet.create({
   btnBox: {
     padding: 16,
     paddingBottom: 40,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   btnStyle: {
     height: 48,

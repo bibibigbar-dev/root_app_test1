@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const InvestStatusContent = ({ navigation, route, user, member_id }) => {
   const [loading, setLoading] = useState(true);
@@ -217,43 +218,47 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
     return null;
   };
 
-  const handleInvestCancel = async (orderNumber) => {
-    Alert.alert(
-      '투자취소',
-      '정말 투자를 취소하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '확인',
-          onPress: async () => {
-            try {
-              const response = await ApiService.api.post('/app/product/invest/cancel', {
-                orderNumber,
-              });
+  const handleInvestCancel = async (item) => {
+    try {
+      const memberId = member_id || user?.session?.member_id || user?.id;
+      
+      if (!memberId) {
+        Alert.alert('오류', '회원 정보를 찾을 수 없습니다.');
+        return;
+      }
 
-              if (response.data === '0') {
-                Alert.alert('알림', '투자가 취소되었습니다.', [
-                  { text: '확인', onPress: () => loadInvestData() }
-                ]);
-              } else {
-                Alert.alert('오류', '투자 취소 중 오류가 발생했습니다.');
-              }
-            } catch (error) {
-              console.error('투자 취소 실패:', error);
-              Alert.alert('오류', '투자 취소 중 오류가 발생했습니다.');
-            }
-          },
-        },
-      ]
-    );
+      // 투자취소 화면으로 이동
+      navigation.navigate('InvestCancel', {
+        user: user,
+        member_id: memberId,
+        orderNumber: item.orderNumber,
+        idx: item.idx,
+        investData: item,
+      });
+    } catch (error) {
+      console.error('투자취소 페이지 이동 실패:', error);
+      Alert.alert('오류', '투자취소 페이지로 이동하는 중 오류가 발생했습니다.');
+    }
   };
 
   const handleShowInvestCertify = async (idx) => {
     try {
-      // 투자 확인서는 새 창으로 열리므로 웹뷰나 외부 브라우저로 처리
-      Alert.alert('알림', '투자 확인서는 웹에서 확인하실 수 있습니다.');
+      const memberId = member_id || user?.session?.member_id || user?.id;
+      
+      if (!memberId) {
+        Alert.alert('오류', '회원 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 투자 확인서 페이지로 이동
+      navigation.navigate('InvestCertify', {
+        user: user,
+        member_id: memberId,
+        idx: idx,
+      });
     } catch (error) {
-      console.error('투자 확인서 조회 실패:', error);
+      console.error('투자 확인서 페이지 이동 실패:', error);
+      Alert.alert('오류', '투자 확인서 페이지로 이동하는 중 오류가 발생했습니다.');
     }
   };
 
@@ -538,7 +543,7 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
                       {item.status === 'FUNDING' && item.iv_status === 'INVEST' && (
                         <TouchableOpacity
                           style={styles.cancelButton}
-                          onPress={() => handleInvestCancel(item.orderNumber)}
+                          onPress={() => handleInvestCancel(item)}
                         >
                           <Text style={styles.cancelButtonText}>투자취소</Text>
                         </TouchableOpacity>
@@ -655,229 +660,188 @@ const InvestStatusContent = ({ navigation, route, user, member_id }) => {
       </ScrollView>
 
       {/* 원리금수취권 판매신청 모달 */}
-      <Modal
+      <AppModal
         visible={showSellModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowSellModal(false)}
+        title="원리금수취권 판매신청"
+        onClose={() => {
+          setShowSellModal(false);
+          setBondSellPrice('');
+          setHopeSellPrice('');
+        }}
+        secondaryAction={{
+          text: '취소',
+          onPress: () => {
+            setShowSellModal(false);
+            setBondSellPrice('');
+            setHopeSellPrice('');
+          },
+        }}
+        primaryAction={{
+          text: '신청하기',
+          onPress: handleRequestBondSell,
+        }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>원리금수취권 판매신청</Text>
-
-            <View style={styles.modalBody}>
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>보유 채권금액</Text>
-                <Text style={styles.modalValue}>
-                  {formatCurrency(selectedItem?.bond_price || 0)} 원
-                </Text>
-              </View>
-
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>양도 채권금액</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={bondSellPrice}
-                  onChangeText={(text) => {
-                    const numeric = text.replace(/[^0-9]/g, '');
-                    setBondSellPrice(formatCurrency(numeric));
-                  }}
-                  placeholder="기호('-')없이 숫자만 입력"
-                  keyboardType="numeric"
-                  maxLength={13}
-                />
-              </View>
-
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>희망 판매금액</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={hopeSellPrice}
-                  onChangeText={(text) => {
-                    const numeric = text.replace(/[^0-9]/g, '');
-                    setHopeSellPrice(formatCurrency(numeric));
-                  }}
-                  placeholder="기호('-')없이 숫자만 입력"
-                  keyboardType="numeric"
-                  maxLength={13}
-                />
-              </View>
-            </View>
-
-            <Text style={styles.modalNoticeText}>
-              신청 후 판매를 취소하는 경우 고객센터로 문의 바랍니다.
+        <View style={styles.modalBody}>
+          <View style={styles.modalRow}>
+            <Text style={styles.modalLabel}>보유 채권금액</Text>
+            <Text style={styles.modalValue}>
+              {formatCurrency(selectedItem?.bond_price || 0)} 원
             </Text>
+          </View>
 
-            <Text style={styles.modalConfirmText}>
-              원리금수취권 판매를{'\n'}신청하겠습니까?
-            </Text>
+          <View style={styles.modalRow}>
+            <Text style={styles.modalLabel}>양도 채권금액</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={bondSellPrice}
+              onChangeText={(text) => {
+                const numeric = text.replace(/[^0-9]/g, '');
+                setBondSellPrice(formatCurrency(numeric));
+              }}
+              placeholder="기호('-')없이 숫자만 입력"
+              keyboardType="numeric"
+              maxLength={13}
+            />
+          </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => {
-                  setShowSellModal(false);
-                  setBondSellPrice('');
-                  setHopeSellPrice('');
-                }}
-              >
-                <Text style={styles.modalButtonText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
-                onPress={handleRequestBondSell}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
-                  신청하기
-                </Text>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.modalRow}>
+            <Text style={styles.modalLabel}>희망 판매금액</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={hopeSellPrice}
+              onChangeText={(text) => {
+                const numeric = text.replace(/[^0-9]/g, '');
+                setHopeSellPrice(formatCurrency(numeric));
+              }}
+              placeholder="기호('-')없이 숫자만 입력"
+              keyboardType="numeric"
+              maxLength={13}
+            />
           </View>
         </View>
-      </Modal>
+
+        <Text style={styles.modalNoticeText}>
+          신청 후 판매를 취소하는 경우 고객센터로 문의 바랍니다.
+        </Text>
+
+        <Text style={styles.modalConfirmText}>
+          원리금수취권 판매를{'\n'}신청하겠습니까?
+        </Text>
+      </AppModal>
 
       {/* 판매신청 불가 모달 */}
-      <Modal
+      <AppModal
         visible={showSellErrorModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowSellErrorModal(false)}
+        title="원리금수취권 판매신청"
+        onClose={() => setShowSellErrorModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowSellErrorModal(false),
+        }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>원리금수취권 판매신청</Text>
-            <Text style={styles.modalErrorText}>
-              해당 채권에 대한 판매신청 내역이 존재합니다.{'\n'}
-              판매 취소 및 판매금액 변경시 고객센터로 문의 바랍니다.
-            </Text>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonConfirm]}
-              onPress={() => setShowSellErrorModal(false)}
-            >
-              <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
-                확인
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.modalErrorText}>
+          해당 채권에 대한 판매신청 내역이 존재합니다.{'\n'}
+          판매 취소 및 판매금액 변경시 고객센터로 문의 바랍니다.
+        </Text>
+      </AppModal>
 
       {/* 상환 스케줄 모달 */}
-      <Modal
+      <AppModal
         visible={showScheduleModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowScheduleModal(false)}
+        title="상환 스케줄"
+        onClose={() => {
+          setShowScheduleModal(false);
+          setExpandedScheduleIndex(null);
+        }}
+        primaryAction={{
+          text: '확인',
+          onPress: () => {
+            setShowScheduleModal(false);
+            setExpandedScheduleIndex(null);
+          },
+        }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, styles.scheduleModalContent]}>
-            <View style={styles.modalBody}>
-              <View style={styles.boxCalc}>
-                <View style={styles.boxCalcTotal}>
-                  <Text style={styles.boxCalcTotalDt}>
-                    상환 스케줄
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <ScrollView style={styles.scheduleScroll}>
-              {scheduleData.length === 0 ? (
-                <View style={styles.emptyScheduleContainer}>
-                  <Text style={styles.emptyScheduleText}>상환 스케줄 정보가 없습니다.</Text>
-                </View>
-              ) : (
-                <View style={styles.repayList}>
-                  {scheduleData.map((repay, index) => {
-                    const isExpanded = expandedScheduleIndex === index;
-                    const repayDate = repay.REAL_REPAY_DATE || repay.EX_RETURN_DATE || repay.repay_date || '';
-
-                    return (
-                      <View key={index} style={styles.repayListItem}>
-                        <TouchableOpacity
-                          style={styles.repayListHead}
-                          onPress={() => toggleScheduleItem(index)}
-                        >
-                          <Text style={styles.repayListHeadDt}>
-                            {index}회차
-                          </Text>
-                          <View style={styles.repayListHeadDd}>
-                            <Text style={styles.repayListHeadDdText}>
-                              세후 <Text style={styles.repayListHeadDdCnt}>
-                                {formatCurrency(repay.R_RETURN_PRICE || repay.r_return_price || repay.repay_price || 0)}
-                              </Text> 원
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                        {isExpanded && (
-                          <View style={styles.repayListCont}>
-                            <View style={styles.boxCalc}>
-                              <View style={styles.boxCalcDl}>
-                                <Text style={styles.boxCalcDt}>지급일</Text>
-                                <Text style={styles.boxCalcDd}>
-                                  <Text style={styles.boxCalcDdCnt}>{formatDate(repayDate) || repayDate}</Text>
-                                </Text>
-                              </View>
-                              <View style={styles.boxCalcDl}>
-                                <Text style={styles.boxCalcDt}>원금</Text>
-                                <Text style={styles.boxCalcDd}>
-                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.PRINCIPAL || repay.principal || 0)}</Text> 원
-                                </Text>
-                              </View>
-                              <View style={styles.boxCalcDl}>
-                                <Text style={styles.boxCalcDt}>이자</Text>
-                                <Text style={styles.boxCalcDd}>
-                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.INTEREST || repay.interest || 0)}</Text> 원
-                                </Text>
-                              </View>
-                              <View style={styles.boxCalcDl}>
-                                <Text style={styles.boxCalcDt}>이자소득세</Text>
-                                <Text style={styles.boxCalcDd}>
-                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.I_TAX || repay.i_tax || 0)}</Text> 원
-                                </Text>
-                              </View>
-                              <View style={styles.boxCalcDl}>
-                                <Text style={styles.boxCalcDt}>주민세</Text>
-                                <Text style={styles.boxCalcDd}>
-                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.R_TAX || repay.r_tax || 0)}</Text> 원
-                                </Text>
-                              </View>
-                              <View style={styles.boxCalcDl}>
-                                <Text style={styles.boxCalcDt}>플랫폼수수료</Text>
-                                <Text style={styles.boxCalcDd}>
-                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.I_COMMISSION || repay.i_commission || repay.commission || 0)}</Text> 원
-                                </Text>
-                              </View>
-                              <View style={styles.boxCalcDl}>
-                                <Text style={styles.boxCalcDt}>실지급액</Text>
-                                <Text style={styles.boxCalcDd}>
-                                  <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.R_RETURN_PRICE || repay.r_return_price || repay.repay_price || 0)}</Text> 원
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </ScrollView>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
-                onPress={() => {
-                  setShowScheduleModal(false);
-                  setExpandedScheduleIndex(null);
-                }}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
-                  확인
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {scheduleData.length === 0 ? (
+          <View style={styles.emptyScheduleContainer}>
+            <Text style={styles.emptyScheduleText}>상환 스케줄 정보가 없습니다.</Text>
           </View>
-        </View>
-      </Modal>
+        ) : (
+          <View style={styles.repayList}>
+            {scheduleData.map((repay, index) => {
+              const isExpanded = expandedScheduleIndex === index;
+              const repayDate = repay.REAL_REPAY_DATE || repay.EX_RETURN_DATE || repay.repay_date || '';
+
+              return (
+                <View key={index} style={styles.repayListItem}>
+                  <TouchableOpacity
+                    style={styles.repayListHead}
+                    onPress={() => toggleScheduleItem(index)}
+                  >
+                    <Text style={styles.repayListHeadDt}>
+                      {index}회차
+                    </Text>
+                    <View style={styles.repayListHeadDd}>
+                      <Text style={styles.repayListHeadDdText}>
+                        세후 <Text style={styles.repayListHeadDdCnt}>
+                          {formatCurrency(repay.R_RETURN_PRICE || repay.r_return_price || repay.repay_price || 0)}
+                        </Text> 원
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  {isExpanded && (
+                    <View style={styles.repayListCont}>
+                      <View style={styles.boxCalc}>
+                        <View style={styles.boxCalcDl}>
+                          <Text style={styles.boxCalcDt}>지급일</Text>
+                          <Text style={styles.boxCalcDd}>
+                            <Text style={styles.boxCalcDdCnt}>{formatDate(repayDate) || repayDate}</Text>
+                          </Text>
+                        </View>
+                        <View style={styles.boxCalcDl}>
+                          <Text style={styles.boxCalcDt}>원금</Text>
+                          <Text style={styles.boxCalcDd}>
+                            <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.PRINCIPAL || repay.principal || 0)}</Text> 원
+                          </Text>
+                        </View>
+                        <View style={styles.boxCalcDl}>
+                          <Text style={styles.boxCalcDt}>이자</Text>
+                          <Text style={styles.boxCalcDd}>
+                            <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.INTEREST || repay.interest || 0)}</Text> 원
+                          </Text>
+                        </View>
+                        <View style={styles.boxCalcDl}>
+                          <Text style={styles.boxCalcDt}>이자소득세</Text>
+                          <Text style={styles.boxCalcDd}>
+                            <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.I_TAX || repay.i_tax || 0)}</Text> 원
+                          </Text>
+                        </View>
+                        <View style={styles.boxCalcDl}>
+                          <Text style={styles.boxCalcDt}>주민세</Text>
+                          <Text style={styles.boxCalcDd}>
+                            <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.R_TAX || repay.r_tax || 0)}</Text> 원
+                          </Text>
+                        </View>
+                        <View style={styles.boxCalcDl}>
+                          <Text style={styles.boxCalcDt}>플랫폼수수료</Text>
+                          <Text style={styles.boxCalcDd}>
+                            <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.I_COMMISSION || repay.i_commission || repay.commission || 0)}</Text> 원
+                          </Text>
+                        </View>
+                        <View style={styles.boxCalcDl}>
+                          <Text style={styles.boxCalcDt}>실지급액</Text>
+                          <Text style={styles.boxCalcDd}>
+                            <Text style={styles.boxCalcDdCnt}>{formatCurrency(repay.R_RETURN_PRICE || repay.r_return_price || repay.repay_price || 0)}</Text> 원
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </AppModal>
 
     </View>
   );
@@ -1356,9 +1320,6 @@ const styles = StyleSheet.create({
     padding: 24,
     maxHeight: '80%',
   },
-  scheduleModalContent: {
-    maxHeight: '90%',
-  },
   modalTitle: {
     paddingVertical: 20,
     paddingHorizontal: 16,
@@ -1455,10 +1416,6 @@ const styles = StyleSheet.create({
   },
   modalButtonTextConfirm: {
     color: '#fff',
-  },
-  scheduleScroll: {
-    maxHeight: 400,
-    marginTop: 16,
   },
   scheduleItem: {
     marginBottom: 8,

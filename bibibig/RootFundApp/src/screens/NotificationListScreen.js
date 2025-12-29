@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import PushNotificationService from '../services/pushNotification';
@@ -148,7 +149,12 @@ const NotificationListScreen = ({ navigation }) => {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>🔔</Text>
+      <Ionicons
+        name="notifications-outline"
+        color="#000"
+        size={24}
+        style={styles.emptyIcon}
+      />
       <Text style={styles.emptyText}>받은 알림이 없습니다</Text>
     </View>
   );

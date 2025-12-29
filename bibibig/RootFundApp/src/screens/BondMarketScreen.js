@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -697,187 +698,145 @@ const BondMarketScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* 원리금수취권 구매 모달 */}
-      <Modal
+      <AppModal
         visible={showBuyModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowBuyModal(false)}
+        title="원리금수취권 구매신청"
+        onClose={() => {
+          setShowBuyModal(false);
+          setSelectedBond(null);
+        }}
+        secondaryAction={{
+          text: '취소',
+          onPress: () => {
+            setShowBuyModal(false);
+            setSelectedBond(null);
+          },
+        }}
+        primaryAction={{
+          text: '신청하기',
+          onPress: handleBuyRequest,
+        }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalBox}>
-              <Text style={styles.modalTitle}>원리금수취권 구매신청</Text>
-
-              <View style={styles.modalContent}>
-                <Text style={styles.modalSubTitle}>투자위험 안내고지</Text>
-                <Text style={styles.modalWarningText}>
-                  이 투자상품은 '온라인투자연계금융업법'에 따라{'\n'}
-                  원금과투자수익을 보장할 수 없습니다.{'\n'}
-                  또한 차입자가 원금의 전부{'\n'}
-                  또는 일부를 상환하지 못할 경우{'\n'}
-                  원금손실의 위험성이 있으며,{'\n'}
-                  결국 그 손실은 투자자가 부담하게 됩니다.
-                </Text>
-              </View>
-
-              <View style={styles.hrLine} />
-
-              <View style={styles.modalNotice}>
-                <Image
-                  source={require('../assets/images/ico_exc.png')}
-                  style={styles.modalNoticeIcon}
-                  resizeMode="contain"
-                />
-                <Text style={styles.modalNoticeText}>
-                  해당 신청은 구매 확정이 아니며,{'\n'}
-                  신청 후 관리자 승인에 의하여 구매{'\n'}
-                  또는 취소될 수 있습니다.{'\n'}
-                  구매대상자 선정시 고객센터를 통하여 유선상으로{'\n'}
-                  자세한 안내를 전달드립니다.
-                </Text>
-              </View>
-
-              <View style={styles.modalGrayBox}>
-                <Text style={styles.modalProductName}>
-                  {selectedBond?.orderName}
-                </Text>
-              </View>
-
-              <Text style={styles.modalConfirmText}>
-                상품에 대한 원리금수취권 구매{'\n'}신청하겠습니까?
-              </Text>
-
-              <View style={styles.modalButtonBox}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonGray]}
-                  onPress={() => {
-                    setShowBuyModal(false);
-                    setSelectedBond(null);
-                  }}
-                >
-                  <Text style={styles.modalButtonTextGray}>취소</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonBlue]}
-                  onPress={handleBuyRequest}
-                >
-                  <Text style={styles.modalButtonTextWhite}>신청하기</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalSubTitle}>투자위험 안내고지</Text>
+          <Text style={styles.modalWarningText}>
+            이 투자상품은 '온라인투자연계금융업법'에 따라{'\n'}
+            원금과투자수익을 보장할 수 없습니다.{'\n'}
+            또한 차입자가 원금의 전부{'\n'}
+            또는 일부를 상환하지 못할 경우{'\n'}
+            원금손실의 위험성이 있으며,{'\n'}
+            결국 그 손실은 투자자가 부담하게 됩니다.
+          </Text>
         </View>
-      </Modal>
+
+        <View style={styles.hrLine} />
+
+        <View style={styles.modalNotice}>
+          <Image
+            source={require('../assets/images/ico_exc.png')}
+            style={styles.modalNoticeIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.modalNoticeText}>
+            해당 신청은 구매 확정이 아니며,{'\n'}
+            신청 후 관리자 승인에 의하여 구매{'\n'}
+            또는 취소될 수 있습니다.{'\n'}
+            구매대상자 선정시 고객센터를 통하여 유선상으로{'\n'}
+            자세한 안내를 전달드립니다.
+          </Text>
+        </View>
+
+        <View style={styles.modalGrayBox}>
+          <Text style={styles.modalProductName}>
+            {selectedBond?.orderName}
+          </Text>
+        </View>
+
+        <Text style={styles.modalConfirmText}>
+          상품에 대한 원리금수취권 구매{'\n'}신청하겠습니까?
+        </Text>
+      </AppModal>
 
       {/* 지역 선택 모달 */}
-      <Modal
+      <AppModal
         visible={showAreaPicker}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAreaPicker(false)}
+        title="지역 선택"
+        onClose={() => setShowAreaPicker(false)}
+        primaryAction={{
+          text: '닫기',
+          onPress: () => setShowAreaPicker(false),
+        }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.areaModalContainer}>
-            <View style={styles.areaModalBox}>
-              <Text style={styles.areaModalTitle}>지역 선택</Text>
+        <TouchableOpacity
+          style={styles.areaModalItem}
+          onPress={() => {
+            setSelectedArea('');
+            setShowAreaPicker(false);
+          }}
+        >
+          <Text
+            style={[
+              styles.areaModalItemText,
+              selectedArea === '' && styles.areaModalItemTextActive,
+            ]}
+          >
+            전체
+          </Text>
+          {selectedArea === '' && (
+            <Image
+              source={require('../assets/images/icon_check.png')}
+              style={styles.areaModalCheckIcon}
+              resizeMode="contain"
+            />
+          )}
+        </TouchableOpacity>
 
-              <ScrollView style={styles.areaModalList}>
-                <TouchableOpacity
-                  style={styles.areaModalItem}
-                  onPress={() => {
-                    setSelectedArea('');
-                    setShowAreaPicker(false);
-                  }}
+        {areaList &&
+          areaList.map((area, index) => {
+            const areaName = area.name || area.type;
+            const areaValue = area.type || area.name;
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.areaModalItem}
+                onPress={() => {
+                  setSelectedArea(areaValue);
+                  setShowAreaPicker(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.areaModalItemText,
+                    selectedArea === areaValue &&
+                      styles.areaModalItemTextActive,
+                  ]}
                 >
-                  <Text
-                    style={[
-                      styles.areaModalItemText,
-                      selectedArea === '' && styles.areaModalItemTextActive,
-                    ]}
-                  >
-                    전체
-                  </Text>
-                  {selectedArea === '' && (
-                    <Image
-                      source={require('../assets/images/icon_check.png')}
-                      style={styles.areaModalCheckIcon}
-                      resizeMode="contain"
-                    />
-                  )}
-                </TouchableOpacity>
-
-                {areaList &&
-                  areaList.map((area, index) => {
-                    const areaName = area.name || area.type;
-                    const areaValue = area.type || area.name;
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.areaModalItem}
-                        onPress={() => {
-                          setSelectedArea(areaValue);
-                          setShowAreaPicker(false);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.areaModalItemText,
-                            selectedArea === areaValue &&
-                              styles.areaModalItemTextActive,
-                          ]}
-                        >
-                          {areaName}
-                        </Text>
-                        {selectedArea === areaValue && (
-                          <Image
-                            source={require('../assets/images/icon_check.png')}
-                            style={styles.areaModalCheckIcon}
-                            resizeMode="contain"
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-              </ScrollView>
-
-              <View style={styles.areaModalButtonBox}>
-                <TouchableOpacity
-                  style={[styles.areaModalButton, styles.areaModalButtonGray]}
-                  onPress={() => setShowAreaPicker(false)}
-                >
-                  <Text style={styles.areaModalButtonTextGray}>닫기</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+                  {areaName}
+                </Text>
+                {selectedArea === areaValue && (
+                  <Image
+                    source={require('../assets/images/icon_check.png')}
+                    style={styles.areaModalCheckIcon}
+                    resizeMode="contain"
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+      </AppModal>
 
       {/* 수익금 계산 모달 */}
-      <Modal
+      <AppModal
         visible={showCalcModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCalcModal(false)}
+        title="예상 수익계산"
+        onClose={() => setShowCalcModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowCalcModal(false),
+        }}
       >
-        <View style={styles.popContainer}>
-          <TouchableOpacity
-            style={styles.popMask}
-            activeOpacity={1}
-            onPress={() => setShowCalcModal(false)}
-          />
-          <View style={styles.popWrapper}>
-            <View style={styles.popBox}>
-              <Text style={styles.popTitle}>예상 수익계산</Text>
-              <View style={styles.popTitleBorder} />
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={styles.popScrollView}
-                contentContainerStyle={styles.popScrollContent}
-              >
-                {/* 투자예정 금액 입력 */}
-                <View style={styles.pr4pl4}>
+        {/* 투자예정 금액 입력 */}
+        <View style={styles.pr4pl4}>
                   <View style={styles.flexTit}>
                     <Text style={styles.titText}>투자예정 금액</Text>
                   </View>
@@ -1010,32 +969,18 @@ const BondMarketScreen = ({ navigation, route }) => {
                       )}
                     </View>
                   ))}
-                </View>
-
-                {/* 안내 문구 */}
-                <View style={styles.flexText}>
-                  <Text style={styles.excIcon}>ⓘ</Text>
-                  <Text style={styles.txtNote}>
-                    위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
-                    변경될 수 있습니다. 또한 중도상환, 연체 등으로{'\n'}
-                    지급일자와 지급액에 차이가 있을 수 있습니다.
-                  </Text>
-                </View>
-              </ScrollView>
-
-              {/* 확인 버튼 (고정) */}
-              <View style={styles.btnBoxModal}>
-                <TouchableOpacity
-                  style={styles.btnStyleModal}
-                  onPress={() => setShowCalcModal(false)}
-                >
-                  <Text style={styles.btnTextModal}>확인</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
         </View>
-      </Modal>
+
+        {/* 안내 문구 */}
+        <View style={styles.flexText}>
+          <Text style={styles.excIcon}>ⓘ</Text>
+          <Text style={styles.txtNote}>
+            위 상환계획은 모집 완료시점과 대출 실행 일정에 따라서{'\n'}
+            변경될 수 있습니다. 또한 중도상환, 연체 등으로{'\n'}
+            지급일자와 지급액에 차이가 있을 수 있습니다.
+          </Text>
+        </View>
+      </AppModal>
     </View>
   );
 };

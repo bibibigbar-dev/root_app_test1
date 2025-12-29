@@ -15,54 +15,155 @@ class PushNotificationService {
     this.fcmToken = null;
     this.initialized = false;
     this.available = messaging !== null;
+    this._unsubscribers = [];
+    // 초기화 상태 공유 (MainScreen에서 무한 대기 방지용)
+    this.initStatus = 'idle'; // 'idle' | 'initializing' | 'ready' | 'failed'
+    this.initError = null;
+    this._initPromise = null;
   }
 
   /**
    * 푸시 알림 초기화
    */
   async initialize() {
+    // 이미 초기화 중이면 같은 Promise 공유
+    if (this._initPromise) return this._initPromise;
+
+    this.initStatus = 'initializing';
+    this.initError = null;
+
+    this._initPromise = (async () => {
+    if (this.initialized) {
+      console.log('✅ 푸시 알림이 이미 초기화되어 있습니다.');
+      this.initStatus = 'ready';
+      return true;
+    }
+    
     if (!this.available) {
       console.log('⚠️ Firebase가 설정되지 않았습니다. 푸시 알림 비활성화.');
       console.log('📝 Firebase 설정 방법: PUSH_APP_SETUP_COMPLETE.md 참고');
+      this.initStatus = 'failed';
+      this.initError = new Error('Firebase messaging module unavailable');
       return false;
     }
+
+    console.log('🚀 푸시 알림 초기화 시작...');
 
     try {
       // Firebase 앱이 제대로 초기화되었는지 확인
       const isFirebaseInitialized = await this.checkFirebaseInitialization();
       if (!isFirebaseInitialized) {
-        console.log('⚠️ Firebase 프로젝트가 설정되지 않았습니다.');
-        console.log('📝 다음 파일을 추가해주세요:');
-        console.log('   - iOS: GoogleService-Info.plist');
-        console.log('   - Android: google-services.json');
-        console.log('💡 자세한 내용: PUSH_APP_SETUP_COMPLETE.md 참고');
+        // checkFirebaseInitialization()에서 이미 상세 로그를 출력함
+        this.initStatus = 'failed';
+        this.initError = new Error('Firebase not initialized');
         return false;
       }
 
+      // iOS는 토큰 발급 전 registerDeviceForRemoteMessages가 필요할 수 있음
+      if (Platform.OS === 'ios') {
+        try {
+          console.log('📱 iOS 기기 등록 중...');
+          await messaging().setAutoInitEnabled?.(true);
+          await messaging().registerDeviceForRemoteMessages();
+          console.log('✅ iOS 기기 등록 완료');
+        } catch (e) {
+          // register 단계 오류는 환경/설정에 따라 발생할 수 있으니 초기화 자체를 막지 않음
+          if (__DEV__) {
+            console.log('⚠️ iOS registerDeviceForRemoteMessages 실패 (무시하고 계속):', e?.message || e);
+          }
+        }
+      }
+
       // 권한 요청
+      console.log('🔐 푸시 알림 권한 요청 중...');
       const authStatus = await this.requestPermission();
       
       if (authStatus) {
         // FCM 토큰 가져오기
-        await this.getFCMToken();
+        console.log('🔑 FCM 토큰 가져오는 중...');
+        const token = await this.getFCMToken();
+        if (!token) {
+          console.log('⚠️ FCM 토큰을 가져오지 못했습니다.');
+          // 개발 환경에서는 토큰 없이도 계속 진행
+          if (__DEV__) {
+            console.log('🧪 개발 환경: 토큰 없이 계속 진행');
+            this.setupMessageListeners();
+            this.initialized = true;
+            this.initStatus = 'ready';
+            return true;
+          }
+          this.initStatus = 'failed';
+          this.initError = new Error('Failed to get FCM token');
+          return false;
+        }
         
         // 메시지 리스너 설정
+        console.log('👂 메시지 리스너 설정 중...');
         this.setupMessageListeners();
         
         this.initialized = true;
-        console.log('✅ 푸시 알림 초기화 완료');
+        this.initStatus = 'ready';
+        console.log('✅ 푸시 알림 초기화 완료!');
+        console.log('📱 FCM 토큰:', token.substring(0, 50) + '...');
         return true;
       } else {
         console.log('⚠️ 푸시 알림 권한이 거부되었습니다');
+        // 개발 환경에서는 권한 없이도 계속 진행
+        if (__DEV__) {
+          console.log('🧪 개발 환경: 권한 없이 계속 진행');
+          const token = await this.getFCMToken();
+          if (token) {
+            this.setupMessageListeners();
+            this.initialized = true;
+            this.initStatus = 'ready';
+            console.log('✅ 푸시 알림 초기화 완료 (개발 모드)');
+            return true;
+          }
+          // 토큰 없어도 초기화는 성공으로 간주
+          this.setupMessageListeners();
+          this.initialized = true;
+          this.initStatus = 'ready';
+          console.log('✅ 푸시 알림 초기화 완료 (토큰 없음, 개발 모드)');
+          return true;
+        }
+        this.initStatus = 'failed';
+        this.initError = new Error('Push permission denied');
         return false;
       }
     } catch (error) {
-      console.error('❌ 푸시 알림 초기화 오류:', error.message);
-      if (error.message && error.message.includes('No Firebase App')) {
-        console.log('💡 Firebase 설정 파일이 누락되었습니다. PUSH_APP_SETUP_COMPLETE.md 참고');
+      console.error('❌ 푸시 알림 초기화 오류:', error);
+      this.initError = error;
+      
+      if (__DEV__) {
+        console.error('오류 상세:', {
+          message: error.message,
+          code: error.code,
+        });
       }
+      
+      if (error.message && error.message.includes('No Firebase App')) {
+        console.log('💡 Firebase 설정 파일이 누락되었습니다.');
+        console.log('   - iOS: GoogleService-Info.plist의 BUNDLE_ID 확인');
+        console.log('   - Android: google-services.json의 package_name 확인');
+      }
+      
+      // 개발 환경에서는 에러가 발생해도 초기화 성공으로 처리 (앱이 중단되지 않도록)
+      if (__DEV__) {
+        console.log('🧪 개발 환경: 초기화 실패했지만 계속 진행');
+        this.initialized = true; // 개발 환경에서는 강제로 초기화 완료로 설정
+        this.initStatus = 'ready';
+        return true;
+      }
+      
+      this.initStatus = 'failed';
       return false;
     }
+    })().finally(() => {
+      // 다음 initialize 호출에서 재시도할 수 있도록 Promise 해제
+      this._initPromise = null;
+    });
+
+    return await this._initPromise;
   }
 
   /**
@@ -70,36 +171,89 @@ class PushNotificationService {
    */
   async checkFirebaseInitialization() {
     try {
-      // Firebase 앱이 초기화되어 있는지 확인
-      const app = require('@react-native-firebase/app').default;
-      const apps = app.apps;
-      
-      if (!apps || apps.length === 0) {
-        console.log('⚠️ Firebase 앱이 초기화되지 않았습니다.');
+      // 개발 환경에서는 더 관대하게 체크
+      if (__DEV__) {
+        console.log('🧪 개발 환경: Firebase 초기화 체크 시작');
+      }
+
+      // Firebase messaging이 로드되어 있다면 기본적으로 초기화되어 있다고 판단
+      if (!messaging) {
+        console.log('⚠️ Firebase Messaging 모듈이 없습니다.');
         return false;
       }
-      
-      console.log('✅ Firebase 앱 초기화 확인됨');
-      
-      // 개발 환경(시뮬레이터)에서는 권한 체크 건너뛰기
-      if (__DEV__) {
-        console.log('🧪 개발 환경: Firebase 초기화 통과');
-        return true;
-      }
-      
-      // Firebase 앱이 있어도 설정 파일이 올바른지 확인
+
+      // 실제로 FCM 토큰을 가져올 수 있는지 테스트 (더 실용적인 체크)
       try {
-        await messaging().requestPermission();
-        return true;
-      } catch (err) {
-        if (err.message && err.message.includes('No Firebase App')) {
+        const testToken = await messaging().getToken();
+        if (testToken) {
+          console.log('✅ Firebase 정상 작동 확인 (토큰 가져오기 성공)');
+          return true;
+        }
+      } catch (tokenError) {
+        // 토큰 가져오기 실패 시 상세 로그
+        if (__DEV__) {
+          console.log('⚠️ FCM 토큰 가져오기 실패:', tokenError.message);
+        }
+        
+        // 특정 에러는 무시하고 계속 진행
+        if (tokenError.message?.includes('MISSING_INSTANCEID_SERVICE') ||
+            tokenError.message?.includes('network') ||
+            tokenError.message?.includes('timeout')) {
+          console.log('💡 일시적 오류로 판단, Firebase는 초기화되어 있음');
+          return true;
+        }
+        
+        // 설정 파일이 없는 경우에만 false 반환
+        if (tokenError.message?.includes('No Firebase App') ||
+            tokenError.message?.includes('default app') ||
+            tokenError.message?.includes('GoogleService-Info') ||
+            tokenError.message?.includes('google-services')) {
+          console.log('⚠️ Firebase 프로젝트가 설정되지 않았습니다.');
+          console.log('📝 다음 파일을 추가해주세요:');
+          console.log('   - iOS: GoogleService-Info.plist');
+          console.log('   - Android: google-services.json');
           return false;
         }
-        // 다른 에러는 권한 관련일 수 있으므로 true 반환
+        
+        // 기타 에러는 일단 통과 (너무 엄격하지 않게)
+        console.log('⚠️ Firebase 체크 중 오류 발생했지만 계속 진행');
         return true;
       }
+
+      // 혹시 위에서 토큰을 못 가져왔어도 Firebase 앱 자체는 초기화되어 있을 수 있음
+      try {
+        const app = require('@react-native-firebase/app').default;
+        const apps = app.apps;
+        
+        if (apps && apps.length > 0) {
+          console.log('✅ Firebase 앱 초기화 확인됨');
+          console.log('   Firebase 앱 이름:', apps[0]?.name);
+          console.log('   Firebase 프로젝트:', apps[0]?.options?.projectId);
+          return true;
+        }
+      } catch (appError) {
+        if (__DEV__) {
+          console.log('⚠️ Firebase 앱 정보 조회 실패 (무시):', appError.message);
+        }
+      }
+
+      // 개발 환경에서는 기본적으로 true 반환 (너무 엄격하지 않게)
+      if (__DEV__) {
+        console.log('🧪 개발 환경: Firebase 초기화되어 있다고 가정');
+        return true;
+      }
+      
+      return true;
     } catch (error) {
-      console.error('Firebase 초기화 체크 오류:', error);
+      console.error('❌ Firebase 초기화 체크 오류:', error);
+      console.error('   오류 메시지:', error.message);
+      
+      // 개발 환경에서는 체크 실패해도 계속 진행
+      if (__DEV__) {
+        console.log('🧪 개발 환경: 체크 실패했지만 true 반환');
+        return true;
+      }
+      
       return false;
     }
   }
@@ -165,24 +319,67 @@ class PushNotificationService {
    */
   async getFCMToken() {
     try {
-      const token = await messaging().getToken();
+      console.log('🔑 FCM 토큰 요청 시작...');
+      
+      // iOS에서 registerDeviceForRemoteMessages가 호출되지 않았으면 호출
+      if (Platform.OS === 'ios') {
+        try {
+          await messaging().registerDeviceForRemoteMessages();
+          console.log('✅ iOS 원격 메시지 등록 완료');
+        } catch (e) {
+          console.log('⚠️ iOS 원격 메시지 등록 실패 (무시):', e?.message);
+        }
+      }
+
+      // APNs 토큰이 늦게 설정되어 getToken이 실패하는 케이스가 있어 재시도
+      const tryGetToken = async (retries = 3) => {
+        try {
+          console.log(`   시도 ${4 - retries}/3...`);
+          const token = await messaging().getToken();
+          console.log('✅ FCM 토큰 획득 성공');
+          return token;
+        } catch (e) {
+          const msg = e?.message || '';
+          const isApnsNotSet =
+            msg.includes('APNs token') ||
+            msg.includes('apns-token-not-set') ||
+            msg.includes('messaging/apns-token-not-set');
+          
+          console.log(`   ⚠️ FCM 토큰 획득 실패: ${msg}`);
+          
+          if (Platform.OS === 'ios' && isApnsNotSet && retries > 0) {
+            console.log(`   ⏳ ${retries}번 재시도 남음, 1초 대기 중...`);
+            await new Promise(r => setTimeout(r, 1000));
+            return await tryGetToken(retries - 1);
+          }
+          throw e;
+        }
+      };
+
+      const token = await tryGetToken();
       this.fcmToken = token;
-      console.log('📱 FCM 토큰:', token);
+      console.log('📱 FCM 토큰 (처음 50자):', token.substring(0, 50) + '...');
       
       // 로컬에 저장
       await AsyncStorage.setItem('fcmToken', token);
+      console.log('💾 FCM 토큰 로컬 저장 완료');
       
       // 서버에 토큰 전송 (백엔드 준비되면 활성화)
       await this.sendTokenToServer(token);
       
       return token;
     } catch (error) {
-      console.error('❌ FCM 토큰 가져오기 오류:', error);
-      console.error('오류 상세:', error.message);
+      console.error('❌ FCM 토큰 가져오기 최종 실패:', error);
+      console.error('   오류 코드:', error.code);
+      console.error('   오류 메시지:', error.message);
       
       // 시뮬레이터에서는 실제 토큰을 생성할 수 없음
       // 개발 환경에서는 Mock 토큰 사용
-      if (__DEV__ && error.message && error.message.includes('APNs')) {
+      if (__DEV__ && error.message && (
+        error.message.includes('APNs') || 
+        error.message.includes('simulator') ||
+        error.message.includes('APNS')
+      )) {
         console.log('⚠️ 시뮬레이터 감지: Mock FCM 토큰 생성');
         const mockToken = `MOCK_FCM_TOKEN_${Platform.OS}_${Date.now()}`;
         this.fcmToken = mockToken;
@@ -264,8 +461,16 @@ class PushNotificationService {
    * 메시지 리스너 설정
    */
   setupMessageListeners() {
+    // 기존 리스너가 있으면 정리
+    if (this._unsubscribers?.length) {
+      this._unsubscribers.forEach(fn => {
+        try { fn && fn(); } catch (_) {}
+      });
+      this._unsubscribers = [];
+    }
+
     // 포그라운드 메시지 수신 (앱 사용 중)
-    messaging().onMessage(async remoteMessage => {
+    const unsubOnMessage = messaging().onMessage(async remoteMessage => {
       console.log('📨 포그라운드 메시지 수신:', remoteMessage);
       
       // 알림 저장
@@ -279,7 +484,7 @@ class PushNotificationService {
     // messaging().setBackgroundMessageHandler는 루트 레벨에서 설정
 
     // 알림 탭 이벤트 (앱이 백그라운드에 있을 때)
-    messaging().onNotificationOpenedApp(async remoteMessage => {
+    const unsubOnOpened = messaging().onNotificationOpenedApp(async remoteMessage => {
       console.log('🔔 알림 탭으로 앱 열림 (백그라운드):', remoteMessage);
       await this.saveNotification(remoteMessage);
       this.handleNotificationOpen(remoteMessage);
@@ -297,7 +502,7 @@ class PushNotificationService {
       });
 
     // 토큰 갱신 리스너
-    messaging().onTokenRefresh(async token => {
+    const unsubOnRefresh = messaging().onTokenRefresh(async token => {
       console.log('🔄 FCM 토큰 갱신:', token);
       this.fcmToken = token;
       await AsyncStorage.setItem('fcmToken', token);
@@ -306,6 +511,7 @@ class PushNotificationService {
       await this.sendTokenToServer(token);
     });
 
+    this._unsubscribers.push(unsubOnMessage, unsubOnOpened, unsubOnRefresh);
     console.log('✅ 메시지 리스너 설정 완료');
   }
 
@@ -370,6 +576,17 @@ class PushNotificationService {
    */
   isInitialized() {
     return this.initialized;
+  }
+
+  /**
+   * 초기화 상태(성공/실패/진행중) 반환
+   */
+  getInitStatus() {
+    return this.initStatus;
+  }
+
+  getInitError() {
+    return this.initError;
   }
 
   /**

@@ -406,7 +406,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
     textAlign: 'center',
-    fontStyle: 'pretendard-medium',
   },
   subTitleGuide: {
     marginTop: 50,

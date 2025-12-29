@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import RenderHtml from 'react-native-render-html';
 import api from '../services/api';
+import AppModal from '../components/AppModal';
 
 const InvestRequestScreen = ({ navigation, route }) => {
   const { orderNumber, orderKey } = route.params || {};
@@ -132,6 +133,29 @@ const InvestRequestScreen = ({ navigation, route }) => {
     } else {
       setInvestAmount(formatNumber(numericValue));
     }
+  };
+
+  // 빠른 금액 선택 핸들러
+  const handleQuickAmount = (amount) => {
+    const numericBalance = parseInt(balance.toString().replace(/[^0-9]/g, ''), 10) || 0;
+    
+    if (amount > numericBalance) {
+      Alert.alert('알림', '예치금을 초과한 금액입니다.', [
+        { 
+          text: '확인', 
+          onPress: () => setInvestAmount('') 
+        }
+      ]);
+      return;
+    }
+    
+    setInvestAmount(formatNumber(amount.toString()));
+  };
+
+  // 전액 버튼 핸들러
+  const handleFullAmount = () => {
+    const numericBalance = parseInt(balance.toString().replace(/[^0-9]/g, ''), 10) || 0;
+    setInvestAmount(formatNumber(numericBalance.toString()));
   };
 
   const handleRefresh = async () => {
@@ -618,7 +642,16 @@ const InvestRequestScreen = ({ navigation, route }) => {
                     />
                   </View>
                   <View style={styles.bankNum}>
-                    <Text style={styles.bankNumText}>{member.v_account}</Text>
+                    <View style={styles.bankNumRow}>
+                      <Text style={styles.bankNumText}>{member.v_account}</Text>
+                      <TouchableOpacity style={styles.btnCopy} onPress={handleCopyAccount}>
+                        <Image
+                          source={require('../assets/images/ico_copy.png')}
+                          style={styles.btnCopyImg}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    </View>
                     <View style={styles.bankNumTip}>
                       <View style={styles.bankNumTipArrow} />
                       <View style={styles.bankNumTipArrowInner} />
@@ -627,13 +660,6 @@ const InvestRequestScreen = ({ navigation, route }) => {
                       </Text>
                     </View>
                   </View>
-                  <TouchableOpacity style={styles.btnCopy} onPress={handleCopyAccount}>
-                    <Image
-                      source={require('../assets/images/ico_copy.png')}
-                      style={styles.btnCopyImg}
-                      resizeMode="contain"
-                    />
-                  </TouchableOpacity>
                 </View>
               </View>
               
@@ -672,7 +698,16 @@ const InvestRequestScreen = ({ navigation, route }) => {
 
             <View style={styles.wrAmount}>
               <TextInput
-                style={[styles.inputAmount, { color: '#ffffff' }]}
+                style={[
+                  styles.inputAmount, 
+                  { 
+                    color: (() => {
+                      const numericAmount = parseInt(investAmount.replace(/[^0-9]/g, ''), 10) || 0;
+                      const numericBalance = parseInt(balance.toString().replace(/[^0-9]/g, ''), 10) || 0;
+                      return numericAmount > numericBalance ? '#ff4444' : '#ffffff';
+                    })()
+                  }
+                ]}
                 value={investAmount}
                 onChangeText={handleAmountChange}
                 placeholder="최소 투자금액 10,000원 부터 입력"
@@ -683,7 +718,50 @@ const InvestRequestScreen = ({ navigation, route }) => {
                 autoCorrect={false}
                 autoCapitalize="none"
               />
-              <Text style={styles.wrAmountTxt}>원</Text>
+              <Text style={[
+                styles.wrAmountTxt,
+                {
+                  color: (() => {
+                    const numericAmount = parseInt(investAmount.replace(/[^0-9]/g, ''), 10) || 0;
+                    const numericBalance = parseInt(balance.toString().replace(/[^0-9]/g, ''), 10) || 0;
+                    return numericAmount > numericBalance ? '#ff4444' : '#ffffff';
+                  })()
+                }
+              ]}>원</Text>
+            </View>
+
+            {/* 빠른 금액 선택 버튼 */}
+            <View style={styles.quickAmountContainer}>
+              <TouchableOpacity 
+                style={styles.quickAmountBtn}
+                onPress={() => handleQuickAmount(10000)}
+              >
+                <Text style={styles.quickAmountBtnText}>1만원</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAmountBtn}
+                onPress={() => handleQuickAmount(100000)}
+              >
+                <Text style={styles.quickAmountBtnText}>10만원</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAmountBtn}
+                onPress={() => handleQuickAmount(500000)}
+              >
+                <Text style={styles.quickAmountBtnText}>50만원</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAmountBtn}
+                onPress={() => handleQuickAmount(1000000)}
+              >
+                <Text style={styles.quickAmountBtnText}>100만원</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAmountBtn}
+                onPress={handleFullAmount}
+              >
+                <Text style={styles.quickAmountBtnText}>전액</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -875,157 +953,100 @@ const InvestRequestScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* 투자가능금액 안내 모달 */}
-      <Modal
+      <AppModal
         visible={showInvestLimitModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowInvestLimitModal(false)}
+        title="투자가능금액 안내"
+        onClose={() => setShowInvestLimitModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowInvestLimitModal(false),
+        }}
       >
-        <View style={styles.popContainer}>
-          <TouchableOpacity 
-            style={styles.popMask} 
-            activeOpacity={1}
-            onPress={() => setShowInvestLimitModal(false)}
-          />
-          <View style={styles.popWrapper}>
-            <View style={styles.popBox}>
-              <Text style={styles.popTitle}>투자가능금액 안내</Text>
-              
-              <Text style={styles.popMsg}>
-                해당 상품에 투자한 이력이 없는 경우{'\n'}
-                전체 투자한도까지 투자 가능합니다.
-              </Text>
-              
-              <Text style={styles.popMsg}>
-                해당 상품에 일부 금액을 투자한 적 있거나,{'\n'}
-                투자한도 전체 금액을 투자한 적이 있는 경우{'\n'}
-                해당 금액을 제외한 금액만 투자 가능합니다.
-              </Text>
-              
-              <Text style={styles.popMsg}>
-                ex) A-1호 상품에 200만원 투자 시{'\n'}
-                A-2호 상품에 300만원 투자 가능
-              </Text>
-              
-              <View style={styles.popBtnBox}>
-                <TouchableOpacity 
-                  style={styles.popBtnStyleH48}
-                  onPress={() => setShowInvestLimitModal(false)}
-                >
-                  <Text style={styles.popBtnText}>확인</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+        <View style={styles.modalBody}>
+          <Text style={styles.modalText}>
+            해당 상품에 투자한 이력이 없는 경우{'\n'}
+            전체 투자한도까지 투자 가능합니다.
+          </Text>
+          
+          <Text style={styles.modalText}>
+            해당 상품에 일부 금액을 투자한 적 있거나,{'\n'}
+            투자한도 전체 금액을 투자한 적이 있는 경우{'\n'}
+            해당 금액을 제외한 금액만 투자 가능합니다.
+          </Text>
+          
+          <Text style={styles.modalText}>
+            ex) A-1호 상품에 200만원 투자 시{'\n'}
+            A-2호 상품에 300만원 투자 가능
+          </Text>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* 투자등급 안내 모달 */}
-      <Modal
+      <AppModal
         visible={showInvestGradeModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowInvestGradeModal(false)}
+        title="투자등급 안내"
+        onClose={() => setShowInvestGradeModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowInvestGradeModal(false),
+        }}
       >
-        <View style={styles.popContainer}>
-          <TouchableOpacity 
-            style={styles.popMask} 
-            activeOpacity={1}
-            onPress={() => setShowInvestGradeModal(false)}
-          />
-          <View style={styles.popWrapper}>
-            <View style={styles.popBox}>
-              <Text style={styles.popTitle}>투자등급 안내</Text>
-              
-              <Text style={styles.popMsg}>
-                소득적격 투자자 : 투자한도 2천만원{'\n'}
-                전문투자자 : 투자한도 모집금액의 40%{'\n'}
-                등급 변경에 관한 조건은 상단의{'\n'}
-                특수투자자 전환하기를 참고해 주세요.
-              </Text>
-              
-              <Text style={styles.popMsg}>
-                해당 차입자 상품에 투자한 적 없으면 500만원{'\n'}
-                해당 차입자 상품에 일부 투자한 적 있으면 해당 금액 제외
-              </Text>
-              
-              <Text style={styles.popMsg}>
-                예) 이전 상품 300만원 투자 시 200만원{'\n'}
-                해당 차입자 상품에 투자한도 전액 투자한 상태면 0원
-              </Text>
-              
-              <View style={styles.popBtnBox}>
-                <TouchableOpacity 
-                  style={styles.popBtnStyleH48}
-                  onPress={() => setShowInvestGradeModal(false)}
-                >
-                  <Text style={styles.popBtnText}>확인</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+        <View style={styles.modalBody}>
+          <Text style={styles.modalText}>
+            소득적격 투자자 : 투자한도 2천만원{'\n'}
+            전문투자자 : 투자한도 모집금액의 40%{'\n'}
+            등급 변경에 관한 조건은 상단의{'\n'}
+            특수투자자 전환하기를 참고해 주세요.
+          </Text>
+          
+          <Text style={styles.modalText}>
+            해당 차입자 상품에 투자한 적 없으면 500만원{'\n'}
+            해당 차입자 상품에 일부 투자한 적 있으면 해당 금액 제외
+          </Text>
+          
+          <Text style={styles.modalText}>
+            예) 이전 상품 300만원 투자 시 200만원{'\n'}
+            해당 차입자 상품에 투자한도 전액 투자한 상태면 0원
+          </Text>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* 연계투자계약 약관 모달 */}
-      <Modal
+      <AppModal
         visible={showTermsModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowTermsModal(false)}
+        title="연계투자계약 약관"
+        onClose={() => setShowTermsModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowTermsModal(false),
+        }}
       >
-        <View style={styles.popContainer}>
-          <TouchableOpacity 
-            style={styles.popMask} 
-            activeOpacity={1}
-            onPress={() => setShowTermsModal(false)}
+        {term.contents ? (
+          <RenderHtml
+            contentWidth={width - 100}
+            source={{ html: term.contents }}
+            tagsStyles={{
+              body: {
+                color: '#666',
+                fontSize: 13,
+                lineHeight: 19.5,
+                fontWeight: '400',
+              },
+              p: {
+                marginTop: 0,
+                marginBottom: 8,
+              },
+              br: {
+                height: 8,
+              },
+            }}
           />
-          <View style={styles.popWrapper}>
-            <View style={styles.popBox}>
-              <Text style={styles.popTitle}>연계투자계약 약관</Text>
-              
-              <ScrollView style={styles.popTermsScroll}>
-                <View style={styles.popTermsContent}>
-                  {term.contents ? (
-                    <RenderHtml
-                      contentWidth={width - 100}
-                      source={{ html: term.contents }}
-                      tagsStyles={{
-                        body: {
-                          color: '#666',
-                          fontSize: 13,
-                          lineHeight: 19.5,
-                          fontWeight: '400',
-                        },
-                        p: {
-                          marginTop: 0,
-                          marginBottom: 8,
-                        },
-                        br: {
-                          height: 8,
-                        },
-                      }}
-                    />
-                  ) : (
-                    <Text style={styles.popTermsTxt}>
-                      약관 내용을 불러오는 중입니다...
-                    </Text>
-                  )}
-                </View>
-              </ScrollView>
-              
-              <View style={styles.popBtnBox}>
-                <TouchableOpacity 
-                  style={styles.popBtnStyleH48}
-                  onPress={() => setShowTermsModal(false)}
-                >
-                  <Text style={styles.popBtnText}>확인</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        ) : (
+          <Text style={styles.popTermsTxt}>
+            약관 내용을 불러오는 중입니다...
+          </Text>
+        )}
+      </AppModal>
     </View>
   );
 };
@@ -1098,8 +1119,6 @@ const styles = StyleSheet.create({
   productImgbox: {
     position: 'relative',
     marginRight: 16,
-    top: 22,
-    left: 27,
   },
   productImg: {
     width: 47,
@@ -1122,15 +1141,15 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   productName: {
-    marginLeft: 20,
+    marginTop: 8,
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '700',
     color: '#222',
   },
   productDate: {
-    marginTop: 6,
-    color: '#a3a7ab',
+    marginTop: 8,
+    color: '#666',
     fontSize: 13,
     lineHeight: 16.9,
   },
@@ -1245,7 +1264,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     lineHeight: 13,
-    fontWeight: '400',
+    fontWeight: '600',
   },
   progressInfo: {
     flexDirection: 'row',
@@ -1462,10 +1481,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8faff',
   },
   bankInfoAccountnum: {
+    marginTop: 5,
     marginBottom: 6,
   },
   bankInfoDt: {
-    marginBottom: 12,
+    marginBottom: 8,
     color: '#666',
     fontSize: 13,
     lineHeight: 22,
@@ -1474,9 +1494,10 @@ const styles = StyleSheet.create({
   bankInfoDd: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: -10,
   },
   bankLogo: {
-    marginRight: 10,
+    marginRight: 6,
   },
   bankLogoImg: {
     height: 20,
@@ -1485,16 +1506,20 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
+  bankNumRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   bankNumText: {
-    fontSize: 18,
+    fontSize: 16,
     lineHeight: 22,
     fontWeight: '600',
     color: '#222',
   },
   bankNumTip: {
     position: 'absolute',
-    top: 23,
-    right: 40,
+    top: 22,
+    right: 98,
     marginTop: 5,
     paddingTop: 5,
     paddingHorizontal: 8,
@@ -1548,24 +1573,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   btnCopy: {
-    marginLeft: 10,
-    width: 20,
-    height: 20,
+    marginLeft: 8,
+    width: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   btnCopyImg: {
-    width: 13,
-    height: 13,
+    width: 15,
+    height: 15,
   },
   bankInfoUsername: {
     flexDirection: 'row',
     position: 'absolute',
-    top: 10,
+    marginTop: 8,
     right: 20,
   },
   bankInfoUsernameDt: {
-    marginRight: 48,
+    marginRight: 30,
     color: '#666',
     fontSize: 13,
     lineHeight: 22,
@@ -1658,6 +1683,27 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: '500',
   },
+  quickAmountContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 15,
+    gap: 8,
+  },
+  quickAmountBtn: {
+    flex: 1,
+    height: 36,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickAmountBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   invintroBox: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -1699,7 +1745,7 @@ const styles = StyleSheet.create({
   },
   starNotif: {
     marginTop: 12,
-    color: '#ff5042',
+    color: '#666',
     fontSize: 12,
     lineHeight: 18,
   },
@@ -1915,6 +1961,18 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   // 모달 스타일
+  modalBody: {
+    paddingVertical: 10,
+  },
+  modalText: {
+    marginBottom: 20,
+    color: '#393f44',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // 기존 팝업 스타일 (다른 곳에서 사용될 수 있음)
   popContainer: {
     flex: 1,
     flexDirection: 'column',

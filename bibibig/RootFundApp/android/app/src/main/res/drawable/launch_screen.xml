@@ -7,7 +7,7 @@
     <item>
         <bitmap
             android:src="@drawable/main"
-            android:gravity="fill"
+            android:gravity="center"
             android:antialias="true"
             android:filter="true" />
     </item>

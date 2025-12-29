@@ -112,7 +112,20 @@ class ApiService {
       const currentUser = await this.getCurrentUser();
       const memberId = currentUser?.session?.member_id || currentUser?.member_id || currentUser?.id;
       
-      // 백엔드 로그아웃 API 호출 (선택적)
+      // 1. FCM 토큰 삭제 (백엔드 DB)
+      try {
+        if (memberId) {
+          console.log('🗑️ FCM 토큰 삭제 요청 (회원ID:', memberId + ')');
+          await this.api.post('/api/fcm/unregister', {
+            member_id: memberId,
+          });
+          console.log('✅ 백엔드 FCM 토큰 삭제 완료');
+        }
+      } catch (error) {
+        console.warn('⚠️ FCM 토큰 삭제 실패 (계속 진행):', error.message);
+      }
+      
+      // 2. 백엔드 로그아웃 API 호출 (선택적)
       try {
         if (memberId) {
           const response = await this.api.post('/app/logoutProcess', {
@@ -125,7 +138,15 @@ class ApiService {
         console.warn('⚠️ 백엔드 로그아웃 실패 (로컬 데이터는 삭제):', error.message);
       }
       
-      // 로컬 세션 데이터 삭제
+      // 3. 로컬 FCM 토큰 삭제 (AsyncStorage)
+      try {
+        await AsyncStorage.removeItem('fcmToken');
+        console.log('✅ 로컬 FCM 토큰 삭제 완료');
+      } catch (error) {
+        console.warn('⚠️ 로컬 FCM 토큰 삭제 실패:', error.message);
+      }
+      
+      // 4. 로컬 세션 데이터 삭제
       await this.clearLoginData();
       
       return { success: true };

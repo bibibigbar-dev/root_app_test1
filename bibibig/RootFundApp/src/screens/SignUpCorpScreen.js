@@ -13,6 +13,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import ApiService from '../services/api';
 import AppModal from '../components/AppModal';
+import { getWebViewPretendardCss } from '../utils/webviewPretendard';
 
 const { width } = Dimensions.get('window');
 
@@ -99,9 +100,9 @@ const SignUpCorpScreen = () => {
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
           <style>
+            ${getWebViewPretendardCss()}
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
               font-size: 13px; 
               line-height: 1.5; 
               color: #666; 

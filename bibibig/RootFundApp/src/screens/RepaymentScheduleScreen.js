@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Header from '../components/Header';
 import ApiService from '../services/api';
+import AppModal from '../components/AppModal';
 
 const RepaymentScheduleScreen = ({ navigation, route }) => {
   const { user, member_id } = route.params || {};
@@ -318,72 +319,61 @@ const RepaymentScheduleScreen = ({ navigation, route }) => {
       )}
 
       {/* 상세 정보 모달 */}
-      <Modal
+      <AppModal
         visible={showDetailModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowDetailModal(false)}
+        title="상환 상세 정보"
+        onClose={() => setShowDetailModal(false)}
+        primaryAction={{
+          text: '확인',
+          onPress: () => setShowDetailModal(false),
+        }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>상환 상세 정보</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowDetailModal(false)}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
+        {selectedRepayment && (
+          <View>
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>상품명</Text>
+              <Text style={styles.modalValue}>
+                {selectedRepayment.product_name || selectedRepayment.productName || '-'}
+              </Text>
             </View>
-            
-            {selectedRepayment && (
-              <ScrollView style={styles.modalBody}>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>상품명</Text>
-                  <Text style={styles.modalValue}>
-                    {selectedRepayment.product_name || selectedRepayment.productName || '-'}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>상환일</Text>
-                  <Text style={styles.modalValue}>
-                    {selectedRepayment.repay_date || selectedRepayment.repayDate || '-'}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>상환금액</Text>
-                  <Text style={styles.modalValue}>
-                    {formatCurrency(selectedRepayment.repay_amount || selectedRepayment.repayAmount || 0)}원
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>원금</Text>
-                  <Text style={styles.modalValue}>
-                    {formatCurrency(selectedRepayment.principal || 0)}원
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>이자</Text>
-                  <Text style={styles.modalValue}>
-                    {formatCurrency(selectedRepayment.interest || 0)}원
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>상태</Text>
-                  <Text style={[
-                    styles.modalValue,
-                    selectedRepayment.status === 'Y' || selectedRepayment.status === '완료' 
-                      ? styles.modalValueComplete 
-                      : styles.modalValuePending
-                  ]}>
-                    {selectedRepayment.status === 'Y' || selectedRepayment.status === '완료' ? '완료' : '예정'}
-                  </Text>
-                </View>
-              </ScrollView>
-            )}
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>상환일</Text>
+              <Text style={styles.modalValue}>
+                {selectedRepayment.repay_date || selectedRepayment.repayDate || '-'}
+              </Text>
+            </View>
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>상환금액</Text>
+              <Text style={styles.modalValue}>
+                {formatCurrency(selectedRepayment.repay_amount || selectedRepayment.repayAmount || 0)}원
+              </Text>
+            </View>
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>원금</Text>
+              <Text style={styles.modalValue}>
+                {formatCurrency(selectedRepayment.principal || 0)}원
+              </Text>
+            </View>
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>이자</Text>
+              <Text style={styles.modalValue}>
+                {formatCurrency(selectedRepayment.interest || 0)}원
+              </Text>
+            </View>
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>상태</Text>
+              <Text style={[
+                styles.modalValue,
+                selectedRepayment.status === 'Y' || selectedRepayment.status === '완료' 
+                  ? styles.modalValueComplete 
+                  : styles.modalValuePending
+              ]}>
+                {selectedRepayment.status === 'Y' || selectedRepayment.status === '완료' ? '완료' : '예정'}
+              </Text>
+            </View>
           </View>
-        </View>
-      </Modal>
+        )}
+      </AppModal>
     </View>
   );
 };
