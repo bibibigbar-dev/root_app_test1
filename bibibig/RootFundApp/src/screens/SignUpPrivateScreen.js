@@ -262,15 +262,16 @@ const SignUpPrivateScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {/* 뒤로가기 버튼 */}
+      <View style={styles.backButtonContainer}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
           style={styles.backButton}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
         >
-          <Image
-            source={require('../assets/images/ico_back.png')}
-            style={styles.backButtonImage}
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon}
           />
         </TouchableOpacity>
       </View>
@@ -529,22 +530,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
   },
-  header: {
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
+  backButtonContainer: {
     paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButtonImage: {
+  backIcon: {
     width: 24,
     height: 24,
-    resizeMode: 'contain',
   },
   content: {
     flex: 1,

@@ -514,15 +514,15 @@ const MyCertScreen = () => {
     if (!memberData.co_cpno) {
       return (
         <View style={styles.container}>
-          <View style={styles.header}>
+          <View style={styles.backButtonContainer}>
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
               style={styles.backButton}
-              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
             >
-              <Image
-                source={require('../assets/images/ico_back.png')}
-                style={styles.backButtonImage}
+              <Image 
+                source={require('../assets/images/ico_back.png')} 
+                style={styles.backIcon}
               />
             </TouchableOpacity>
           </View>
@@ -594,15 +594,15 @@ const MyCertScreen = () => {
     if (employeeData.length === 0) {
       return (
         <View style={styles.container}>
-          <View style={styles.header}>
+          <View style={styles.backButtonContainer}>
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
               style={styles.backButton}
-              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
             >
-              <Image
-                source={require('../assets/images/ico_back.png')}
-                style={styles.backButtonImage}
+              <Image 
+                source={require('../assets/images/ico_back.png')} 
+                style={styles.backIcon}
               />
             </TouchableOpacity>
           </View>
@@ -682,15 +682,15 @@ const MyCertScreen = () => {
 
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={styles.backButtonContainer}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
             style={styles.backButton}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
           >
-            <Image
-              source={require('../assets/images/ico_back.png')}
-              style={styles.backButtonImage}
+            <Image 
+              source={require('../assets/images/ico_back.png')} 
+              style={styles.backIcon}
             />
           </TouchableOpacity>
         </View>
@@ -864,15 +864,15 @@ const MyCertScreen = () => {
 
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={styles.backButtonContainer}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
             style={styles.backButton}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
           >
-            <Image
-              source={require('../assets/images/ico_back.png')}
-              style={styles.backButtonImage}
+            <Image 
+              source={require('../assets/images/ico_back.png')} 
+              style={styles.backIcon}
             />
           </TouchableOpacity>
         </View>
@@ -1011,32 +1011,6 @@ const MyCertScreen = () => {
               <Text style={styles.btnText}>다음</Text>
             )}
           </TouchableOpacity>
-
-          {/* 임시 테스트 버튼 */}
-          <TouchableOpacity
-            style={[styles.btnStyle, { backgroundColor: '#ff9800', marginTop: 10 }]}
-            onPress={async () => {
-              try {
-                setLoading(true);
-                const response = await ApiService.api.get('/app/my/cert', {
-                  params: { member_id: '6425' }
-                });
-                
-                if (response.data.member) {
-                  setMemberData(response.data.member);
-                  setBc5jsencpublickey(response.data.bc5jsencpublickey || '');
-                  Alert.alert('성공', 'member_id=6425 데이터를 불러왔습니다.');
-                }
-              } catch (error) {
-                console.error('❌ 테스트 데이터 로드 오류:', error);
-                Alert.alert('오류', '테스트 데이터를 불러오는 중 오류가 발생했습니다.');
-              } finally {
-                setLoading(false);
-              }
-            }}
-          >
-            <Text style={styles.btnText}>🧪 테스트: member_id=6425 불러오기</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -1047,15 +1021,15 @@ const MyCertScreen = () => {
   if (memberData && memberData.cpno) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={styles.backButtonContainer}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
             style={styles.backButton}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
           >
-            <Image
-              source={require('../assets/images/ico_back.png')}
-              style={styles.backButtonImage}
+            <Image 
+              source={require('../assets/images/ico_back.png')} 
+              style={styles.backIcon}
             />
           </TouchableOpacity>
         </View>
@@ -1184,31 +1158,6 @@ const MyCertScreen = () => {
         </ScrollView>
 
         <View style={styles.fixBtnWrap}>
-          {/* 임시 테스트 버튼 */}
-          <TouchableOpacity
-            style={[styles.btnStyle, { backgroundColor: '#ff9800' }]}
-            onPress={async () => {
-              try {
-                setLoading(true);
-                const response = await ApiService.api.get('/app/my/cert', {
-                  params: { member_id: '6425' }
-                });
-                
-                if (response.data.member) {
-                  setMemberData(response.data.member);
-                  setBc5jsencpublickey(response.data.bc5jsencpublickey || '');
-                  Alert.alert('성공', 'member_id=6425 데이터를 불러왔습니다.');
-                }
-              } catch (error) {
-                console.error('❌ 테스트 데이터 로드 오류:', error);
-                Alert.alert('오류', '테스트 데이터를 불러오는 중 오류가 발생했습니다.');
-              } finally {
-                setLoading(false);
-              }
-            }}
-          >
-            <Text style={styles.btnText}>🧪 테스트: member_id=6425 불러오기</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -1229,29 +1178,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
-  header: {
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
+  backButtonContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   backButton: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
-    padding: 10,
-    paddingLeft: 16,
-  },
-  backButtonImage: {
     width: 24,
     height: 24,
-    resizeMode: 'contain',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#393f44',
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   content: {
     flex: 1,
@@ -1385,8 +1325,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   fixBtnWrap: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: 20,
     paddingBottom: 40,
+    backgroundColor: 'transparent', // 투명 배경
   },
   btnStyle: {
     height: 54,

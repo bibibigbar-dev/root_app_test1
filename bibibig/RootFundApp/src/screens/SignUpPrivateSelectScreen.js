@@ -19,15 +19,20 @@ const SignUpPrivateSelectScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
+      {/* 뒤로가기 버튼 */}
+      <View style={styles.backButtonContainer}>
+        <TouchableOpacity
           style={styles.backButton}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
         >
-          <Image source={require('../assets/images/ico_back.png')} style={styles.backButtonImage} />
+          <Image 
+            source={require('../assets/images/ico_back.png')} 
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
       </View>
+
       <ScrollView style={styles.content}>
         <View style={styles.subTitleBox}>
           <Text style={styles.title}>개인회원 유형을 선택해주세요</Text>
@@ -125,6 +130,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  backButtonContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  backButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
   content: {
     flex: 1,
   },
@@ -191,27 +211,10 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   link: {
-    ontSize: 14,
+    fontSize: 14,
     color: '#2c3db8',
     fontWeight: '600',
     textDecorationLine: 'underline',
-  },
-  header: {
-    height: 48, // 4.8rem
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16, // 1.6rem
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonImage: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
   },
 });
 
