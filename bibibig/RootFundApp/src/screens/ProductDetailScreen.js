@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   TextInput,
   Clipboard,
   Alert,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
@@ -21,7 +22,9 @@ import AppModal from '../components/AppModal';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ProductDetailScreen = ({ navigation, route }) => {
-  const { orderKey } = route.params || {};
+  const { orderKey, ordernumber } = route.params || {};
+  // ordernumber가 있으면 사용, 없으면 orderKey 사용 (하위 호환성)
+  const productId = ordernumber || orderKey;
   const [loading, setLoading] = useState(true);
   const [productData, setProductData] = useState(null);
   const [activeTab1, setActiveTab1] = useState(0); // 상품개요/사업개요
@@ -44,6 +47,10 @@ const ProductDetailScreen = ({ navigation, route }) => {
   const [expandedSchedule, setExpandedSchedule] = useState({});
   const [estimatedProfit, setEstimatedProfit] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showFloatingButton, setShowFloatingButton] = useState(false);
+  const [buttonY, setButtonY] = useState(0);
+  const scrollViewRef = React.useRef(null);
+  const floatingOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (orderKey) {
@@ -51,6 +58,15 @@ const ProductDetailScreen = ({ navigation, route }) => {
     }
     checkLoginStatus();
   }, [orderKey]);
+
+  useEffect(() => {
+    // 플로팅 버튼 애니메이션
+    Animated.timing(floatingOpacity, {
+      toValue: showFloatingButton ? 1 : 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [showFloatingButton]);
 
   useEffect(() => {
     // 화면이 포커스될 때 로그인 상태만 확인 (상품 정보는 재로드하지 않음)
@@ -80,9 +96,15 @@ const ProductDetailScreen = ({ navigation, route }) => {
   const loadProductDetail = async () => {
     try {
       setLoading(true);
+      
+      // 현재 로그인한 사용자 정보 확인
+      const currentUser = await ApiService.getCurrentUser();
+      const memberId = currentUser?.session?.member_id || currentUser?.id;
 
+      // member_id를 쿼리 파라미터로 전달 (세션에서 인식 못할 경우 대비)
       const response = await ApiService.api.get(
-        `/app/product/detail/${orderKey}`,
+        `/app/product/detail/${productId}`,
+        memberId ? { params: { member_id: memberId } } : {}
       );
 
       if (response.data) {
@@ -141,40 +163,13 @@ const ProductDetailScreen = ({ navigation, route }) => {
     return diffDt;
   };
 
-  // 100만원 기준 예상 수익 계산
-  const calculateEstimatedProfit = () => {
-    if (!productData || !productData.prod || !productData.option) return;
+  const buildCalcResultForPrice = (priceNumber) => {
+    if (!productData?.prod || !productData?.option) return null;
 
     const prod = productData.prod;
     const option = productData.option;
 
-    const price = 1000000; // 100만원 고정
-    const rate = Number(prod.rate);
-    const period = Number(prod.period);
-    const comm = Number(option.i_comm_1 || 0);
-    const iTaxPer = Number(option.i_tax || 0);
-
-    // 총 이자 계산
-    const totalInterest = Math.floor((price * rate * period) / 1200);
-
-    // 세금 계산
-    const tax = Math.floor((totalInterest * iTaxPer) / 100);
-
-    // 수수료 계산
-    const commission = Math.floor((price * comm * period) / 1200);
-
-    // 순수익 = 이자 - 세금 - 수수료
-    const profit = totalInterest - tax - commission;
-
-    setEstimatedProfit(profit);
-  };
-
-  // 수익 계산
-  const calculateInterest = () => {
-    if (!productData || !prod || !option) return;
-
     let tBal = 0;
-    let tRrp = 0;
     let tInt = 0;
     let tTax = 0;
     let tComm = 0;
@@ -183,8 +178,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
     const rpType = prod.repay_type;
     const rate = Number(prod.rate);
     const dRate = rate / 100 / 365;
-    let price = calcPrice.replace(/,/g, '');
-    price = Number(price);
+    const price = Number(priceNumber);
     const period = Number(prod.period);
     const comm = Number(option.i_comm_1 || 0);
     const dComm = comm / 100 / 365;
@@ -244,22 +238,40 @@ const ProductDetailScreen = ({ navigation, route }) => {
       });
 
       startDate = endDate;
-      tRrp += rrpFloor;
       tInt += riFloor;
       tTax += rti + rtr;
       tComm += rcFloor;
       tBal = tBal - rp;
     }
 
-    const rsInterestTotal = Number(tInt) - Number(tTax) - Number(tComm);
+    const totalProfit = Number(tInt) - Number(tTax) - Number(tComm);
 
-    setCalcResult({
-      totalProfit: rsInterestTotal,
+    return {
+      totalProfit,
       totalInterest: tInt,
       totalTax: tTax,
       totalComm: tComm,
-      schedule: schedule,
-    });
+      schedule,
+    };
+  };
+
+  // 100만원 기준 예상 수익 계산 (모달 계산 로직과 동일)
+  const calculateEstimatedProfit = () => {
+    const result = buildCalcResultForPrice(1000000);
+    if (!result) return;
+    setEstimatedProfit(result.totalProfit);
+  };
+
+  // 수익 계산
+  const calculateInterest = () => {
+    const numOnly = String(calcPrice || '').replace(/[^0-9]/g, '');
+    const price = Number(numOnly || 0);
+    if (!price) return;
+
+    const result = buildCalcResultForPrice(price);
+    if (!result) return;
+
+    setCalcResult(result);
   };
 
   const formatNumber = num => {
@@ -400,8 +412,11 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
     // 로그인한 경우 checkInvest 값에 따라 버튼 변경
     const { checkInvest } = productData || {};
+    
+    // checkInvest를 문자열로 변환하여 비교
+    const checkInvestStr = String(checkInvest);
 
-    switch (checkInvest) {
+    switch (checkInvestStr) {
       case '0': // 투자 가능
         return (
           <TouchableOpacity
@@ -511,7 +526,16 @@ const ProductDetailScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.content}
+        onScroll={(event) => {
+          const scrollY = event.nativeEvent.contentOffset.y;
+          // 버튼이 화면에서 사라지면 플로팅 버튼 표시
+          setShowFloatingButton(scrollY > buttonY + 100);
+        }}
+        scrollEventThrottle={16}
+      >
         <View style={styles.productViewN}>
           {/* 상품 번호 */}
           <Text style={styles.prdNum}>
@@ -631,7 +655,15 @@ const ProductDetailScreen = ({ navigation, route }) => {
           </View>
 
           {/* 투자하기 버튼 */}
-          <View style={styles.btnBox}>{renderInvestButton()}</View>
+          <View 
+            style={styles.btnBox}
+            onLayout={(event) => {
+              const layout = event.nativeEvent.layout;
+              setButtonY(layout.y);
+            }}
+          >
+            {renderInvestButton()}
+          </View>
 
           {/* 수익 안내 박스 */}
           <View style={styles.detailIntrobox}>
@@ -652,12 +684,18 @@ const ProductDetailScreen = ({ navigation, route }) => {
               </Text>
 
               <View style={styles.revenueDl}>
-                <Text style={styles.revenueDt}>세전수익률</Text>
-                <Text style={styles.revenueDd}>연 {prod.rate}%</Text>
-                <Text style={styles.revenueDt}>순수익률</Text>
-                <Text style={styles.revenueDd}>
-                  연 {prod.net_return || '-'}%
-                </Text>
+                <View style={styles.revenueRow}>
+                  <Text style={styles.revenueDt}>세전수익률</Text>
+                  <Text style={styles.revenueDd} numberOfLines={1}>
+                    연 {prod.rate}%
+                  </Text>
+                </View>
+                <View style={styles.revenueRow}>
+                  <Text style={styles.revenueDt}>순수익률</Text>
+                  <Text style={styles.revenueDd} numberOfLines={1}>
+                    연 {prod.net_return || '-'}%
+                  </Text>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -1182,6 +1220,27 @@ const ProductDetailScreen = ({ navigation, route }) => {
         </View>
       </ScrollView>
 
+      {/* 플로팅 투자하기 버튼 */}
+      <Animated.View 
+        style={[
+          styles.floatingButtonContainer,
+          {
+            opacity: floatingOpacity,
+            transform: [
+              {
+                translateY: floatingOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [100, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+        pointerEvents={showFloatingButton ? 'auto' : 'none'}
+      >
+        <View style={styles.btnBox}>{renderInvestButton()}</View>
+      </Animated.View>
+
       {/* 수익 계산 모달 */}
       <AppModal
         visible={showCalcModal}
@@ -1612,26 +1671,30 @@ const styles = StyleSheet.create({
     color: '#197cff',
   },
   revenueDl: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    flexDirection: 'column',
     marginTop: 4,
     marginBottom: 8,
   },
-  revenueDt: {
-    width: 84,
+  revenueRow: {
     marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  revenueDt: {
+    marginTop: 0,
     color: '#666',
-    fontSize: 13,
+    fontSize: 15,
     lineHeight: 16.9,
     fontWeight: '400',
+    marginRight: 12,
   },
   revenueDd: {
-    width: SCREEN_WIDTH - 32 - 40 - 84,
-    marginTop: 8,
+    marginTop: 0,
     fontSize: 13,
     lineHeight: 16.9,
     fontWeight: '600',
+    flex: 1,
+    flexShrink: 1,
   },
   detailEco: {
     padding: 16,
@@ -2152,6 +2215,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  floatingButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingVertical: 16,
+    paddingBottom: 0,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
 

@@ -351,7 +351,10 @@ const MainScreen = ({ navigation }) => {
       screenName = 'ProductDetailOld3';
     }
 
-    navigation.navigate(screenName, { orderKey: item.orderKey });
+    navigation.navigate(screenName, { 
+      orderKey: item.orderKey || item.orderNumber,
+      ordernumber: item.orderNumber || item.orderKey
+    });
   };
 
   // 배너 슬라이드 렌더링

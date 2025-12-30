@@ -165,7 +165,10 @@ const BondMarketScreen = ({ navigation, route }) => {
       screenName = 'ProductDetailOld3';
     }
 
-    navigation.navigate(screenName, { orderKey: item.orderNumber });
+    navigation.navigate(screenName, { 
+      orderKey: item.orderKey || item.orderNumber,
+      ordernumber: item.ordernumber || item.orderNumber 
+    });
   };
 
   const getOrderTypeImage = orderType => {

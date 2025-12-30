@@ -98,7 +98,10 @@ const ProductListScreen = ({ navigation, route }) => {
       screenName = 'ProductDetailOld3';
     }
 
-    navigation.navigate(screenName, { orderKey: item.orderKey });
+    navigation.navigate(screenName, { 
+      orderKey: item.orderKey || item.orderNumber,
+      ordernumber: item.orderNumber || item.orderKey
+    });
   };
 
   const loadProductData = async () => {

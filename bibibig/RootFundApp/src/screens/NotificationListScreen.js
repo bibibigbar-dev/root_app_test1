@@ -180,10 +180,16 @@ const NotificationListScreen = ({ navigation }) => {
       {/* 액션 버튼 */}
       {notifications.length > 0 && (
         <View style={styles.actionBar}>
-          <TouchableOpacity onPress={handleMarkAllAsRead}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={handleMarkAllAsRead}
+          >
             <Text style={styles.actionText}>모두 읽음</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDeleteAll}>
+          <TouchableOpacity 
+            style={[styles.actionButton]}
+            onPress={handleDeleteAll}
+          >
             <Text style={[styles.actionText, styles.deleteText]}>모두 삭제</Text>
           </TouchableOpacity>
         </View>
@@ -241,14 +247,26 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 16,
+    paddingVertical: 8,
+    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  actionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    width: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionText: {
     fontSize: 14,
     color: '#666',
+    fontWeight: '500',
   },
   deleteText: {
     color: '#ff4444',
