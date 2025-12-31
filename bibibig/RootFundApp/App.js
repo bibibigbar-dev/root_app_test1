@@ -5,10 +5,11 @@
  * @format
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar, LogBox, Text, TextInput, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
+import SplashScreen from './src/screens/SplashScreen';
 import { getFontFamily } from './src/styles/fonts';
 import PushNotificationService from './src/services/pushNotification';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,6 +43,8 @@ TextInput.render = function (props, ref) {
 };
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
   useEffect(() => {
     // Suppress deprecation warnings
     LogBox.ignoreLogs([
@@ -49,6 +52,21 @@ function App() {
       'InteractionManager',
       'requestIdleCallback',
     ]);
+    
+    // 더 강력한 경고 억제
+    LogBox.ignoreAllLogs(false); // 모든 로그는 유지하되
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+      const message = args[0];
+      if (
+        typeof message === 'string' &&
+        (message.includes('InteractionManager') || 
+         message.includes('requestIdleCallback'))
+      ) {
+        return; // InteractionManager 관련 경고만 무시
+      }
+      originalWarn.apply(console, args);
+    };
 
     // API 서버 변경 감지 및 세션 정리
     const checkApiServerChange = async () => {
@@ -123,6 +141,15 @@ function App() {
 
     initPushNotifications();
   }, []);
+
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+  };
+
+  // 스플래시 화면 표시 (매번 3초 동안)
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
 
   return (
     <SafeAreaProvider>
