@@ -21,7 +21,6 @@ import ApiService from '../services/api';
 import AppModal from '../components/AppModal';
 
 const joinRootOptions = [
-  '선택해주세요',
   '지인소개',
   '인터넷 검색',
   '구글 광고',
@@ -35,7 +34,6 @@ const joinRootOptions = [
 ];
 
 const jobOptions = [
-  { value: '00', label: '선택해주세요' },
   { value: '01', label: '회사원' },
   { value: '02', label: '자영업자' },
   { value: '03', label: '무직' },

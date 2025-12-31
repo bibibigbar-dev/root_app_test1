@@ -17,7 +17,6 @@ import AppModal from '../components/AppModal';
 
 // 가입 경로 옵션
 const joinRootOptions = [
-  { label: '선택해주세요', value: '선택해주세요' },
   { label: '지인소개', value: '지인소개' },
   { label: '인터넷 검색', value: '인터넷 검색' },
   { label: '구글 광고', value: '구글 광고' },

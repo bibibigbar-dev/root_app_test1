@@ -10,6 +10,9 @@ import {
   ActivityIndicator,
   Clipboard,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import ApiService from '../services/api';
 import AppModal from '../components/AppModal';
@@ -24,7 +27,6 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
   const [showInvestTooltip, setShowInvestTooltip] = useState(false);
   const [banks, setBanks] = useState([]);
   const scrollViewRef = useRef(null);
-  const withdrawSectionRef = useRef(null);
 
   useEffect(() => {
     loadAssetData();
@@ -49,19 +51,10 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
 
   // 스크롤 위치 조정 (투자금출금 탭으로)
   useEffect(() => {
-    if (
-      route.params?.scrollToWithdraw &&
-      withdrawSectionRef.current &&
-      scrollViewRef.current
-    ) {
+    if (route.params?.scrollToWithdraw && !loading) {
       setTimeout(() => {
-        withdrawSectionRef.current.measureLayout(
-          scrollViewRef.current,
-          (x, y) => {
-            scrollViewRef.current.scrollTo({ y: y - 20, animated: true });
-          },
-          () => {},
-        );
+        // 고정 위치로 스크롤 (출금 섹션 대략적인 위치)
+        scrollViewRef.current?.scrollTo({ y: 500, animated: true });
       }, 500);
     }
   }, [route.params?.scrollToWithdraw, loading]);
@@ -370,7 +363,11 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
   const totalInvestPrice = assetData?.rpa?.total_invest_price || 0;
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
       <ScrollView ref={scrollViewRef} style={styles.scrollView}>
         {/* 나의자산 */}
         <View style={styles.subWhitebox}>
@@ -591,7 +588,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
         </View>
 
         {/* 탭 메뉴 */}
-        <View ref={withdrawSectionRef} style={styles.subTab}>
+        <View style={styles.subTab}>
           <TouchableOpacity
             style={[
               styles.tabItem,
@@ -792,6 +789,15 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
                   }}
                   placeholder="출금금액 입력"
                   keyboardType="numeric"
+                  onFocus={() => {
+                    setTimeout(() => {
+                      // 출금 섹션으로 스크롤 (고정 위치)
+                      scrollViewRef.current?.scrollTo({
+                        y: 500, // 출금 섹션 대략적인 위치
+                        animated: true,
+                      });
+                    }, 300);
+                  }}
                 />
                 <Text style={styles.unitText}>원</Text>
               </View>
@@ -867,7 +873,7 @@ const AssetsContent = ({ navigation, route, user, member_id }) => {
           }}
         />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

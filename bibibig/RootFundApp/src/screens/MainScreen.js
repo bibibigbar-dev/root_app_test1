@@ -37,6 +37,7 @@ const MainScreen = ({ navigation }) => {
     topPromotionBanner: [],
     popup: [],
     popup_cnt: 0,
+    employment: null,
   });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentReviewSlide, setCurrentReviewSlide] = useState(0);
@@ -198,6 +199,7 @@ const MainScreen = ({ navigation }) => {
         topPromotionBanner: result?.top_promotion_banner || [],
         popup: result?.popup || [],
         popup_cnt: result?.popup_cnt || 0,
+        employment: result?.employment || null,
       });
       
       console.log('📊 상품 수:', result?.product?.length || 0);
@@ -990,18 +992,30 @@ const MainScreen = ({ navigation }) => {
           </View>
           <View style={styles.rootNewsBox}>
             <View style={styles.rootNewsList}>
-              <TouchableOpacity style={styles.rootNewsItem}>
-                <View style={styles.rootNewsInbox}>
-                  <Text style={styles.rootNewsCate}>채용</Text>
-                  <Text style={styles.rootNewsTit}>기회/실무 파트 채용 중</Text>
-                  <Image 
-                    source={require('../assets/images/ico_rootnews01.png')} 
-                    style={[styles.rootNewsIco, styles.rootNewsIco1]}
-                    resizeMode="contain"
-                  />
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.rootNewsItem}>
+              {mainData.employment && (
+                <TouchableOpacity 
+                  style={styles.rootNewsItem}
+                  onPress={() => {
+                    if (mainData.employment.employment_url) {
+                      Linking.openURL(mainData.employment.employment_url);
+                    }
+                  }}
+                >
+                  <View style={styles.rootNewsInbox}>
+                    <Text style={styles.rootNewsCate}>채용</Text>
+                    <Text style={styles.rootNewsTit}>{mainData.employment.title || '기회/실무 파트 채용 중'}</Text>
+                    <Image 
+                      source={require('../assets/images/ico_rootnews01.png')} 
+                      style={[styles.rootNewsIco, styles.rootNewsIco1]}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={styles.rootNewsItem}
+                onPress={() => navigation.navigate('CompanyIntro')}
+              >
                 <View style={styles.rootNewsInbox}>
                   <Text style={styles.rootNewsCate}>회사소개</Text>
                   <Text style={styles.rootNewsTit}>More for the future 저탄소 사회를 위해</Text>
@@ -1016,7 +1030,10 @@ const MainScreen = ({ navigation }) => {
 
             {/* 프로모션 이미지배너 */}
             <View style={styles.promotionBanner}>
-              <TouchableOpacity style={styles.promotionInbox}>
+              <TouchableOpacity 
+                style={styles.promotionInbox}
+                onPress={() => Linking.openURL('https://pf.kakao.com/_CxaYbd')}
+              >
                 <Image 
                   source={require('../assets/images/main_banner_default.png')} 
                   style={styles.promotionImage}

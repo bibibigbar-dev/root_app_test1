@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   FlatList,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import RenderHTML from 'react-native-render-html';
 import ApiService from '../services/api';
 import AppModal from '../components/AppModal';
@@ -71,12 +72,12 @@ const CustomerServiceScreen = ({ navigation, route }) => {
     setExpandedItems({});
   }, [activeTab]);
 
-  // 연도 변경 시 최대주주 정보 조회
+  // 연도 변경 시 또는 공시안내 탭 전환 시 최대주주 정보 조회
   useEffect(() => {
     if (selectedYear && activeTab === 3) {
       fetchYearData(selectedYear);
     }
-  }, [selectedYear]);
+  }, [selectedYear, activeTab]);
 
   // 상품정보 년도/월 변경 시 또는 상품정보 탭 전환 시 데이터 조회
   useEffect(() => {
@@ -89,6 +90,15 @@ const CustomerServiceScreen = ({ navigation, route }) => {
       fetchProductData(productYear, productMonth);
     }
   }, [productYear, productMonth, disclosureCategory]);
+
+  // 화면 진입 시 initialTab 처리
+  useFocusEffect(
+    React.useCallback(() => {
+      if (initialTab !== undefined && initialTab !== activeTab) {
+        setActiveTab(initialTab);
+      }
+    }, [initialTab])
+  );
 
   // 최대주주 정보 조회 함수
   const fetchYearData = async yyyy => {
@@ -179,9 +189,12 @@ const CustomerServiceScreen = ({ navigation, route }) => {
             operateData: response.data.operateData || {},
             productData: response.data.productData || {},
           });
-          // 초기 년도 설정
+          // 초기 년도 설정 및 데이터 로드
           if (response.data.cur_yyyy && !selectedYear) {
-            setSelectedYear(parseInt(response.data.cur_yyyy));
+            const initialYear = parseInt(response.data.cur_yyyy);
+            setSelectedYear(initialYear);
+            // 초기 최대주주 정보 로드
+            fetchYearData(initialYear);
           }
           // 상품정보용 년도/월 초기화
           if (response.data.dt_yyyy && !productYear) {
@@ -589,7 +602,7 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                         <View style={styles.dlBetween}>
                           <Text style={styles.dlDt}>임직원</Text>
                           <Text style={styles.dlDd}>
-                            {disclosureData.operateData?.mem_1 || '0'} 명
+                            {shareholderData?.op?.mem_1 || disclosureData.operateData?.mem_1 || '0'} 명
                           </Text>
                         </View>
                         <View
@@ -597,7 +610,7 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                         >
                           <Text style={styles.dlDt}>여신심사역</Text>
                           <Text style={styles.dlDd}>
-                            {disclosureData.operateData?.mem_2 || '0'} 명
+                            {shareholderData?.op?.mem_2 || disclosureData.operateData?.mem_2 || '0'} 명
                           </Text>
                         </View>
                         <View
@@ -605,7 +618,7 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                         >
                           <Text style={styles.dlDt}>전문가</Text>
                           <Text style={styles.dlDd}>
-                            {disclosureData.operateData?.mem_3 || '0'} 명
+                            {shareholderData?.op?.mem_3 || disclosureData.operateData?.mem_3 || '0'} 명
                           </Text>
                         </View>
                       </View>
@@ -613,19 +626,34 @@ const CustomerServiceScreen = ({ navigation, route }) => {
                       <View style={[styles.subSTitleBox, styles.mt8]}>
                         <Text style={styles.subSTitle}>재무 현황</Text>
                       </View>
-                      {disclosureData.operateData?.fsFileName ? (
-                        <TouchableOpacity
-                          style={styles.docEvidence}
-                          onPress={() => {
-                            if (disclosureData.operateData?.fsFilePath) {
-                              Linking.openURL(
-                                disclosureData.operateData.fsFilePath,
-                              );
-                            }
-                          }}
-                        >
-                          <Text style={styles.docEvidenceText}>PDF 보기</Text>
-                        </TouchableOpacity>
+                      {(shareholderData?.fs && shareholderData.fs.length > 0) || disclosureData.operateData?.fsFileName ? (
+                        <View style={styles.docEvidenceContainer}>
+                          <Text style={styles.financialFileName}>
+                            {shareholderData?.fs && shareholderData.fs.length > 0
+                              ? shareholderData.fs[shareholderData.fs.length - 1]?.fileName || '재무제표.pdf'
+                              : disclosureData.operateData?.fsFileName || '재무제표.pdf'}
+                          </Text>
+                          <TouchableOpacity
+                            style={styles.docEvidence}
+                            onPress={() => {
+                              if (shareholderData?.fs && shareholderData.fs.length > 0) {
+                                const latestFs = shareholderData.fs[shareholderData.fs.length - 1];
+                                if (latestFs?.filePath) {
+                                  Linking.openURL(latestFs.filePath);
+                                }
+                              } else if (disclosureData.operateData?.fsFilePath) {
+                                Linking.openURL(disclosureData.operateData.fsFilePath);
+                              }
+                            }}
+                          >
+                            <Text style={styles.docEvidenceText}>파일 다운로드</Text>
+                            <Image
+                              source={require('../assets/images/ico_download.png')}
+                              style={styles.downloadIcon}
+                              resizeMode="contain"
+                            />
+                          </TouchableOpacity>
+                        </View>
                       ) : (
                         <View style={styles.dlBetweenBox}>
                           <View style={styles.dlBetween}>
@@ -2540,19 +2568,43 @@ const styles = StyleSheet.create({
   tableCellBold: {
     fontWeight: '600',
   },
+  docEvidenceContainer: {
+    paddingTop: 20,
+    paddingHorizontal: 0,
+    marginBottom: 20,
+    marginHorizontal: 20,
+  },
+  financialFileName: {
+    fontSize: 15,
+    lineHeight: 22.5,
+    color: '#333',
+    fontWeight: '400',
+    marginBottom: 8,
+  },
   docEvidence: {
-    marginTop: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#2c3db8',
-    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 37,
+    paddingVertical: 8,
+    paddingLeft: 20,
+    paddingRight: 40,
+    borderWidth: 1,
+    borderColor: '#e0e1e2',
+    borderRadius: 5,
+    backgroundColor: '#fff',
   },
   docEvidenceText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: '#fff',
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22.5,
+    color: '#333',
+    fontWeight: '400',
+  },
+  downloadIcon: {
+    width: 13,
+    height: 13,
+    marginLeft: 20,
   },
   stepImage: {
     width: '100%',

@@ -246,6 +246,13 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
     const totalProfit = Number(tInt) - Number(tTax) - Number(tComm);
 
+    console.log('💰 상품 수익 계산 결과:');
+    console.log('  투자금액:', price);
+    console.log('  총 이자:', tInt);
+    console.log('  총 세금:', tTax);
+    console.log('  총 수수료:', tComm);
+    console.log('  순수익:', totalProfit);
+
     return {
       totalProfit,
       totalInterest: tInt,

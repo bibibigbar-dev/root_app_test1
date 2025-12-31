@@ -31,7 +31,6 @@ const joinRootOptions = [
 ];
 
 const jobOptions = [
-  { value: '00', label: '선택해주세요' },
   { value: '01', label: '회사원' },
   { value: '02', label: '자영업자' },
   { value: '03', label: '무직' },

@@ -315,7 +315,7 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
             <View style={styles.menuHead}>
               <Text style={styles.welcomeText}>
                 환영합니다!{'\n'}
-                {user?.session?.r_name || user?.name || '로그인 후 이용해주세요'}
+                {user?.session?.r_name || user?.name ? `${user?.session?.r_name || user?.name}님` : '로그인 후 이용해주세요'}
               </Text>
               {user && (
                 <View style={styles.userType}>

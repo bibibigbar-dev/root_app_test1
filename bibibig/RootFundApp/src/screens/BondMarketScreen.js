@@ -42,22 +42,23 @@ const BondMarketScreen = ({ navigation, route }) => {
   });
   const [expandedSchedule, setExpandedSchedule] = useState({});
   const [calcBondData, setCalcBondData] = useState(null);
+  const [showRemainingOnly, setShowRemainingOnly] = useState(false);
 
   useEffect(() => {
     loadBondData();
   }, [activeTab, selectedArea]);
 
-  // 모달이 열릴 때 상세 데이터 로드
-  useEffect(() => {
-    if (showCalcModal && calcBondData && calcBondData.orderNumber) {
-      loadInterestData();
-    }
-  }, [showCalcModal]);
+  // 모달이 열릴 때 상세 데이터 로드 (제거 - 버튼 클릭 시 직접 호출)
+  // useEffect(() => {
+  //   if (showCalcModal && calcBondData && calcBondData.orderNumber) {
+  //     loadInterestData();
+  //   }
+  // }, [showCalcModal]);
 
-  const loadInterestData = async () => {
+  const loadInterestDataAndCalculate = async (item) => {
     try {
       const response = await ApiService.api.post('/market/interest', {
-        orderNumber: calcBondData.orderNumber,
+        orderNumber: item.orderNumber,
       });
 
       if (response.data) {
@@ -65,8 +66,8 @@ const BondMarketScreen = ({ navigation, route }) => {
         const prod = response.data.prod;
         const option = response.data.option;
 
-        setCalcBondData({
-          ...calcBondData,
+        const updatedBondData = {
+          ...item,
           sort: prod.sort,
           repayType: prod.repay_type,
           rate: prod.rate,
@@ -75,20 +76,29 @@ const BondMarketScreen = ({ navigation, route }) => {
           iComm1: option.i_comm_1,
           iTax: option.i_tax,
           rTax: option.r_tax,
-        });
+        };
+
+        setCalcBondData(updatedBondData);
 
         // 판매금액으로 초기화
-        const tradePrice =
-          calcBondData.trade_price || calcBondData.price || '1000000';
-        setCalcPrice(String(tradePrice));
+        const tradePrice = item.trade_price || item.price || '1000000';
+        const tradePriceStr = String(tradePrice);
+        setCalcPrice(tradePriceStr);
 
-        // 초기 계산 실행
-        setTimeout(() => {
-          calculateInterest();
-        }, 100);
+        // 업데이트된 데이터로 즉시 계산 (전체 회차)
+        setShowRemainingOnly(false);
+        calculateInterestWithData(updatedBondData, tradePriceStr, false);
+        
+        // 모달 열기
+        setShowCalcModal(true);
       }
     } catch (error) {
       console.error('이자 관련 데이터 호출 실패:', error);
+      // 에러 발생 시에도 기본 데이터로 모달 열기
+      setCalcBondData(item);
+      const tradePrice = item.trade_price || item.price || '1000000';
+      setCalcPrice(String(tradePrice));
+      setShowCalcModal(true);
     }
   };
 
@@ -222,31 +232,44 @@ const BondMarketScreen = ({ navigation, route }) => {
   };
 
   // 수익 계산
-  const calculateInterest = () => {
-    if (!calcBondData) return;
+  // 데이터를 직접 받아서 계산하는 함수
+  const calculateInterestWithData = (bondData, priceStr, useRemainingOnly = false) => {
+    if (!bondData) return;
 
     let tBal = 0;
-    let tRrp = 0;
     let tInt = 0;
     let tTax = 0;
     let tComm = 0;
 
-    const sort = calcBondData.sort;
-    const rpType = calcBondData.repayType;
-    const rate = Number(calcBondData.rate);
+    const sort = bondData.sort;
+    const rpType = bondData.repayType;
+    const rate = Number(bondData.rate);
     const dRate = rate / 100 / 365;
-    let price = calcPrice.replace(/,/g, '');
+    let price = priceStr.replace(/,/g, '');
     price = Number(price);
-    const period = Number(calcBondData.period);
-    const comm = Number(calcBondData.iComm1 || 0);
+    const totalPeriod = Number(bondData.period); // 전체 회차
+    const currentInstalment = Number(bondData.instalment || 0); // 현재 회차
+    const period = useRemainingOnly ? totalPeriod - currentInstalment : totalPeriod; // 남은 회차 또는 전체 회차
+    const comm = Number(bondData.iComm1 || 0);
     const dComm = comm / 100 / 365;
-    const iTaxPer = Number(calcBondData.iTax || 0);
-    const rTaxPer = Number(calcBondData.rTax || 0);
+    const iTaxPer = Number(bondData.iTax || 0);
+    const rTaxPer = Number(bondData.rTax || 0);
     let startDate = getCurrentDate();
+
+    console.log('📊 계산 입력값:');
+    console.log('  rate:', rate, '%, dRate:', dRate);
+    console.log('  price:', price);
+    console.log('  totalPeriod:', totalPeriod, ', currentInstalment:', currentInstalment);
+    console.log('  계산 회차:', useRemainingOnly ? `남은 회차 ${period}` : `전체 회차 ${period}`);
+    console.log('  comm:', comm, '%, dComm:', dComm);
+    console.log('  iTaxPer:', iTaxPer, '%, rTaxPer:', rTaxPer, '%');
 
     tBal = price;
     const rp1Rp = Math.floor(tBal / period);
     const schedule = [];
+    
+    // 시작 회차 번호 (남은 기간 계산 시 현재 회차 다음부터)
+    const startRound = useRemainingOnly ? currentInstalment + 1 : 1;
 
     for (let i = 1; i <= period; i++) {
       let endDate;
@@ -257,7 +280,7 @@ const BondMarketScreen = ({ navigation, route }) => {
         endDate = addMonths(startDate, 3);
       } else {
         // innovation 등 - 특정 상품은 6개월
-        const orderNumber = calcBondData.orderNumber;
+        const orderNumber = bondData.orderNumber;
         if (
           orderNumber === 'R000278' ||
           orderNumber === 'R000280' ||
@@ -274,6 +297,10 @@ const BondMarketScreen = ({ navigation, route }) => {
       }
 
       const diffDt = calcDateDiff(startDate, endDate) - 1;
+      
+      if (i === 1) {
+        console.log(`  회차 ${i}: startDate=${startDate}, endDate=${endDate}, diffDt=${diffDt}`);
+      }
 
       let rp = 0;
       if (i === period) {
@@ -297,7 +324,7 @@ const BondMarketScreen = ({ navigation, route }) => {
       const rrpFloor = Math.floor(rrp);
 
       schedule.push({
-        round: i,
+        round: startRound + i - 1, // 실제 회차 번호
         afterTax: rrpFloor,
         paymentDate: endDate,
         principal: rp,
@@ -309,22 +336,40 @@ const BondMarketScreen = ({ navigation, route }) => {
       });
 
       startDate = endDate;
-      tRrp += rrpFloor;
       tInt += riFloor;
       tTax += rti + rtr;
       tComm += rcFloor;
       tBal = tBal - rp;
     }
 
-    const rsInterestTotal = Number(tInt) - Number(tTax) - Number(tComm);
+    const totalProfit = Number(tInt) - Number(tTax) - Number(tComm);
+
+    console.log('💰 채권 수익 계산 결과:');
+    console.log('  투자금액:', price);
+    console.log('  총 이자:', tInt);
+    console.log('  총 세금:', tTax);
+    console.log('  총 수수료:', tComm);
+    console.log('  순수익:', totalProfit);
 
     setCalcResult({
-      totalProfit: rsInterestTotal,
+      totalProfit: totalProfit,
       totalInterest: tInt,
       totalTax: tTax,
       totalComm: tComm,
       schedule: schedule,
     });
+  };
+
+  // 현재 state를 사용하는 래퍼 함수
+  const calculateInterest = () => {
+    setShowRemainingOnly(false);
+    calculateInterestWithData(calcBondData, calcPrice, false);
+  };
+  
+  // 남은 기간만 계산
+  const calculateRemainingInterest = () => {
+    setShowRemainingOnly(true);
+    calculateInterestWithData(calcBondData, calcPrice, true);
   };
 
   const handleCalcPriceChange = text => {
@@ -657,9 +702,7 @@ const BondMarketScreen = ({ navigation, route }) => {
                         <TouchableOpacity
                           style={styles.btn}
                           onPress={() => {
-                            setCalcBondData(item);
-                            setShowCalcModal(true);
-                            setTimeout(() => calculateInterest(), 100);
+                            loadInterestDataAndCalculate(item);
                           }}
                         >
                           <Text style={styles.btnText}>수익금 지급 예정표</Text>
@@ -843,20 +886,30 @@ const BondMarketScreen = ({ navigation, route }) => {
                   <View style={styles.flexTit}>
                     <Text style={styles.titText}>투자예정 금액</Text>
                   </View>
-                  <View style={styles.flexInput}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={formatNumber(calcPrice)}
-                      onChangeText={handleCalcPriceChange}
-                      keyboardType="numeric"
-                    />
-                    <Text style={styles.txtUnit}>원</Text>
-                    <TouchableOpacity
-                      style={styles.btnCalc}
-                      onPress={calculateInterest}
-                    >
-                      <Text style={styles.btnCalcText}>계산하기</Text>
-                    </TouchableOpacity>
+                  <View style={styles.flexInputColumn}>
+                    <View style={styles.flexInputRow}>
+                      <TextInput
+                        style={styles.textInput}
+                        value={formatNumber(calcPrice)}
+                        onChangeText={handleCalcPriceChange}
+                        keyboardType="numeric"
+                      />
+                      <Text style={styles.txtUnit}>원</Text>
+                    </View>
+                    <View style={styles.calcButtonRow}>
+                      <TouchableOpacity
+                        style={[styles.btnCalc, styles.btnCalcFull]}
+                        onPress={calculateInterest}
+                      >
+                        <Text style={styles.btnCalcText}>계산하기 (전체)</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.btnCalc, styles.btnCalcRemaining]}
+                        onPress={calculateRemainingInterest}
+                      >
+                        <Text style={styles.btnCalcText}>남은 기간 확인하기</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
 
@@ -1688,6 +1741,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  flexInputColumn: {
+    flexDirection: 'column',
+  },
+  flexInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  calcButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   textInput: {
     flex: 1,
     height: 44,
@@ -1706,11 +1771,17 @@ const styles = StyleSheet.create({
   btnCalc: {
     height: 44,
     paddingHorizontal: 16,
-    marginLeft: 20,
     backgroundColor: '#2c3db8',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    flex: 1,
+  },
+  btnCalcFull: {
+    backgroundColor: '#2c3db8',
+  },
+  btnCalcRemaining: {
+    backgroundColor: '#4CAF50',
   },
   btnCalcText: {
     fontSize: 15,

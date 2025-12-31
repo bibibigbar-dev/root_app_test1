@@ -121,7 +121,7 @@ const HowToUseScreen = ({ navigation }) => {
                   입금합니다
                 </Text>
               </View>
-              <View style={styles.imgbox2}>
+              <View style={styles.imgbox}>
                 <Image
                   source={require('../assets/images/step_3.png')}
                   style={styles.stepImage}
@@ -477,15 +477,12 @@ const styles = StyleSheet.create({
   },
   imgbox: {
     marginTop: 30,
-    marginLeft: 13,
-  },
-  imgbox2: {
-    marginTop: 30,
-    marginLeft: -12,
+    marginRight: 20,
   },
   stepImage: {
-    width: 325,
-    height: 270,
+    width: SCREEN_WIDTH - 40, // 좌우 패딩 20씩 제외
+    height: undefined,
+    aspectRatio: 325 / 270, // 원본 비율 유지
   },
   btnStyleGray: {
     marginTop: 5,
@@ -534,30 +531,32 @@ const styles = StyleSheet.create({
   noticeList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     marginTop: 17,
-    marginHorizontal: 12,
-    gap: 21,
+    marginHorizontal: 5,
+    gap: 10,
   },
   noticeItem: {
-    width: 130,
+    width: '48%', // 2개씩 배치, 양쪽 정렬
+    minWidth: 130,
     alignItems: 'center',
+    marginBottom: 10,
   },
   noticeImage: {
-    width: 97,
-    height: 97,
+    width: 115,
+    height: 115,
   },
   noticeText1: {
     marginTop: 11,
     color: 'rgba(219, 40, 82, 1)',
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 21,
     fontWeight: '500',
   },
   noticeText2: {
     marginTop: 7,
     color: 'rgba(102, 102, 102, 1)',
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 18,
     fontWeight: '400',
     textAlign: 'center',
