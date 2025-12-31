@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import PushNotificationService from '../services/pushNotification';
 
-const NotificationListScreen = ({ navigation }) => {
+const NotificationListScreen = ({ navigation, route }) => {
   const [notifications, setNotifications] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -23,6 +23,20 @@ const NotificationListScreen = ({ navigation }) => {
       loadNotifications();
     }, [])
   );
+
+  // 화면을 떠날 때 이전 화면에 알림 개수 업데이트 요청
+  useEffect(() => {
+    return () => {
+      // 화면을 떠날 때 실행
+      const parent = navigation.getParent();
+      if (parent) {
+        parent.emit({
+          type: 'state',
+          data: { refreshNotifications: true },
+        });
+      }
+    };
+  }, [navigation]);
 
   const loadNotifications = async () => {
     try {
@@ -44,6 +58,8 @@ const NotificationListScreen = ({ navigation }) => {
     if (!notification.read) {
       await PushNotificationService.markAsRead(notification.id);
       await loadNotifications();
+      // 부모 화면에 알림 개수 변경 알림
+      navigation.setParams({ refreshNotifications: Date.now() });
     }
 
     // 알림 타입에 따라 화면 이동
@@ -69,6 +85,8 @@ const NotificationListScreen = ({ navigation }) => {
           onPress: async () => {
             await PushNotificationService.deleteNotification(notificationId);
             await loadNotifications();
+            // 부모 화면에 알림 개수 변경 알림
+            navigation.setParams({ refreshNotifications: Date.now() });
           },
         },
       ]
@@ -78,6 +96,8 @@ const NotificationListScreen = ({ navigation }) => {
   const handleMarkAllAsRead = async () => {
     await PushNotificationService.markAllAsRead();
     await loadNotifications();
+    // 부모 화면에 알림 개수 변경 알림
+    navigation.setParams({ refreshNotifications: Date.now() });
   };
 
   const handleDeleteAll = () => {
@@ -92,6 +112,8 @@ const NotificationListScreen = ({ navigation }) => {
           onPress: async () => {
             await PushNotificationService.deleteAllNotifications();
             await loadNotifications();
+            // 부모 화면에 알림 개수 변경 알림
+            navigation.setParams({ refreshNotifications: Date.now() });
           },
         },
       ]

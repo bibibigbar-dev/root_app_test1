@@ -1094,7 +1094,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
           </View>
 
           {/* 투자 유의사항 토글박스 */}
-          <View style={[styles.detailTogglebox, styles.mb40]}>
+          <View style={[styles.detailTogglebox, styles.mb100]}>
             <TouchableOpacity
               style={[
                 styles.inTitle,
@@ -1952,6 +1952,9 @@ const styles = StyleSheet.create({
   mb40: {
     marginBottom: 40,
   },
+  mb100: {
+    marginBottom: 100,
+  },
   statusIco: {
     width: 9,
     height: 10,
@@ -2230,7 +2233,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingBottom: 0,
     shadowOpacity: 0.1,
     shadowRadius: 4,

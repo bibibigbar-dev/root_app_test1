@@ -46,6 +46,7 @@
 		B4223FC6F79C483BB55DC53C /* Pretendard-Bold.woff */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Bold.woff"; path = "../src/reference/fonts/Pretendard/Pretendard-Bold.woff"; sourceTree = "<group>"; };
 		B68104CE1B48423BB8BAD809 /* Pretendard-Bold.woff2 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Bold.woff2"; path = "../src/reference/fonts/Pretendard/Pretendard-Bold.woff2"; sourceTree = "<group>"; };
 		BE62433A2F017CFA00E6DA2B /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		BEADEB5B2F04F2360031213B /* RootFundApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = RootFundApp.entitlements; path = RootFundApp/RootFundApp.entitlements; sourceTree = "<group>"; };
 		CB9D1E91C8C14F88A8FE7135 /* Pretendard-SemiBold.woff */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-SemiBold.woff"; path = "../src/reference/fonts/Pretendard/Pretendard-SemiBold.woff"; sourceTree = "<group>"; };
 		D4AD89CC6ABC42EB9DD4A166 /* Pretendard-SemiBold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-SemiBold.otf"; path = "../src/reference/fonts/Pretendard/Pretendard-SemiBold.otf"; sourceTree = "<group>"; };
 		E89DE5BFF7854EAE8CAD508B /* Pretendard-Regular.woff2 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Regular.woff2"; path = "../src/reference/fonts/Pretendard/Pretendard-Regular.woff2"; sourceTree = "<group>"; };
@@ -70,6 +71,7 @@
 		13B07FAE1A68108700A75B9A /* RootFundApp */ = {
 			isa = PBXGroup;
 			children = (
+				BEADEB5B2F04F2360031213B /* RootFundApp.entitlements */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -337,6 +339,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = RootFundApp/RootFundApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -370,6 +373,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = RootFundApp/RootFundApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

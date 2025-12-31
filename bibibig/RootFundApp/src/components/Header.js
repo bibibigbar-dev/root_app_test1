@@ -32,9 +32,21 @@ const Header = ({ navigation, user: propUser, showBack = false, onBackPress, hid
   }, []);
 
   useEffect(() => {
+    if (!navigation) return;
+    
     // 화면이 포커스될 때마다 사용자 정보 및 알림 개수 재로드
     const unsubscribe = navigation.addListener('focus', () => {
       loadUserData();
+      loadUnreadCount();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  // NotificationListScreen에서 돌아올 때 알림 개수 업데이트
+  useEffect(() => {
+    if (!navigation) return;
+    
+    const unsubscribe = navigation.addListener('state', () => {
       loadUnreadCount();
     });
     return unsubscribe;

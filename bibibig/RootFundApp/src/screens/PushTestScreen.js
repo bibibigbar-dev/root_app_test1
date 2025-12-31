@@ -102,6 +102,19 @@ const PushTestScreen = ({ navigation }) => {
       console.log('📤 DB 연결 테스트 요청');
       const response = await fetch(`${API_BASE_URL}/admin/fcm/db`);
       console.log('📥 응답 상태:', response.status);
+      
+      // 응답이 JSON인지 확인
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ JSON이 아닌 응답:', text.substring(0, 200));
+        Alert.alert(
+          '오류',
+          `서버가 JSON이 아닌 응답을 반환했습니다.\n상태 코드: ${response.status}\n\n이 엔드포인트가 존재하지 않거나 접근 권한이 없을 수 있습니다.`
+        );
+        return;
+      }
+      
       const result = await response.json();
       console.log('📥 응답 데이터:', result);
       
