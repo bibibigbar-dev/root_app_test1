@@ -597,12 +597,15 @@ const ProductListScreen = ({ navigation, route }) => {
                           {' / '}
                           <Text style={styles.totalEm}>{parseInt(item.price || 0).toLocaleString()}원</Text>
                         </Text>
-                        <Text style={styles.pctText}>
-                          {item.percent}%
+                        <View style={styles.pctContainer}>
+                          <Text style={styles.pctText}>{item.percent}%</Text>
                           {item.percent >= 80 && item.percent < 100 && (
-                            <Text style={styles.tipBgBlue}> ⏱ 곧 마감 서두르세요!</Text>
+                            <View style={styles.tipBgBlue}>
+                              <View style={styles.tipArrow} />
+                              <Text style={styles.tipText}>⏱ 곧 마감 서두르세요!</Text>
+                            </View>
                           )}
-                        </Text>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -689,12 +692,15 @@ const ProductListScreen = ({ navigation, route }) => {
                           {' / '}
                           <Text style={styles.totalEm}>{parseInt(item.price || 0).toLocaleString()}원</Text>
                         </Text>
-                        <Text style={styles.pctText}>
-                          {item.percent}%
+                        <View style={styles.pctContainer}>
+                          <Text style={styles.pctText}>{item.percent}%</Text>
                           {item.percent >= 80 && item.percent < 100 && (
-                            <Text style={styles.tipBgBlue}> ⏱ 곧 마감 서두르세요!</Text>
+                            <View style={styles.tipBgBlue}>
+                              <View style={styles.tipArrow} />
+                              <Text style={styles.tipText}>⏱ 곧 마감 서두르세요!</Text>
+                            </View>
                           )}
-                        </Text>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -785,12 +791,15 @@ const ProductListScreen = ({ navigation, route }) => {
                           {' / '}
                           <Text style={styles.totalEm}>{parseInt(item.price || 0).toLocaleString()}원</Text>
                         </Text>
-                        <Text style={styles.pctText}>
-                          {item.percent}%
+                        <View style={styles.pctContainer}>
+                          <Text style={styles.pctText}>{item.percent}%</Text>
                           {item.percent >= 80 && item.percent < 100 && (
-                            <Text style={styles.tipBgBlue}> ⏱ 곧 마감 서두르세요!</Text>
+                            <View style={styles.tipBgBlue}>
+                              <View style={styles.tipArrow} />
+                              <Text style={styles.tipText}>⏱ 곧 마감 서두르세요!</Text>
+                            </View>
                           )}
-                        </Text>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -843,38 +852,39 @@ const ProductListScreen = ({ navigation, route }) => {
               </View>
             )}
 
-        {/* 예치금 안내 */}
-        {!loading && activeTab !== 'COMPLETE' && showNotif && (
-              <View style={styles.notifOrange}>
-                <TouchableOpacity
-                  style={styles.btnClose}
-                  onPress={() => setShowNotif(false)}
-                >
-                  <Text style={styles.btnCloseText}>✕</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.notifInbox}
-                  onPress={() => {
-                    // navigation.navigate('MyHome');
-                  }}
-                >
-                  <View style={styles.notifTextContainer}>
-                    <Text style={styles.notifTxt}>투자전용계좌에 입금 후 투자 할 수 있습니다.</Text>
-                    {user?.session?.balance && parseInt(user.session.balance) > 0 && (
-                      <Text style={styles.notifAmount}>
-                        예치금 {parseInt(user.session.balance).toLocaleString()}원
-                      </Text>
-                    )}
-                  </View>
-                  <Image
-                    source={require('../assets/images/ico_arrow_orange.png')}
-                    style={styles.notifArrow}
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
       </ScrollView>
+
+      {/* 예치금 안내 - 하단 고정 */}
+      {!loading && activeTab !== 'COMPLETE' && showNotif && (
+        <View style={styles.notifOrange}>
+          <TouchableOpacity
+            style={styles.btnClose}
+            onPress={() => setShowNotif(false)}
+          >
+            <Text style={styles.btnCloseText}>✕</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.notifInbox}
+            onPress={() => {
+              // navigation.navigate('MyHome');
+            }}
+          >
+            <View style={styles.notifTextContainer}>
+              <Text style={styles.notifTxt}>투자전용계좌에 입금 후 투자 할 수 있습니다.</Text>
+              {user?.session?.balance && parseInt(user.session.balance) > 0 && (
+                <Text style={styles.notifAmount}>
+                  예치금 {parseInt(user.session.balance).toLocaleString()}원
+                </Text>
+              )}
+            </View>
+            <Image
+              source={require('../assets/images/ico_arrow_orange.png')}
+              style={styles.notifArrow}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -1090,10 +1100,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 0,
     marginBottom: 10,
+    overflow: 'visible',
   },
   productItem: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 50,
     borderRadius: 10,
     backgroundColor: '#fff',
     shadowColor: '#000',
@@ -1101,7 +1112,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 3,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   imgbox2: {
     position: 'relative',
@@ -1110,6 +1121,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRightWidth: 1,
     borderRightColor: '#e0e1e2',
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
   },
   productImage: {
     width: '100%',
@@ -1192,6 +1205,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e1e2',
     borderLeftWidth: 0,
+    overflow: 'visible',
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
   },
   adBgBlue: {
     position: 'absolute',
@@ -1220,6 +1236,7 @@ const styles = StyleSheet.create({
   },
   progressGroup: {
     marginTop: 0,
+    overflow: 'visible',
   },
   txtInfo: {
     flexDirection: 'row',
@@ -1263,6 +1280,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    overflow: 'visible',
   },
   totalText: {
     fontSize: 11,
@@ -1277,22 +1295,67 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
   },
+  pctContainer: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'visible',
+  },
   tipBgBlue: {
+    position: 'absolute',
+    top: '100%',
+    right: -12,
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#197cff',
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#197cff',
+    zIndex: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  tipArrow: {
+    position: 'absolute',
+    bottom: 27,
+    right: 22,
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderBottomWidth: 5,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#197cff',
+  },
+  tipText: {
     fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '400',
     color: '#fff',
-    backgroundColor: '#2c3db8',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    whiteSpace: 'nowrap',
   },
   notifOrange: {
-    position: 'relative',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     marginHorizontal: 16,
-    marginTop: 5,
-    marginBottom: 40,
+    marginBottom: 30,
     paddingLeft: 38,
     borderRadius: 20,
     backgroundColor: '#f18827',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   btnClose: {
     position: 'absolute',
