@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pretendard 폰트 import - CDN 사용 */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css");
+
+@layer base {
+  html {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  
+  body {
+    @apply text-black bg-white;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply mx-auto px-4 sm:px-6 md:px-4 lg:px-8 xl:px-24 2xl:px-36;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-3 rounded-md hover:bg-opacity-90 transition-all duration-300;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-primary border border-primary px-6 py-3 rounded-md hover:bg-primary hover:text-white transition-all duration-300;
+  }
+  
+  .section-title {
+    @apply text-4xl font-bold text-black mb-6;
+  }
+  
+  .section-subtitle {
+    @apply text-lg text-gray-600 mb-12;
+  }
+
+  /* 투명 헤더 스타일 */
+  header.bg-transparent {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+  }
+
+  /* YouTube hero background: "cover"처럼 화면을 꽉 채우기 (레터박스 숨김) */
+  .yt-cover {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #fff;
+    pointer-events: none;
+  }
+
+  .yt-cover__inner {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* react-youtube가 만든 iframe에 직접 적용 */
+  .yt-cover__iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.06); /* 1~2% 오차/레터박스 방지용 */
+    width: max(100vw, calc(100vh * 16 / 9));
+    height: max(100vh, calc(100vw * 9 / 16));
+    border: 0;
+  }
+}
+
